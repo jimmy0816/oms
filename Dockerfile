@@ -16,15 +16,24 @@ RUN pnpm install --frozen-lockfile
 # 複製源代碼
 COPY . .
 
-# 安裝 TypeScript 和其他依賴
+# 安裝 TypeScript
 RUN npm install -g typescript
-RUN cd apps/frontend && pnpm add -D typescript@5.2.2 @types/react@18.2.21 @types/node@20.8.10
+
+# 清除 node_modules 並重新安裝依賴
+RUN rm -rf node_modules
+RUN pnpm install --frozen-lockfile
 
 # 建立 shared-types 包
 RUN cd packages/shared-types && tsc
 
-# 構建應用（使用 Edge Runtime）
-RUN cd apps/frontend && NEXT_RUNTIME=edge pnpm next build
+# 安裝 Next.js 構建所需的 TypeScript 依賴
+RUN cd apps/frontend && pnpm add -D typescript@5.2.2 @types/react@18.2.21 @types/node@20.8.10
+
+# 設置 Docker 構建環境變數
+ENV DOCKER_BUILD=true
+
+# 構建應用
+RUN cd apps/frontend && pnpm next build
 
 # 運行階段
 FROM node:18-alpine AS runner
@@ -46,7 +55,6 @@ COPY --from=builder /app/node_modules ./node_modules
 
 # 設置環境變數
 ENV NODE_ENV=production
-ENV NEXT_RUNTIME=edge
 ENV PORT=8080
 
 # 暴露端口
