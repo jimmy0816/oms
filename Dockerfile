@@ -34,9 +34,9 @@ COPY --from=builder /app/apps/frontend/package.json ./apps/frontend/
 RUN pnpm install --prod --frozen-lockfile
 
 # 複製構建輸出
-COPY --from=builder /app/apps/frontend/.next/standalone ./
-COPY --from=builder /app/apps/frontend/.next/static ./apps/frontend/.next/static
+COPY --from=builder /app/apps/frontend/.next ./apps/frontend/.next
 COPY --from=builder /app/apps/frontend/public ./apps/frontend/public
+COPY --from=builder /app/node_modules ./node_modules
 
 # 設置環境變數
 ENV NODE_ENV=production
@@ -47,4 +47,5 @@ ENV PORT=8080
 EXPOSE 8080
 
 # 啟動應用
-CMD ["node", "apps/frontend/server.js"]
+WORKDIR /app/apps/frontend
+CMD ["npx", "next", "start", "-p", "8080"]
