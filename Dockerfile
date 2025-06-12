@@ -35,10 +35,8 @@ RUN pnpm install --prod --frozen-lockfile
 
 # 複製構建輸出
 COPY --from=builder /app/apps/frontend/.next ./apps/frontend/.next
-# 創建 public 目錄（如果不存在）
+# 創建 public 目錄
 RUN mkdir -p /app/apps/frontend/public
-# 嘗試複製 public 目錄（如果存在）
-COPY --from=builder /app/apps/frontend/public/. ./apps/frontend/public/
 # 複製必要的依賴
 COPY --from=builder /app/node_modules ./node_modules
 
