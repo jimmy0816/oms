@@ -16,6 +16,9 @@ RUN pnpm install --frozen-lockfile
 # 複製源代碼
 COPY . .
 
+# 建立 shared-types 包
+RUN cd packages/shared-types && pnpm build
+
 # 構建應用（使用 Edge Runtime）
 RUN cd apps/frontend && NEXT_RUNTIME=edge npx next build
 
