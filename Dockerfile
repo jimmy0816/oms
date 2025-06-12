@@ -17,7 +17,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # 構建應用（使用 Edge Runtime）
-RUN cd apps/frontend && pnpm build:edge
+RUN cd apps/frontend && NEXT_RUNTIME=edge pnpm build
 
 # 運行階段
 FROM node:18-alpine AS runner
