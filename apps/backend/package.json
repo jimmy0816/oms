@@ -1,0 +1,26 @@
+{
+  "name": "backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.0.0",
+    "prisma-client": "workspace:*",
+    "shared-types": "workspace:*",
+    "@prisma/client": "^5.5.2",
+    "cors": "^2.8.5",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.15",
+    "@types/node": "^20.8.10",
+    "eslint": "^8.52.0",
+    "eslint-config-next": "^14.0.0",
+    "typescript": "^5.2.2"
+  }
+}

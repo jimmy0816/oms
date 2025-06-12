@@ -1,0 +1,24 @@
+{
+  "name": "prisma-client",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint \"src/**/*.ts\"",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.5.2"
+  },
+  "devDependencies": {
+    "prisma": "^5.5.2",
+    "typescript": "^5.2.2",
+    "eslint": "^8.52.0",
+    "@types/node": "^20.8.10"
+  }
+}

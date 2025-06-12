@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>使用者管理 - OMS 原型</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,600&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="bg-[#f7f9fb] text-[#18181b]">
+  <div id="app" class="flex min-h-screen flex-col md:flex-row">
+    <!-- 側邊欄：md 以上顯示 -->
+    <aside class="hidden md:flex h-auto md:h-screen w-full md:w-60 bg-white border-b md:border-b-0 md:border-r border-gray-100 flex-col py-4 md:py-6 px-2 md:px-3">
+      <div class="mb-8 flex items-center gap-2 px-2">
+        <div class="w-8 h-8 bg-gradient-to-tr from-indigo-500 to-blue-400 rounded-lg flex items-center justify-center text-white font-bold text-xl">O</div>
+        <span class="font-bold text-xl tracking-tight text-gray-900">OMS</span>
+      </div>
+      <nav class="flex flex-col gap-2">
+        <a href="report.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 font-medium transition-all hover:bg-indigo-50 hover:text-indigo-600 group">
+          <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          <span>通報管理</span>
+        </a>
+        <a href="work.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 font-medium transition-all hover:bg-indigo-50 hover:text-indigo-600 group">
+          <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+          <span>工單管理</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 font-medium transition-all hover:bg-indigo-50 hover:text-indigo-600 group">
+          <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          <span>使用者管理</span>
+        </a>
+        <a href="log.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 font-medium transition-all hover:bg-indigo-50 hover:text-indigo-600 group">
+          <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          <span>操作紀錄</span>
+        </a>
+        <a href="setting.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 font-medium transition-all hover:bg-indigo-50 hover:text-indigo-600 group">
+          <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          <span>系統設定</span>
+        </a>
+      </nav>
+      <div class="mt-auto px-3">
+        <div class="flex items-center gap-2 text-sm text-gray-500">
+          <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">王</div>
+          王小明
+        </div>
+      </div>
+    </aside>
+    <!-- 漢堡選單：md 以下顯示 -->
+    <button id="menuBtn" class="md:hidden fixed top-4 left-4 z-50 bg-white border border-gray-200 rounded-lg p-2 shadow-lg focus:outline-none">
+      <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div id="mobileMenu" class="fixed inset-0 bg-black bg-opacity-30 z-40 hidden">
+      <aside class="w-60 bg-white h-full flex flex-col py-6 px-3">
+        <div class="mb-8 flex items-center gap-2 px-2">
+          <div class="w-8 h-8 bg-gradient-to-tr from-indigo-500 to-blue-400 rounded-lg flex items-center justify-center text-white font-bold text-xl">O</div>
+          <span class="font-bold text-xl tracking-tight text-gray-900">OMS</span>
+        </div>
+        <nav class="flex flex-col gap-2">
+          <a href="report.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 font-medium transition-all hover:bg-indigo-50 hover:text-indigo-600 group">通報管理</a>
+          <a href="work.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 font-medium transition-all hover:bg-indigo-50 hover:text-indigo-600 group">工單管理</a>
+          <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 font-medium transition-all hover:bg-indigo-50 hover:text-indigo-600 group">使用者管理</a>
+          <a href="log.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 font-medium transition-all hover:bg-indigo-50 hover:text-indigo-600 group">操作紀錄</a>
+          <a href="setting.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 font-medium transition-all hover:bg-indigo-50 hover:text-indigo-600 group">系統設定</a>
+        </nav>
+        <div class="mt-auto px-3">
+          <div class="flex items-center gap-2 text-sm text-gray-500">
+            <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">王</div>
+            王小明
+          </div>
+        </div>
+      </aside>
+    </div>
+    <!-- 主內容 -->
+    <div class="flex-1 flex flex-col min-h-screen">
+      <!-- Topbar -->
+      <header class="h-14 sm:h-16 flex items-center justify-between px-2 sm:px-4 md:px-8 bg-white border-b border-gray-100">
+        <div class="text-lg font-semibold text-gray-900">使用者管理</div>
+        <div class="flex items-center gap-4">
+          <button class="relative">
+            <span class="absolute top-0 right-0 w-2 h-2 bg-indigo-500 rounded-full"></span>
+            <svg class="w-6 h-6 text-gray-400 hover:text-indigo-500 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 7.165 6 9.388 6 12v2.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          </button>
+          <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">王</div>
+        </div>
+      </header>
+      <main class="flex-1 px-2 sm:px-4 md:px-8 py-4 sm:py-6 md:py-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-4 sm:mb-8">
+          <button class="px-5 py-2 rounded-lg bg-indigo-600 text-white font-bold text-base shadow-md hover:bg-indigo-700 transition w-full sm:w-auto">＋ 新增使用者</button>
+          <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <input type="text" placeholder="搜尋姓名/Email..." class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition w-full sm:w-56" />
+            <select class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition">
+              <option>全部角色</option>
+              <option>系統管理員</option>
+              <option>通報處理者</option>
+              <option>維修工務</option>
+              <option>客服人員</option>
+            </select>
+            <select class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition">
+              <option>全部狀態</option>
+              <option>啟用</option>
+              <option>待啟用</option>
+              <option>停用</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div class="bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-2 border border-gray-100 hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+              <div class="text-sm font-semibold text-gray-900">王小明</div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">啟用</span>
+            </div>
+            <div class="text-xs text-gray-500">系統管理員・台北館</div>
+            <div class="flex items-center gap-4 mt-2">
+              <span class="text-xs text-gray-400">Email：<span class="font-semibold text-indigo-500">ming.wang@company.com</span></span>
+            </div>
+            <div class="flex gap-2 mt-3">
+              <button class="px-4 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 font-semibold text-sm hover:bg-indigo-100 transition">編輯</button>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-2 border border-gray-100 hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+              <div class="text-sm font-semibold text-gray-900">李小華</div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700">待啟用</span>
+            </div>
+            <div class="text-xs text-gray-500">維修工務・新竹館</div>
+            <div class="flex items-center gap-4 mt-2">
+              <span class="text-xs text-gray-400">Email：<span class="font-semibold text-indigo-500">hua.lee@company.com</span></span>
+            </div>
+            <div class="flex gap-2 mt-3">
+              <button class="px-4 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 font-semibold text-sm hover:bg-indigo-100 transition">編輯</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script>
+    // RWD 漢堡選單
+    const menuBtn = document.getElementById('menuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    menuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+    });
+    mobileMenu.addEventListener('click', (e) => {
+      if (e.target === mobileMenu) mobileMenu.classList.add('hidden');
+    });
+  </script>
+</body>
+</html> 

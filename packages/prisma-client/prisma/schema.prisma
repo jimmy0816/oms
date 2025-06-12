@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  role          String    @default("USER") // USER, ADMIN, MANAGER
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  notifications Notification[]
+  ticketsCreated Ticket[] @relation("CreatedTickets")
+  ticketsAssigned Ticket[] @relation("AssignedTickets")
+  comments      Comment[]
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  title       String
+  message     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  relatedTicketId String?
+  relatedTicket Ticket? @relation(fields: [relatedTicketId], references: [id])
+}
+
+model Ticket {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  status      String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  creatorId   String
+  creator     User     @relation("CreatedTickets", fields: [creatorId], references: [id])
+  assigneeId  String?
+  assignee    User?    @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  comments    Comment[]
+  notifications Notification[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
