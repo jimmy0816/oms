@@ -428,6 +428,41 @@ export default function TicketDetail() {
             </div>
           </div>
           
+          {/* 附件區塊 */}
+          {ticket.attachments && ticket.attachments.length > 0 && (
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">附件 ({ticket.attachments.length})</h3>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {ticket.attachments.map((attachment: any) => (
+                  <div key={attachment.id} className="relative group border rounded-md overflow-hidden">
+                    {attachment.type === 'image' ? (
+                      <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                        <img
+                          src={attachment.url}
+                          alt={attachment.name}
+                          className="h-32 w-full object-cover"
+                        />
+                      </a>
+                    ) : (
+                      <div className="h-32 w-full bg-gray-100 flex items-center justify-center">
+                        <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          <span className="sr-only">{attachment.name}</span>
+                        </a>
+                      </div>
+                    )}
+                    <div className="p-1 bg-white text-xs truncate">
+                      {attachment.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           {/* 活動記錄區塊 */}
           <div className="p-6 border-b border-gray-100">
             <h3 className="text-lg font-medium text-gray-900 mb-4">活動記錄</h3>

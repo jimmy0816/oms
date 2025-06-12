@@ -13,9 +13,18 @@ import {
   XMarkIcon,
   HomeIcon,
   ClipboardDocumentListIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  ChevronDownIcon,
+  ChevronUpIcon
 } from '@heroicons/react/24/outline';
 import { NotificationBadge } from './NotificationBadge';
+
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children?: NavigationItem[];
+}
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,20 +34,46 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(3); // 模擬未讀通知數量
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({}); // 追蹤展開的子選單
 
   const navigation = [
     { name: '儀表板', href: '/', icon: HomeIcon },
     { name: '工單管理', href: '/tickets', icon: ClipboardDocumentListIcon },
     { name: '通報中心', href: '/notifications', icon: BellIcon },
     { name: '通報管理', href: '/reports', icon: DocumentTextIcon },
-    { name: '使用者管理', href: '/users', icon: UserIcon },
-    { name: '權限設定', href: '/settings', icon: ShieldCheckIcon },
+    { 
+      name: '系統管理', 
+      href: '#', 
+      icon: Cog6ToothIcon,
+      children: [
+        { name: '用戶管理', href: '/admin/users', icon: UserIcon },
+        { name: '角色權限', href: '/admin/roles', icon: ShieldCheckIcon },
+      ] 
+    },
   ];
 
   const isActive = (path: string) => {
+    if (path === '#') return false; // 父選單項目不會被標記為活動狀態
     if (path === '/' && router.pathname === '/') return true;
     if (path !== '/' && router.pathname.startsWith(path)) return true;
     return false;
+  };
+  
+  // 檢查選單項目或其子項目是否處於活動狀態
+  const hasActiveChild = (item: NavigationItem): boolean => {
+    if (isActive(item.href)) return true;
+    if (item.children) {
+      return item.children.some(child => isActive(child.href));
+    }
+    return false;
+  };
+  
+  // 切換子選單的展開狀態
+  const toggleSubMenu = (name: string) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [name]: !prev[name]
+    }));
   };
 
   return (
@@ -75,21 +110,74 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <span className="font-bold text-xl tracking-tight text-gray-900">OMS</span>
         </div>
         <nav className="flex flex-col gap-2">
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                isActive(item.href)
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-              onClick={() => setSidebarOpen(false)}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {item.name}
-            </Link>
-          ))}
+          {navigation.map((item) => {
+            const isItemActive = hasActiveChild(item);
+            const isExpanded = expandedMenus[item.name] || isItemActive;
+            
+            // 如果是有子選單的項目
+            if (item.children) {
+              return (
+                <div key={item.name} className="flex flex-col">
+                  <button
+                    className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      isItemActive
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                    onClick={() => toggleSubMenu(item.name)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      {item.name}
+                    </div>
+                    {isExpanded ? (
+                      <ChevronUpIcon className="h-4 w-4" />
+                    ) : (
+                      <ChevronDownIcon className="h-4 w-4" />
+                    )}
+                  </button>
+                  
+                  {/* 子選單 */}
+                  {isExpanded && (
+                    <div className="ml-5 mt-1 flex flex-col gap-1 border-l border-gray-200 pl-2">
+                      {item.children.map((child) => (
+                        <Link
+                          key={child.name}
+                          href={child.href}
+                          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                            isActive(child.href)
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          }`}
+                          onClick={() => setSidebarOpen(false)}
+                        >
+                          <child.icon className="h-4 w-4 flex-shrink-0" />
+                          {child.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            
+            // 一般選單項目
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive(item.href)
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {item.name}
+              </Link>
+            );
+          })}
         </nav>
         <div className="mt-auto pt-4 border-t border-gray-100 hidden md:block">
           <div className="flex items-center gap-3 px-3 py-2">
