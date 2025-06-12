@@ -2,11 +2,16 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ["shared-types"],
-  // 只在生產環境使用靜態導出
-  ...(process.env.NODE_ENV === 'production' ? {
-    output: 'export', // Static export for GitHub Pages
+  // 根據環境變量選擇輸出模式
+  ...(process.env.NEXT_RUNTIME === 'edge' ? {
+    output: 'standalone', // 獨立模式用於 Edge Runtime
+    experimental: {
+      runtime: 'edge',
+    },
+  } : process.env.NODE_ENV === 'production' ? {
+    output: 'export', // 靜態導出用於 GitHub Pages
     images: {
-      unoptimized: true, // Required for static export
+      unoptimized: true, // 靜態導出需要
     },
     basePath: '/oms-prototype',
   } : {}),
