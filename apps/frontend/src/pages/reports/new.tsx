@@ -5,10 +5,10 @@ import { useForm } from 'react-hook-form';
 import { 
   ArrowLeftIcon,
   DocumentTextIcon,
-  PhotoIcon,
-  XMarkIcon
+  PhotoIcon
 } from '@heroicons/react/24/outline';
 import CategorySelector from '../../components/CategorySelector';
+import FileUploader, { UploadedFile } from '../../components/FileUploader';
 // 直接定義報告狀態常量，避免依賴 shared-types 中的枚舉
 const ReportPriority = {
   LOW: 'LOW',
@@ -19,6 +19,15 @@ const ReportPriority = {
 
 // 不再使用舊的分類常量，改用 CategorySelector 中的三層級分類
 
+// 定義檔案資訊介面
+interface FileInfo {
+  id: string;
+  name: string;
+  url: string;
+  type: 'image' | 'video';
+  size?: number;
+}
+
 // 定義創建通報請求的接口
 interface CreateReportRequest {
   title: string;
@@ -27,15 +36,14 @@ interface CreateReportRequest {
   categoryId: string;
   categoryPath: string;
   location: string;
-  images?: string[];
+  attachments?: FileInfo[];
 }
 
 export default function NewReport() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const [previewImages, setPreviewImages] = useState<{file: File, preview: string}[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [selectedCategoryPath, setSelectedCategoryPath] = useState<string>('');
   
@@ -49,23 +57,8 @@ export default function NewReport() {
     }
   }, [selectedCategoryId, selectedCategoryPath, setValue]);
   
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    
-    const newFiles = Array.from(e.target.files);
-    const newPreviews = newFiles.map(file => ({
-      file,
-      preview: URL.createObjectURL(file)
-    }));
-    
-    setPreviewImages([...previewImages, ...newPreviews]);
-  };
-  
-  const removeImage = (index: number) => {
-    const newPreviews = [...previewImages];
-    URL.revokeObjectURL(newPreviews[index].preview);
-    newPreviews.splice(index, 1);
-    setPreviewImages(newPreviews);
+  const handleFilesChange = (files: UploadedFile[]) => {
+    setUploadedFiles(files);
   };
   
   const onSubmit = async (data: CreateReportRequest) => {
@@ -80,9 +73,15 @@ export default function NewReport() {
     }
     
     try {
-      // 在實際應用中，這裡會先上傳圖片，然後將圖片 URL 加入到 data 中
-      // 模擬圖片上傳
-      const imageUrls = previewImages.map((img, index) => `https://example.com/images/report-${Date.now()}-${index}.jpg`);
+      // 在實際應用中，這裡會先上傳圖片，然後將圖片資訊加入到 data 中
+      // 轉換上傳檔案為檔案資訊
+      const attachments = uploadedFiles.map((file) => ({
+        id: file.id,
+        name: file.name,
+        url: file.url || file.previewUrl,
+        type: file.type,
+        size: file.size
+      }));
       
       // 建立新通報物件
       const now = new Date();
@@ -100,7 +99,7 @@ export default function NewReport() {
         updatedAt: now,
         creatorId: '1', // 模擬用戶 ID
         creator: { id: '1', name: '管理員', email: 'admin@example.com', role: 'ADMIN' },
-        images: imageUrls
+        attachments: attachments
       };
       
       console.log('提交通報資料:', newReport);
@@ -301,43 +300,13 @@ export default function NewReport() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   上傳圖片（選填）
                 </label>
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                  <div className="space-y-1 text-center">
-                    <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
-                    <div className="flex text-sm text-gray-600">
-                      <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                        <span>上傳圖片</span>
-                        <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple accept="image/*" onChange={handleImageUpload} />
-                      </label>
-                      <p className="pl-1">或拖放圖片至此處</p>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      PNG, JPG, GIF 格式，每張不超過 10MB
-                    </p>
-                  </div>
-                </div>
-                
-                {/* 預覽圖片 */}
-                {previewImages.length > 0 && (
-                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {previewImages.map((img, index) => (
-                      <div key={index} className="relative">
-                        <img 
-                          src={img.preview} 
-                          alt={`Preview ${index}`} 
-                          className="h-24 w-24 object-cover rounded-md"
-                        />
-                        <button
-                          type="button"
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                          onClick={() => removeImage(index)}
-                        >
-                          <XMarkIcon className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <FileUploader
+                  files={uploadedFiles}
+                  onFilesChange={handleFilesChange}
+                  maxFiles={5}
+                  acceptedFileTypes={['image/*', 'video/*']}
+                  viewOnly={false}
+                />
               </div>
               
               {/* 提交按鈕 */}

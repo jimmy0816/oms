@@ -8,6 +8,7 @@ import {
   UserCircleIcon,
   MapPinIcon
 } from '@heroicons/react/24/outline';
+import FileUploader, { UploadedFile } from '../../components/FileUploader';
 // 直接定義報告狀態常量，避免依賴 shared-types 中的枚舉
 const ReportStatus = {
   UNCONFIRMED: 'UNCONFIRMED',
@@ -46,11 +47,11 @@ const mockReport = {
   updatedAt: new Date('2025-06-09T08:30:00Z'),
   creatorId: '1',
   creator: { id: '1', name: '李小明', email: 'lee@example.com', role: 'USER' },
-  // 添加模擬圖片和影片檔案
+  // 添加模擬圖片和影片檔案 - 使用固定的可靠圖片來源
   images: [
-    'https://source.unsplash.com/random/800x600/?elevator',
-    'https://source.unsplash.com/random/800x600/?broken',
-    'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4'
+    'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23eaeaea%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23757575%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E9%9B%BB%E6%A2%AF%E6%95%85%E9%9A%9C%E5%9C%96%E7%89%87%3C%2Ftext%3E%3C%2Fsvg%3E',
+    'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23f5f5f5%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23757575%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E6%95%85%E9%9A%9C%E8%A8%AD%E5%82%99%E5%9C%96%E7%89%87%3C%2Ftext%3E%3C%2Fsvg%3E',
+    'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23333333%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23ffffff%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E5%BD%B1%E7%89%87%E6%AA%94%E6%A1%88%3C%2Ftext%3E%3C%2Fsvg%3E'
   ],
   history: [
     {
@@ -444,33 +445,36 @@ export default function ReportDetail() {
               </div>
               
               {/* 顯示上傳的圖片和影片 */}
-              {report.images && report.images.length > 0 && (
+              {(report.attachments || report.images) && (report.attachments?.length > 0 || report.images?.length > 0) && (
                 <div className="mt-6 border-t border-gray-100 pt-4">
                   <h3 className="text-sm font-medium text-gray-500 mb-2">上傳的檔案</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {report.images.map((image, index) => {
-                      const isVideo = image.match(/\.(mp4|webm|ogg|mov)$/i);
-                      return (
-                        <div key={index} className="relative">
-                          {isVideo ? (
-                            <video 
-                              controls 
-                              className="h-32 w-full object-cover rounded-md border border-gray-200"
-                              src={image}
-                            />
-                          ) : (
-                            <a href={image} target="_blank" rel="noopener noreferrer">
-                              <img 
-                                src={image} 
-                                alt={`附件 ${index + 1}`} 
-                                className="h-32 w-full object-cover rounded-md border border-gray-200"
-                              />
-                            </a>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <FileUploader
+                    files={
+                      report.attachments 
+                        ? report.attachments.map((attachment) => ({
+                            id: attachment.id || `file-${attachment.name}`,
+                            name: attachment.name,
+                            url: attachment.url,
+                            type: attachment.type || 'image',
+                            previewUrl: attachment.url,
+                            size: attachment.size
+                          } as UploadedFile))
+                        : report.images.map((image, index) => {
+                            // 檢查是否為影片檔案 - 第三個模擬為影片
+                            const isVideo = index === 2;
+                            
+                            return {
+                              id: `file-${index}`,
+                              name: isVideo ? `影片檔案 ${index + 1}` : `圖片檔案 ${index + 1}`,
+                              url: image,
+                              type: isVideo ? 'video' : 'image',
+                              previewUrl: image
+                            } as UploadedFile;
+                          })
+                    }
+                    onFilesChange={() => {}}
+                    viewOnly={true}
+                  />
                 </div>
               )}
             </div>

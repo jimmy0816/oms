@@ -1,15 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
 import { 
   ArrowLeftIcon,
-  DocumentTextIcon,
-  PhotoIcon,
-  XMarkIcon,
-  FilmIcon
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import { TicketPriority, TicketStatus } from 'shared-types';
+import FileUploader, { UploadedFile } from '../../components/FileUploader';
 
 // 定義表單資料型別
 interface TicketFormData {
@@ -19,20 +17,13 @@ interface TicketFormData {
   assigneeId?: string;
 }
 
-// 定義上傳檔案類型
-interface UploadedFile {
-  id: string;
-  file: File;
-  previewUrl: string;
-  type: 'image' | 'video';
-}
+// 使用共用元件中的 UploadedFile 類型
 
 export default function NewTicket() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // 模擬用戶數據
   const users = [
@@ -45,56 +36,9 @@ export default function NewTicket() {
   
   const { register, handleSubmit, formState: { errors } } = useForm<TicketFormData>();
   
-  // 處理檔案上傳
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    // 處理每個選擇的檔案
-    Array.from(files).forEach(file => {
-      // 檢查檔案類型
-      const isImage = file.type.startsWith('image/');
-      const isVideo = file.type.startsWith('video/');
-      
-      if (!isImage && !isVideo) {
-        alert('只支援圖片和影片檔案');
-        return;
-      }
-
-      // 建立預覽 URL
-      const previewUrl = URL.createObjectURL(file);
-      
-      // 新增到上傳檔案列表
-      setUploadedFiles(prev => [
-        ...prev,
-        {
-          id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          file,
-          previewUrl,
-          type: isImage ? 'image' : 'video'
-        }
-      ]);
-    });
-    
-    // 清空 input 值，允許重複上傳相同檔案
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  // 移除上傳的檔案
-  const removeFile = (id: string) => {
-    setUploadedFiles(prev => {
-      const updatedFiles = prev.filter(file => file.id !== id);
-      
-      // 釋放已移除檔案的 URL
-      const fileToRemove = prev.find(file => file.id === id);
-      if (fileToRemove) {
-        URL.revokeObjectURL(fileToRemove.previewUrl);
-      }
-      
-      return updatedFiles;
-    });
+  // 處理檔案變更
+  const handleFilesChange = (files: UploadedFile[]) => {
+    setUploadedFiles(files);
   };
 
   const onSubmit = async (data: TicketFormData) => {
@@ -324,68 +268,19 @@ export default function NewTicket() {
                 </select>
               </div>
               
-              {/* 上傳圖片/影片 */}
-              <div>
+              {/* 附件 */}
+              <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  上傳圖片或影片
+                  附件
                 </label>
-                <div className="flex flex-col space-y-4">
-                  <div className="flex items-center">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileUpload}
-                      accept="image/*,video/*"
-                      multiple
-                      className="hidden"
-                      id="file-upload"
-                    />
-                    <label
-                      htmlFor="file-upload"
-                      className="cursor-pointer py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
-                    >
-                      <div className="flex items-center">
-                        <PhotoIcon className="h-5 w-5 mr-2 text-gray-500" />
-                        <span>選擇圖片或影片</span>
-                      </div>
-                    </label>
-                    <p className="ml-3 text-xs text-gray-500">
-                      支援 JPG, PNG, GIF, MP4 等格式
-                    </p>
-                  </div>
-                  
-                  {/* 預覽上傳的檔案 */}
-                  {uploadedFiles.length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
-                      {uploadedFiles.map(file => (
-                        <div key={file.id} className="relative group border rounded-md overflow-hidden">
-                          {file.type === 'image' ? (
-                            <img
-                              src={file.previewUrl}
-                              alt={file.file.name}
-                              className="h-32 w-full object-cover"
-                            />
-                          ) : (
-                            <div className="h-32 w-full bg-gray-100 flex items-center justify-center">
-                              <FilmIcon className="h-12 w-12 text-gray-400" />
-                              <span className="sr-only">{file.file.name}</span>
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => removeFile(file.id)}
-                            className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm opacity-70 hover:opacity-100"
-                          >
-                            <XMarkIcon className="h-4 w-4 text-gray-700" />
-                          </button>
-                          <div className="p-1 bg-white text-xs truncate">
-                            {file.file.name}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <FileUploader 
+                  files={uploadedFiles} 
+                  onFilesChange={handleFilesChange} 
+                  maxFiles={10}
+                  allowedTypes={['image/*', 'video/*']}
+                  label="選擇圖片或影片"
+                  helpText="支援 JPG, PNG, GIF, MP4 等格式"
+                />
               </div>
               
               {/* 提交按鈕 */}
