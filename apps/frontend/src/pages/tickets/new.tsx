@@ -277,7 +277,7 @@ export default function NewTicket() {
                   files={uploadedFiles} 
                   onFilesChange={handleFilesChange} 
                   maxFiles={10}
-                  allowedTypes={['image/*', 'video/*']}
+                  acceptedFileTypes={['image/*', 'video/*']}
                   label="選擇圖片或影片"
                   helpText="支援 JPG, PNG, GIF, MP4 等格式"
                 />
