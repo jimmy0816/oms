@@ -39,7 +39,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigation = [
     { name: '儀表板', href: '/', icon: HomeIcon },
     { name: '工單管理', href: '/tickets', icon: ClipboardDocumentListIcon },
-    { name: '通報中心', href: '/notifications', icon: BellIcon },
     { name: '通報管理', href: '/reports', icon: DocumentTextIcon },
     { 
       name: '系統管理', 
