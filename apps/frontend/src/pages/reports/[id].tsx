@@ -46,6 +46,12 @@ const mockReport = {
   updatedAt: new Date('2025-06-09T08:30:00Z'),
   creatorId: '1',
   creator: { id: '1', name: '李小明', email: 'lee@example.com', role: 'USER' },
+  // 添加模擬圖片和影片檔案
+  images: [
+    'https://source.unsplash.com/random/800x600/?elevator',
+    'https://source.unsplash.com/random/800x600/?broken',
+    'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4'
+  ],
   history: [
     {
       id: '1',
@@ -436,6 +442,37 @@ export default function ReportDetail() {
                   </div>
                 )}
               </div>
+              
+              {/* 顯示上傳的圖片和影片 */}
+              {report.images && report.images.length > 0 && (
+                <div className="mt-6 border-t border-gray-100 pt-4">
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">上傳的檔案</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {report.images.map((image, index) => {
+                      const isVideo = image.match(/\.(mp4|webm|ogg|mov)$/i);
+                      return (
+                        <div key={index} className="relative">
+                          {isVideo ? (
+                            <video 
+                              controls 
+                              className="h-32 w-full object-cover rounded-md border border-gray-200"
+                              src={image}
+                            />
+                          ) : (
+                            <a href={image} target="_blank" rel="noopener noreferrer">
+                              <img 
+                                src={image} 
+                                alt={`附件 ${index + 1}`} 
+                                className="h-32 w-full object-cover rounded-md border border-gray-200"
+                              />
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           

@@ -49,7 +49,12 @@ const mockReports = [
     createdAt: new Date('2025-06-09T08:30:00Z'),
     updatedAt: new Date('2025-06-09T08:30:00Z'),
     creatorId: '1',
-    creator: { id: '1', name: '李小明', email: 'lee@example.com', role: 'USER' }
+    creator: { id: '1', name: '李小明', email: 'lee@example.com', role: 'USER' },
+    images: [
+      'https://source.unsplash.com/random/800x600/?elevator',
+      'https://source.unsplash.com/random/800x600/?broken',
+      'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4'
+    ]
   },
   {
     id: '2',
@@ -64,7 +69,11 @@ const mockReports = [
     creatorId: '2',
     creator: { id: '2', name: '王大華', email: 'wang@example.com', role: 'USER' },
     assigneeId: '3',
-    assignee: { id: '3', name: '張小芳', email: 'zhang@example.com', role: 'MANAGER' }
+    assignee: { id: '3', name: '張小芳', email: 'zhang@example.com', role: 'MANAGER' },
+    images: [
+      'https://source.unsplash.com/random/800x600/?security',
+      'https://source.unsplash.com/random/800x600/?camera'
+    ]
   },
   {
     id: '3',
@@ -79,7 +88,11 @@ const mockReports = [
     creatorId: '4',
     creator: { id: '4', name: '陳志明', email: 'chen@example.com', role: 'USER' },
     assigneeId: '3',
-    assignee: { id: '3', name: '張小芳', email: 'zhang@example.com', role: 'MANAGER' }
+    assignee: { id: '3', name: '張小芳', email: 'zhang@example.com', role: 'MANAGER' },
+    images: [
+      'https://source.unsplash.com/random/800x600/?air-conditioner',
+      'https://source.unsplash.com/random/800x600/?meeting-room'
+    ]
   },
   {
     id: '4',
@@ -96,7 +109,12 @@ const mockReports = [
     assigneeId: '5',
     assignee: { id: '5', name: '林美玲', email: 'lin@example.com', role: 'MANAGER' },
     reviewerId: '6',
-    reviewer: { id: '6', name: '黃建國', email: 'huang@example.com', role: 'ADMIN' }
+    reviewer: { id: '6', name: '黃建國', email: 'huang@example.com', role: 'ADMIN' },
+    images: [
+      'https://source.unsplash.com/random/800x600/?water-leak',
+      'https://source.unsplash.com/random/800x600/?bathroom',
+      'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4'
+    ]
   },
   {
     id: '5',
@@ -109,7 +127,11 @@ const mockReports = [
     createdAt: new Date('2025-06-05T16:40:00Z'),
     updatedAt: new Date('2025-06-06T09:15:00Z'),
     creatorId: '4',
-    creator: { id: '4', name: '陳志明', email: 'chen@example.com', role: 'USER' }
+    creator: { id: '4', name: '陳志明', email: 'chen@example.com', role: 'USER' },
+    images: [
+      'https://source.unsplash.com/random/800x600/?security-guard',
+      'https://source.unsplash.com/random/800x600/?entrance'
+    ]
   }
 ];
 
