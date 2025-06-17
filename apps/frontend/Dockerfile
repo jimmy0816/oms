@@ -2,8 +2,7 @@
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# 安裝 pnpm 和 PostgreSQL 客戶端
-RUN apk add --no-cache postgresql-client
+# 安裝 pnpm
 RUN npm install -g pnpm
 
 # 複製 package.json 和 workspace 配置
@@ -12,7 +11,7 @@ COPY packages/shared-types/package.json ./packages/shared-types/
 COPY apps/frontend/package.json ./apps/frontend/
 
 # 安裝依賴
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # 複製源代碼
 COPY . .
@@ -22,7 +21,7 @@ RUN npm install -g typescript
 
 # 清除 node_modules 並重新安裝依賴
 RUN rm -rf node_modules
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # 建立 shared-types 包
 RUN cd packages/shared-types && tsc
@@ -32,6 +31,7 @@ RUN cd apps/frontend && pnpm add -D typescript@5.2.2 @types/react@18.2.21 @types
 
 # 設置 Docker 構建環境變數
 ENV DOCKER_BUILD=true
+ENV NEXT_PUBLIC_API_URL=https://oms-backend-url.run.app
 
 # 構建應用
 RUN cd apps/frontend && pnpm next build
@@ -51,6 +51,7 @@ RUN pnpm install --prod --frozen-lockfile
 COPY --from=builder /app/apps/frontend/.next ./apps/frontend/.next
 # 創建 public 目錄
 RUN mkdir -p /app/apps/frontend/public
+COPY --from=builder /app/apps/frontend/public ./apps/frontend/public
 # 複製必要的依賴
 COPY --from=builder /app/node_modules ./node_modules
 
