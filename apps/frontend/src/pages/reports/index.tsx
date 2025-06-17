@@ -51,9 +51,9 @@ const mockReports = [
     creatorId: '1',
     creator: { id: '1', name: '李小明', email: 'lee@example.com', role: 'USER' },
     images: [
-      'https://source.unsplash.com/random/800x600/?elevator',
-      'https://source.unsplash.com/random/800x600/?broken',
-      'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4'
+      'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23eaeaea%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23757575%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E9%9B%BB%E6%A2%AF%E6%95%85%E9%9A%9C%E5%9C%96%E7%89%87%3C%2Ftext%3E%3C%2Fsvg%3E',
+      'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23f5f5f5%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23757575%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E6%95%85%E9%9A%9C%E8%A8%AD%E5%82%99%E5%9C%96%E7%89%87%3C%2Ftext%3E%3C%2Fsvg%3E',
+      'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23333333%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23ffffff%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E5%BD%B1%E7%89%87%E6%AA%94%E6%A1%88%3C%2Ftext%3E%3C%2Fsvg%3E'
     ]
   },
   {
@@ -71,8 +71,8 @@ const mockReports = [
     assigneeId: '3',
     assignee: { id: '3', name: '張小芳', email: 'zhang@example.com', role: 'MANAGER' },
     images: [
-      'https://source.unsplash.com/random/800x600/?security',
-      'https://source.unsplash.com/random/800x600/?camera'
+      'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23e6f7ff%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23333%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E6%B0%B4%E7%AE%A1%E6%BC%8F%E6%B0%B4%E5%9C%96%E7%89%87%3C%2Ftext%3E%3C%2Fsvg%3E',
+      'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23e3f2fd%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23333%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E6%B0%B4%E6%BA%A2%E5%87%BA%E5%9C%96%E7%89%87%3C%2Ftext%3E%3C%2Fsvg%3E'
     ]
   },
   {
@@ -90,8 +90,8 @@ const mockReports = [
     assigneeId: '3',
     assignee: { id: '3', name: '張小芳', email: 'zhang@example.com', role: 'MANAGER' },
     images: [
-      'https://source.unsplash.com/random/800x600/?air-conditioner',
-      'https://source.unsplash.com/random/800x600/?meeting-room'
+      'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23e8f5e9%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23333%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E7%A9%BA%E8%AA%BF%E6%95%85%E9%9A%9C%E5%9C%96%E7%89%87%3C%2Ftext%3E%3C%2Fsvg%3E',
+      'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23c8e6c9%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23333%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E6%BA%AB%E5%BA%A6%E8%A8%88%E7%95%B0%E5%B8%B8%3C%2Ftext%3E%3C%2Fsvg%3E'
     ]
   },
   {
@@ -111,9 +111,9 @@ const mockReports = [
     reviewerId: '6',
     reviewer: { id: '6', name: '黃建國', email: 'huang@example.com', role: 'ADMIN' },
     images: [
-      'https://source.unsplash.com/random/800x600/?water-leak',
-      'https://source.unsplash.com/random/800x600/?bathroom',
-      'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4'
+      'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23fff8e1%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23333%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E9%96%80%E7%A6%81%E6%95%85%E9%9A%9C%E5%9C%96%E7%89%87%3C%2Ftext%3E%3C%2Fsvg%3E',
+      'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23fff3e0%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23333%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E9%96%80%E7%A6%81%E6%95%85%E9%9A%9C%E7%89%B9%E5%AF%AB%3C%2Ftext%3E%3C%2Fsvg%3E',
+      'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23333333%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23ffffff%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E9%96%80%E7%A6%81%E6%95%85%E9%9A%9C%E5%BD%B1%E7%89%87%3C%2Ftext%3E%3C%2Fsvg%3E'
     ]
   },
   {
@@ -129,8 +129,8 @@ const mockReports = [
     creatorId: '4',
     creator: { id: '4', name: '陳志明', email: 'chen@example.com', role: 'USER' },
     images: [
-      'https://source.unsplash.com/random/800x600/?security-guard',
-      'https://source.unsplash.com/random/800x600/?entrance'
+      'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23ffebee%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23333%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E4%BF%9D%E5%85%A8%E4%BA%BA%E5%93%A1%E7%85%A7%E7%89%87%3C%2Ftext%3E%3C%2Fsvg%3E',
+      'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22600%22%20viewBox%3D%220%200%20800%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22800%22%20height%3D%22600%22%20fill%3D%22%23ffcdd2%22%2F%3E%3Ctext%20x%3D%22400%22%20y%3D%22300%22%20style%3D%22fill%3A%23333%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%3Bfont-size%3A40px%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3E%E5%89%8D%E9%96%80%E7%85%A7%E7%89%87%3C%2Ftext%3E%3C%2Fsvg%3E'
     ]
   }
 ];

@@ -6,11 +6,5 @@ const nextConfig = {
   }
 };
 
-// Export with server configuration
-module.exports = {
-  ...nextConfig,
-  // Change the port to 3002 to avoid conflicts
-  devServer: {
-    port: 3002,
-  }
-};
+// Export the configuration
+module.exports = nextConfig;

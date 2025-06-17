@@ -1,0 +1,32 @@
+steps:
+  # 構建 Docker 鏡像
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/oms-frontend:$COMMIT_SHA', '-f', 'apps/frontend/Dockerfile', '.']
+
+  # 推送鏡像到 Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/oms-frontend:$COMMIT_SHA']
+
+  # 部署到 Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'oms-frontend'
+      - '--image=gcr.io/$PROJECT_ID/oms-frontend:$COMMIT_SHA'
+      - '--region=asia-east1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=NEXT_PUBLIC_API_URL=${_BACKEND_URL}'
+
+# 替換變數
+substitutions:
+  _BACKEND_URL: 'https://oms-backend-url.run.app' # 將在 Cloud Build 觸發器中設置為後端服務的 URL
+
+# 構建的鏡像
+images:
+  - 'gcr.io/$PROJECT_ID/oms-frontend:$COMMIT_SHA'
+
+# 超時設置
+timeout: '1800s'
