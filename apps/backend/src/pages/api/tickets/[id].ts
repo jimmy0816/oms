@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
-import { ApiResponse, Ticket, UpdateTicketRequest } from 'shared-types';
+import { ApiResponse, Ticket, UpdateTicketRequest, TicketStatus, TicketPriority } from 'shared-types';
 import cors from 'cors';
 
 // Helper function to run middleware
@@ -89,7 +89,14 @@ async function getTicket(id: string, res: NextApiResponse<ApiResponse<Ticket>>) 
     return res.status(404).json({ success: false, error: 'Ticket not found' });
   }
 
-  return res.status(200).json({ success: true, data: ticket });
+  // 確保 status 和 priority 屬性都是正確的枚舉類型
+  const ticketWithCorrectTypes: Ticket = {
+    ...ticket,
+    status: ticket.status as unknown as TicketStatus,
+    priority: ticket.priority as unknown as TicketPriority,
+  };
+
+  return res.status(200).json({ success: true, data: ticketWithCorrectTypes });
 }
 
 async function updateTicket(
@@ -159,7 +166,14 @@ async function updateTicket(
     });
   }
 
-  return res.status(200).json({ success: true, data: updatedTicket });
+  // 確保 status 和 priority 屬性都是正確的枚舉類型
+  const ticketWithCorrectTypes: Ticket = {
+    ...updatedTicket,
+    status: updatedTicket.status as unknown as TicketStatus,
+    priority: updatedTicket.priority as unknown as TicketPriority,
+  };
+
+  return res.status(200).json({ success: true, data: ticketWithCorrectTypes });
 }
 
 async function deleteTicket(id: string, res: NextApiResponse<ApiResponse<Ticket>>) {
@@ -184,5 +198,12 @@ async function deleteTicket(id: string, res: NextApiResponse<ApiResponse<Ticket>
     where: { id },
   });
 
-  return res.status(200).json({ success: true, data: deletedTicket });
+  // 確保 status 和 priority 屬性都是正確的枚舉類型
+  const ticketWithCorrectTypes: Ticket = {
+    ...deletedTicket,
+    status: deletedTicket.status as unknown as TicketStatus,
+    priority: deletedTicket.priority as unknown as TicketPriority,
+  };
+
+  return res.status(200).json({ success: true, data: ticketWithCorrectTypes });
 }

@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
-import { ApiResponse, CreateTicketRequest, PaginatedResponse, Ticket } from 'shared-types';
+import { ApiResponse, CreateTicketRequest, PaginatedResponse, Ticket, TicketStatus, TicketPriority } from 'shared-types';
 import cors from 'cors';
 
 // Helper function to run middleware
@@ -91,10 +91,17 @@ async function getTickets(
     prisma.ticket.count({ where }),
   ]);
 
+  // 確保每個 ticket 的 status 和 priority 屬性都是正確的枚舉類型
+  const ticketsWithCorrectTypes = tickets.map(ticket => ({
+    ...ticket,
+    status: ticket.status as unknown as TicketStatus,
+    priority: ticket.priority as unknown as TicketPriority,
+  }));
+
   return res.status(200).json({
     success: true,
     data: {
-      items: tickets,
+      items: ticketsWithCorrectTypes,
       total,
       page,
       pageSize,
@@ -125,6 +132,7 @@ async function createTicket(
       title,
       description,
       priority,
+      status: TicketStatus.PENDING, // 設置默認狀態為待接單
       creatorId,
       assigneeId,
     },
@@ -142,8 +150,15 @@ async function createTicket(
     });
   }
 
+  // 確保 status 和 priority 屬性都是正確的枚舉類型
+  const ticketWithCorrectTypes: Ticket = {
+    ...ticket,
+    status: ticket.status as unknown as TicketStatus,
+    priority: ticket.priority as unknown as TicketPriority,
+  };
+
   return res.status(201).json({
     success: true,
-    data: ticket,
+    data: ticketWithCorrectTypes,
   });
 }
