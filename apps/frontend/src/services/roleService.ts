@@ -1,11 +1,11 @@
 import { UserRole, Permission, ROLE_PERMISSIONS } from 'shared-types';
 
-// 本地存儲的鍵名
-const STORAGE_KEY = 'oms-role-permissions';
+// 獲取 API URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 /**
  * 角色權限管理服務
- * 在原型階段直接使用 localStorage 存儲權限數據
+ * 使用後端 API 管理角色權限
  */
 export const roleService = {
   /**
@@ -14,14 +14,15 @@ export const roleService = {
    */
   async getAllRolePermissions(): Promise<Record<string, Permission[]>> {
     try {
-      // 從 localStorage 獲取權限，如果不存在則使用默認值
-      const storedPermissions = localStorage.getItem(STORAGE_KEY);
-      if (storedPermissions) {
-        return JSON.parse(storedPermissions);
+      // 從後端 API 獲取權限數據
+      const response = await fetch(`${API_URL}/api/roles`);
+      
+      if (!response.ok) {
+        throw new Error(`API 錯誤: ${response.status}`);
       }
       
-      // 如果沒有存儲的權限，返回默認值
-      return { ...ROLE_PERMISSIONS };
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error('Error fetching role permissions:', error);
       // 如果出錯，返回默認權限
@@ -36,11 +37,15 @@ export const roleService = {
    */
   async getRolePermissions(role: UserRole): Promise<Permission[]> {
     try {
-      // 從 localStorage 獲取所有角色權限
-      const allPermissions = await this.getAllRolePermissions();
+      // 從後端 API 獲取特定角色的權限
+      const response = await fetch(`${API_URL}/api/roles/${role}`);
       
-      // 返回特定角色的權限，如果不存在則返回空數組
-      return allPermissions[role] || [];
+      if (!response.ok) {
+        throw new Error(`API 錯誤: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.permissions || [];
     } catch (error) {
       console.error(`Error fetching permissions for role ${role}:`, error);
       // 如果出錯，返回默認權限
@@ -56,14 +61,20 @@ export const roleService = {
    */
   async updateRolePermissions(role: UserRole, permissions: Permission[]): Promise<{ success: boolean; message: string }> {
     try {
-      // 獲取當前所有角色權限
-      const allPermissions = await this.getAllRolePermissions();
+      // 將更新的權限發送到後端 API
+      const response = await fetch(`${API_URL}/api/roles/${role}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ permissions }),
+      });
       
-      // 更新特定角色的權限
-      allPermissions[role] = permissions;
+      if (!response.ok) {
+        throw new Error(`API 錯誤: ${response.status}`);
+      }
       
-      // 保存到 localStorage
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(allPermissions));
+      const result = await response.json();
       
       return { 
         success: true, 
@@ -85,14 +96,19 @@ export const roleService = {
    */
   async resetRolePermissions(role: UserRole): Promise<{ success: boolean; message: string }> {
     try {
-      // 獲取當前所有角色權限
-      const allPermissions = await this.getAllRolePermissions();
+      // 將重置請求發送到後端 API
+      const response = await fetch(`${API_URL}/api/roles/${role}/reset`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
-      // 重置為默認值
-      allPermissions[role] = [...ROLE_PERMISSIONS[role]];
+      if (!response.ok) {
+        throw new Error(`API 錯誤: ${response.status}`);
+      }
       
-      // 保存到 localStorage
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(allPermissions));
+      const result = await response.json();
       
       return { 
         success: true, 

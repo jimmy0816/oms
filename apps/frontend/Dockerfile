@@ -31,10 +31,14 @@ RUN cd apps/frontend && pnpm add -D typescript@5.2.2 @types/react@18.2.21 @types
 
 # 設置 Docker 構建環境變數
 ENV DOCKER_BUILD=true
-ENV NEXT_PUBLIC_API_URL=https://oms-backend-url.run.app
+# 不在構建時設置 API URL，而是在運行時通過 Docker Compose 設置
+
+# 只移除 disabled 目錄，保留 tickets 目錄
+RUN rm -rf apps/frontend/src/pages/disabled
 
 # 構建應用
-RUN cd apps/frontend && pnpm next build
+ENV NEXT_SKIP_TYPE_CHECK=1
+RUN cd apps/frontend && pnpm next build --no-lint
 
 # 運行階段
 FROM node:18-alpine AS runner

@@ -6,130 +6,51 @@ import {
   MagnifyingGlassIcon,
   PlusIcon
 } from '@heroicons/react/24/outline';
-import { TicketPriority, TicketStatus, TicketPermission, UserRole } from 'shared-types';
+import { TicketPriority, TicketStatus, TicketPermission, UserRole, Ticket } from 'shared-types';
+import ticketService from '../../services/ticketService';
 
 export default function TicketsPage() {
-  // 默認的模擬工單數據
-  const defaultTickets = [
-    { 
-      id: '1', 
-      title: '系統登入問題', 
-      description: '用戶無法登入系統',
-      status: TicketStatus.PENDING, 
-      priority: TicketPriority.HIGH, 
-      createdAt: '2025-06-09T10:30:00Z',
-      creator: { id: '1', name: '李小明', role: 'REPORT_PROCESSOR' },
-      assignee: null,
-      activityLogs: [
-        {
-          id: 'activity-1',
-          type: 'CREATE',
-          timestamp: '2025-06-09T10:30:00Z',
-          user: { id: '1', name: '李小明' },
-          details: { title: '系統登入問題', priority: 'HIGH' }
-        }
-      ]
-    },
-    { 
-      id: '2', 
-      title: '報表產生失敗', 
-      description: '月度報表無法正確產生',
-      status: TicketStatus.IN_PROGRESS, 
-      priority: TicketPriority.MEDIUM, 
-      createdAt: '2025-06-08T14:20:00Z',
-      creator: { id: '1', name: '李小明', role: 'REPORT_PROCESSOR' },
-      assignee: { id: '3', name: '張小芳', role: 'MAINTENANCE_WORKER' },
-      activityLogs: [
-        {
-          id: 'activity-2-1',
-          type: 'CREATE',
-          timestamp: '2025-06-08T14:20:00Z',
-          user: { id: '1', name: '李小明' },
-          details: { title: '報表產生失敗', priority: 'MEDIUM' }
-        },
-        {
-          id: 'activity-2-2',
-          type: 'CLAIM_WORK_ORDERS',
-          timestamp: '2025-06-08T15:30:00Z',
-          user: { id: '3', name: '張小芳' },
-          details: { previousStatus: 'PENDING', newStatus: 'IN_PROGRESS' }
-        }
-      ]
-    },
-    { 
-      id: '3', 
-      title: '用戶權限問題', 
-      description: '新用戶無法訪問所需模塊',
-      status: TicketStatus.COMPLETED, 
-      priority: TicketPriority.LOW, 
-      createdAt: '2025-06-07T09:15:00Z',
-      creator: { id: '3', name: '張小芳', role: 'CUSTOMER_SERVICE' },
-      assignee: { id: '4', name: '陳志明', role: 'MAINTENANCE_WORKER' },
-      activityLogs: [
-        {
-          id: 'activity-3-1',
-          type: 'CREATE',
-          timestamp: '2025-06-07T09:15:00Z',
-          user: { id: '3', name: '張小芳' },
-          details: { title: '用戶權限問題', priority: 'LOW' }
-        },
-        {
-          id: 'activity-3-2',
-          type: 'CLAIM_WORK_ORDERS',
-          timestamp: '2025-06-07T10:20:00Z',
-          user: { id: '4', name: '陳志明' },
-          details: { previousStatus: 'PENDING', newStatus: 'IN_PROGRESS' }
-        },
-        {
-          id: 'activity-3-3',
-          type: 'COMPLETE_OR_FAIL_WORK_ORDERS',
-          timestamp: '2025-06-07T14:45:00Z',
-          user: { id: '4', name: '陳志明' },
-          details: { previousStatus: 'IN_PROGRESS', newStatus: 'COMPLETED' }
-        }
-      ]
-    },
-  ];
-  
-  const [tickets, setTickets] = useState([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // 從 localStorage 加載工單數據
-  useEffect(() => {
-    const loadTickets = () => {
-      try {
-        const savedTicketsStr = localStorage.getItem('oms-tickets');
-        
-        if (savedTicketsStr) {
-          // 解析 JSON 數據
-          const savedTickets = JSON.parse(savedTicketsStr);
-          if (Array.isArray(savedTickets) && savedTickets.length > 0) {
-            setTickets(savedTickets);
-          } else {
-            // 如果沒有保存的工單或格式不正確，使用默認數據
-            setTickets(defaultTickets);
-          }
-        } else {
-          // 如果 localStorage 中沒有數據，使用默認數據
-          setTickets(defaultTickets);
-        }
-      } catch (error) {
-        console.error('加載工單數據時出錯:', error);
-        // 出錯時使用默認數據
-        setTickets(defaultTickets);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadTickets();
-  }, []);
-
+  const [totalTickets, setTotalTickets] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
   const [filters, setFilters] = useState({
     status: '',
     priority: '',
     search: '',
   });
+
+  // 處理頁面變更
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  // 從 API 加載工單數據
+  useEffect(() => {
+    const loadTickets = async () => {
+      try {
+        setLoading(true);
+        // 構建過濾條件
+        const apiFilters: Record<string, string> = {};
+        if (filters.status) apiFilters.status = filters.status;
+        if (filters.priority) apiFilters.priority = filters.priority;
+        
+        // 調用 API 獲取工單
+        const ticketsData = await ticketService.getAllTickets(currentPage, pageSize, apiFilters);
+        
+        setTickets(ticketsData.items);
+        setTotalTickets(ticketsData.total);
+      } catch (error) {
+        console.error('加載工單數據時出錯:', error);
+        setTickets([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTickets();
+  }, [currentPage, pageSize, filters.status, filters.priority]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

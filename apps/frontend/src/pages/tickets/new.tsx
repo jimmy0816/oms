@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { TicketPriority, TicketStatus } from 'shared-types';
 import FileUploader, { UploadedFile } from '../../components/FileUploader';
+import ticketService from '../../services/ticketService';
 
 // 定義表單資料型別
 interface TicketFormData {
@@ -24,15 +25,20 @@ export default function NewTicket() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   
-  // 模擬用戶數據
-  const users = [
-    { id: '1', name: '李小明', role: 'REPORT_PROCESSOR' },
-    { id: '2', name: '王大明', role: 'REPORT_REVIEWER' },
-    { id: '3', name: '張小芳', role: 'CUSTOMER_SERVICE' },
-    { id: '4', name: '陳志明', role: 'MAINTENANCE_WORKER' },
-    { id: '5', name: '林小楠', role: 'MAINTENANCE_WORKER' },
-  ];
+  // 從後端 API 獲取用戶數據
+  useEffect(() => {
+    // 在實際應用中，這裡會從 API 獲取用戶列表
+    // 目前使用模擬數據
+    setUsers([
+      { id: '1', name: '李小明', role: 'REPORT_PROCESSOR' },
+      { id: '2', name: '王大明', role: 'REPORT_REVIEWER' },
+      { id: '3', name: '張小芳', role: 'CUSTOMER_SERVICE' },
+      { id: '4', name: '陳志明', role: 'MAINTENANCE_WORKER' },
+      { id: '5', name: '林小楠', role: 'MAINTENANCE_WORKER' },
+    ]);
+  }, []);
   
   const { register, handleSubmit, formState: { errors } } = useForm<TicketFormData>();
   
@@ -46,105 +52,37 @@ export default function NewTicket() {
     setError(null);
     
     try {
-      // 在實際應用中，這裡會呼叫 API 建立工單
       console.log('提交工單資料:', data);
       console.log('上傳檔案:', uploadedFiles);
       
-      // 模擬 API 呼叫延遲
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // 創建新工單物件
-      const now = new Date();
-      const timestamp = now.toISOString();
-      
-      // 處理檔案資訊 (實際環境中會上傳到伺服器)
-      const attachments = uploadedFiles.map(file => ({
-        id: file.id,
-        name: file.file.name,
-        type: file.type,
-        size: file.file.size,
-        url: file.previewUrl // 實際環境中這會是伺服器上的 URL
-      }));
-      
-      // 創建活動記錄
-      const createActivityLog = {
-        id: `activity-${Date.now()}`,
-        type: 'CREATE',
-        timestamp,
-        user: { id: '1', name: '李小明', role: 'REPORT_PROCESSOR' },
-        details: {
-          title: data.title,
-          priority: data.priority,
-          attachmentCount: attachments.length
-        }
-      };
-      
-      // 如果有指派人員，增加指派活動記錄
-      let assignActivityLog = null;
-      if (data.assigneeId) {
-        const assignee = users.find(u => u.id === data.assigneeId);
-        assignActivityLog = {
-          id: `activity-${Date.now() + 1}`,
-          type: 'ASSIGN',
-          timestamp,
-          user: { id: '1', name: '李小明', role: 'REPORT_PROCESSOR' },
-          details: {
-            assigneeId: data.assigneeId,
-            assigneeName: assignee ? assignee.name : '未知用戶',
-            assigneeRole: assignee ? assignee.role : ''
-          }
-        };
-      }
-      
-      const newTicket = {
-        id: `ticket-${Date.now()}`,
+      // 準備要發送到後端 API 的數據
+      const ticketData = {
         title: data.title,
         description: data.description,
-        status: TicketStatus.PENDING, // 初始狀態為「待接單」
         priority: data.priority,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        creatorId: '1', // 假設當前用戶 ID
-        creator: { id: '1', name: '李小明', role: 'REPORT_PROCESSOR' },
-        assigneeId: data.assigneeId || null,
-        assignee: data.assigneeId ? users.find(u => u.id === data.assigneeId) : null,
-        comments: [],
-        attachments: attachments, // 新增附件資訊
-        activityLogs: assignActivityLog ? 
-          [createActivityLog, assignActivityLog] : 
-          [createActivityLog]
+        assigneeId: data.assigneeId || undefined,
+        // 如果有上傳文件，將其轉換為 URL 數組
+        attachments: uploadedFiles.map(file => ({
+          name: file.file.name,
+          type: file.type,
+          size: file.file.size,
+          url: file.previewUrl // 實際環境中這會是伺服器上的 URL
+        }))
       };
       
-      // 從 localStorage 讀取現有工單
-      const existingTicketsStr = localStorage.getItem('oms-tickets');
-      let existingTickets = [];
+      // 調用 ticketService 將數據發送到後端 API
+      const createdTicket = await ticketService.createTicket(ticketData);
       
-      if (existingTicketsStr) {
-        try {
-          const parsed = JSON.parse(existingTicketsStr);
-          // 確保是數組
-          existingTickets = Array.isArray(parsed) ? parsed : [];
-        } catch (e) {
-          console.error('解析現有工單時出錯:', e);
-          // 解析錯誤時使用空數組
-          existingTickets = [];
-        }
-      }
-      
-      // 將新工單添加到列表中
-      const updatedTickets = [newTicket, ...existingTickets];
-      
-      // 存回 localStorage
-      localStorage.setItem('oms-tickets', JSON.stringify(updatedTickets));
+      console.log('工單創建成功:', createdTicket);
       
       // 顯示成功訊息
       alert('工單已成功建立！');
       
       // 導向到工單列表頁面
       router.push('/tickets');
-    } catch (err) {
+    } catch (err: any) {
       console.error('建立工單時發生錯誤:', err);
-      setError('建立工單時發生錯誤，請稍後再試。');
+      setError(err.message || '建立工單時發生錯誤，請稍後再試。');
     } finally {
       setIsSubmitting(false);
     }
