@@ -1,11 +1,11 @@
 steps:
   # 構建 Docker 鏡像
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/oms-frontend:$COMMIT_SHA', '-f', 'apps/frontend/Dockerfile', '.']
+    args: ['build', '-t', 'asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA', '-f', 'apps/frontend/Dockerfile', '.']
 
-  # 推送鏡像到 Container Registry
+  # 推送 Docker 鏡像
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/oms-frontend:$COMMIT_SHA']
+    args: ['push', 'asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA']
 
   # 部署到 Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -14,7 +14,7 @@ steps:
       - 'run'
       - 'deploy'
       - 'oms-frontend'
-      - '--image=gcr.io/$PROJECT_ID/oms-frontend:$COMMIT_SHA'
+      - '--image=asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA'
       - '--region=asia-east1'
       - '--platform=managed'
       - '--allow-unauthenticated'
