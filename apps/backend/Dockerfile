@@ -32,7 +32,7 @@ RUN apk add --no-cache openssl
 RUN cd packages/shared-types && tsc
 
 # 生成 Prisma 客戶端
-RUN cd packages/prisma-client && npx prisma generate
+RUN cd packages/prisma-client && npx prisma generate --schema=./prisma/schema.prisma
 
 # 建立 prisma-client 包
 RUN cd packages/prisma-client && tsc
@@ -41,11 +41,12 @@ RUN cd packages/prisma-client && tsc
 RUN cd apps/backend && pnpm next build
 
 # 運行階段
-FROM node:18-alpine AS runner
+# 使用較舊的 Alpine 版本，其中包含 OpenSSL 1.1
+FROM node:18-alpine3.15 AS runner
 WORKDIR /app
 
-# 安裝 PostgreSQL 客戶端
-RUN apk add --no-cache postgresql-client
+# 安裝 PostgreSQL 客戶端和 OpenSSL 依賴
+RUN apk add --no-cache postgresql-client openssl
 
 # 安裝生產依賴
 RUN npm install -g pnpm
@@ -59,6 +60,11 @@ RUN pnpm install --prod
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
 COPY --from=builder /app/packages/prisma-client/prisma ./packages/prisma-client/prisma
 COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./packages/prisma-client/node_modules/.prisma
+
+# 確保 Prisma 客戶端可以被正確導入
+COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./apps/backend/node_modules/@prisma/client
+RUN mkdir -p ./apps/backend/node_modules/.prisma
+COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./apps/backend/node_modules/.prisma
 
 # 複製必要的依賴
 COPY --from=builder /app/node_modules ./node_modules
