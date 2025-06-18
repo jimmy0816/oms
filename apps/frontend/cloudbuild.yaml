@@ -1,4 +1,14 @@
 steps:
+  # 確保 Artifact Registry API 已啟用
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud services enable artifactregistry.googleapis.com
+        echo "Waiting for API to be fully enabled..."
+        sleep 10
+
   # 創建 Artifact Registry 儲存庫
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
@@ -6,6 +16,10 @@ steps:
       - '-c'
       - |
         gcloud artifacts repositories create oms --repository-format=docker --location=asia-east1 --quiet || echo "Repository may already exist"
+        echo "Waiting for repository to be fully created..."
+        sleep 10
+        gcloud artifacts repositories list --location=asia-east1
+        echo "Repository creation completed."
 
   # 構建 Docker 鏡像
   - name: 'gcr.io/cloud-builders/docker'
