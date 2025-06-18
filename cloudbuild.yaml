@@ -1,4 +1,12 @@
 steps:
+  # 创建 Artifact Registry 倉庫
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud artifacts repositories create oms --repository-format=docker --location=asia-east1 --quiet || echo "Repository may already exist"
+
   # 前端構建
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA', '-f', 'apps/frontend/Dockerfile', '.']
