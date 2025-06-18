@@ -35,8 +35,24 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/oms
       - JWT_SECRET=local_development_secret
       - NODE_ENV=development
+      - PRISMA_SCHEMA_PATH=/app/packages/prisma-client/prisma/schema.prisma
+      - PRISMA_GENERATE_DATAPROXY=false
     depends_on:
       - db
+      
+  # 前端服務
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:3001/api
+      - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_SKIP_TYPE_CHECK=1
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
