@@ -1,4 +1,12 @@
 steps:
+  # 創建 Artifact Registry 儲存庫
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud artifacts repositories create oms --repository-format=docker --location=asia-east1 --quiet || echo "Repository may already exist"
+
   # 構建 Docker 鏡像
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA', '-f', 'apps/frontend/Dockerfile', '.']
@@ -26,7 +34,7 @@ substitutions:
 
 # 構建的鏡像
 images:
-  - 'gcr.io/$PROJECT_ID/oms-frontend:$COMMIT_SHA'
+  - 'asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA'
 
 # 超時設置
 timeout: '1800s'
