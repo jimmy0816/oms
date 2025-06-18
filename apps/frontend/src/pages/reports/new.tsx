@@ -9,13 +9,8 @@ import {
 } from '@heroicons/react/24/outline';
 import CategorySelector from '../../components/CategorySelector';
 import FileUploader, { UploadedFile } from '../../components/FileUploader';
-// 直接定義報告狀態常量，避免依賴 shared-types 中的枚舉
-const ReportPriority = {
-  LOW: 'LOW',
-  MEDIUM: 'MEDIUM',
-  HIGH: 'HIGH',
-  URGENT: 'URGENT'
-};
+import reportService, { ReportPriority } from '../../services/reportService';
+// 使用從 reportService 導入的 ReportPriority
 
 // 不再使用舊的分類常量，改用 CategorySelector 中的三層級分類
 
@@ -73,58 +68,23 @@ export default function NewReport() {
     }
     
     try {
-      // 在實際應用中，這裡會先上傳圖片，然後將圖片資訊加入到 data 中
-      // 轉換上傳檔案為檔案資訊
-      const attachments = uploadedFiles.map((file) => ({
-        id: file.id,
-        name: file.name,
-        url: file.url || file.previewUrl,
-        type: file.type,
-        size: file.size
-      }));
-      
-      // 建立新通報物件
-      const now = new Date();
-      const newReport = {
-        id: `${Date.now()}`, // 使用時間戳作為 ID
+      // 準備要發送到後端 API 的數據
+      const reportData = {
         title: data.title,
         description: data.description,
-        status: 'UNCONFIRMED', // 新通報預設狀態
         priority: data.priority,
-        category: 'OTHER', // 使用舊的類別常量，確保列表頁面能識別
-        categoryId: data.categoryId, // 存儲新的分類 ID
-        categoryPath: data.categoryPath, // 存儲分類路徑
+        category: selectedCategoryPath.split('/')[0] || 'OTHER', // 使用第一級分類作為主分類
         location: data.location,
-        createdAt: now,
-        updatedAt: now,
-        creatorId: '1', // 模擬用戶 ID
-        creator: { id: '1', name: '管理員', email: 'admin@example.com', role: 'ADMIN' },
-        attachments: attachments
+        // 如果有上傳文件，將其轉換為 URL 數組
+        images: uploadedFiles.map(file => file.url || file.previewUrl)
       };
       
-      console.log('提交通報資料:', newReport);
+      console.log('提交通報資料到後端 API:', reportData);
       
-      // 將新通報存入 localStorage
-      try {
-        // 先讀取現有通報
-        const savedReportsStr = localStorage.getItem('oms-reports');
-        let savedReports = [];
-        
-        if (savedReportsStr) {
-          savedReports = JSON.parse(savedReportsStr);
-        }
-        
-        // 添加新通報
-        savedReports.unshift(newReport); // 添加到最前面
-        
-        // 存回 localStorage
-        localStorage.setItem('oms-reports', JSON.stringify(savedReports));
-      } catch (storageErr) {
-        console.error('存儲通報失敗:', storageErr);
-      }
+      // 調用 reportService 將數據發送到後端 API
+      const createdReport = await reportService.createReport(reportData);
       
-      // 模擬 API 呼叫延遲
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('通報創建成功:', createdReport);
       
       // 先導航到通報列表頁面，然後再顯示成功訊息
       // 使用 Next.js 的路由器導航

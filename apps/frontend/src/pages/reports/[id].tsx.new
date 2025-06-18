@@ -339,23 +339,32 @@ export default function ReportDetail() {
               </div>
               
               {/* 顯示上傳的圖片和影片 */}
-              {report.images && report.images.length > 0 && (
+              {(report.attachments || report.images) && (report.attachments?.length > 0 || report.images?.length > 0) && (
                 <div className="mt-6 border-t border-gray-100 pt-4">
                   <h3 className="text-sm font-medium text-gray-500 mb-2">上傳的檔案</h3>
                   <FileUploader
                     files={
-                      report.images.map((image, index) => {
-                        // 檢查是否為影片檔案 - 第三個模擬為影片
-                        const isVideo = index === 2;
-                        
-                        return {
-                          id: `file-${index}`,
-                          name: isVideo ? `影片檔案 ${index + 1}` : `圖片檔案 ${index + 1}`,
-                          url: image,
-                          type: isVideo ? 'video' : 'image',
-                          previewUrl: image
-                        } as UploadedFile;
-                      })
+                      report.attachments 
+                        ? report.attachments.map((attachment) => ({
+                            id: attachment.id || `file-${attachment.name}`,
+                            name: attachment.name,
+                            url: attachment.url,
+                            type: attachment.type || 'image',
+                            previewUrl: attachment.url,
+                            size: attachment.size
+                          } as UploadedFile))
+                        : report.images.map((image, index) => {
+                            // 檢查是否為影片檔案 - 第三個模擬為影片
+                            const isVideo = index === 2;
+                            
+                            return {
+                              id: `file-${index}`,
+                              name: isVideo ? `影片檔案 ${index + 1}` : `圖片檔案 ${index + 1}`,
+                              url: image,
+                              type: isVideo ? 'video' : 'image',
+                              previewUrl: image
+                            } as UploadedFile;
+                          })
                     }
                     onFilesChange={() => {}}
                     viewOnly={true}
@@ -371,23 +380,23 @@ export default function ReportDetail() {
             
             <div className="flow-root">
               <ul className="-mb-8">
-                {report.comments && report.comments.map((event: any, eventIdx: number) => (
+                {report.history.map((event: any, eventIdx: number) => (
                   <li key={event.id}>
                     <div className="relative pb-8">
-                      {eventIdx !== report.comments.length - 1 ? (
+                      {eventIdx !== report.history.length - 1 ? (
                         <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
                       ) : null}
                       <div className="relative flex space-x-3">
                         <div>
-                          <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white bg-blue-100 text-blue-800`}>
+                          <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${getStatusColor(event.status)}`}>
                             <ClockIcon className="h-5 w-5" />
                           </span>
                         </div>
                         <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
                           <div>
                             <p className="text-sm text-gray-500">
-                              {report.status && getStatusName(report.status)}
-                              {event.content && <span className="font-medium text-gray-900"> - {event.content}</span>}
+                              {getStatusName(event.status)}
+                              {event.comment && <span className="font-medium text-gray-900"> - {event.comment}</span>}
                             </p>
                           </div>
                           <div className="text-right text-sm whitespace-nowrap text-gray-500">
