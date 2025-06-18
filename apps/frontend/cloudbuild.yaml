@@ -1,25 +1,33 @@
 steps:
-  # 確保 Artifact Registry API 已啟用
+  # 確保 Artifact Registry API 已啟用並設置 Docker 認證
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
         gcloud services enable artifactregistry.googleapis.com
-        echo "Waiting for API to be fully enabled..."
-        sleep 10
+        echo "Configuring Docker authentication..."
+        gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
+        echo "Docker authentication configured."
+        sleep 5
 
-  # 創建 Artifact Registry 儲存庫
+  # 創建 Artifact Registry 儲存庫並設置權限
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
+        echo "Creating repository..."
         gcloud artifacts repositories create oms --repository-format=docker --location=asia-east1 --quiet || echo "Repository may already exist"
-        echo "Waiting for repository to be fully created..."
-        sleep 10
+        echo "Setting repository permissions..."
+        PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
+        gcloud artifacts repositories add-iam-policy-binding oms \
+          --location=asia-east1 \
+          --member=serviceAccount:$PROJECT_NUMBER@cloudbuild.gserviceaccount.com \
+          --role=roles/artifactregistry.writer || echo "IAM binding may already exist"
+        echo "Verifying repository..."
         gcloud artifacts repositories list --location=asia-east1
-        echo "Repository creation completed."
+        echo "Repository setup completed."
 
   # 構建 Docker 鏡像
   - name: 'gcr.io/cloud-builders/docker'
