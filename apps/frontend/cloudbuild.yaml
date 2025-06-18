@@ -1,6 +1,6 @@
 steps:
   # 使用 Artifact Registry 而不是 Container Registry
-  - name: 'us-docker.pkg.dev/google-cloud-build-artifacts/cloud-sdk/gcloud'
+  - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
@@ -11,15 +11,15 @@ steps:
         echo "Docker authentication configured."
 
   # 構建 Docker 鏡像
-  - name: 'us-docker.pkg.dev/cloud-builders/docker'
+  - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA', '-f', 'apps/frontend/Dockerfile', '.']
 
   # 推送 Docker 鏡像
-  - name: 'us-docker.pkg.dev/cloud-builders/docker'
+  - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA']
 
   # 部署到 Cloud Run
-  - name: 'us-docker.pkg.dev/google-cloud-build-artifacts/cloud-sdk/gcloud'
+  - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: gcloud
     args:
       - 'run'
