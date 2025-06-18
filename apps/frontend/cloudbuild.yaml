@@ -1,31 +1,31 @@
 steps:
-  # 直接使用 gcr.io 而不是 Artifact Registry
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  # 使用 Artifact Registry 而不是 Container Registry
+  - name: 'us-docker.pkg.dev/google-cloud-build-artifacts/cloud-sdk/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        echo "Using Container Registry (gcr.io) which should be available by default"
+        echo "Using Artifact Registry instead of Container Registry"
         echo "Configuring Docker authentication..."
-        gcloud auth configure-docker --quiet
+        gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
         echo "Docker authentication configured."
 
   # 構建 Docker 鏡像
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/oms-frontend:$COMMIT_SHA', '-f', 'apps/frontend/Dockerfile', '.']
+  - name: 'us-docker.pkg.dev/cloud-builders/docker'
+    args: ['build', '-t', 'asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA', '-f', 'apps/frontend/Dockerfile', '.']
 
   # 推送 Docker 鏡像
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/oms-frontend:$COMMIT_SHA']
+  - name: 'us-docker.pkg.dev/cloud-builders/docker'
+    args: ['push', 'asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA']
 
   # 部署到 Cloud Run
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - name: 'us-docker.pkg.dev/google-cloud-build-artifacts/cloud-sdk/gcloud'
     entrypoint: gcloud
     args:
       - 'run'
       - 'deploy'
       - 'oms-frontend'
-      - '--image=gcr.io/$PROJECT_ID/oms-frontend:$COMMIT_SHA'
+      - '--image=asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA'
       - '--region=asia-east1'
       - '--platform=managed'
       - '--allow-unauthenticated'
@@ -37,7 +37,7 @@ substitutions:
 
 # 構建的鏡像
 images:
-  - 'gcr.io/$PROJECT_ID/oms-frontend:$COMMIT_SHA'
+  - 'asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA'
 
 # 超時設置
 timeout: '1800s'
