@@ -11,7 +11,8 @@ import {
   DocumentTextIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import { TicketStatus, TicketPriority, TicketPermission, UserRole } from 'shared-types';
+import { TicketStatus, TicketPriority, TicketPermission, UserRole, Ticket } from 'shared-types';
+import ticketService from '../../services/ticketService';
 
 // 定義活動記錄類型
 interface ActivityLog {
@@ -36,44 +37,24 @@ export default function TicketDetail() {
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   
-  // 從 localStorage 獲取工單詳情
+  // 從 API 獲取工單詳情
   useEffect(() => {
-    if (id) {
-      // 模擬加載延遲
-      setTimeout(() => {
-        try {
-          // 從 localStorage 獲取所有工單
-          const savedTicketsStr = localStorage.getItem('oms-tickets');
-          
-          if (savedTicketsStr) {
-            const savedTickets = JSON.parse(savedTicketsStr);
-            
-            // 查找指定 ID 的工單
-            const foundTicket = savedTickets.find((t: any) => t.id === id);
-            
-            if (foundTicket) {
-              // 確保工單有 comments 屬性
-              if (!foundTicket.comments) {
-                foundTicket.comments = [];
-              }
-              
-              setTicket(foundTicket);
-            } else {
-              // 找不到工單
-              setTicket(null);
-            }
-          } else {
-            // localStorage 中沒有工單數據
-            setTicket(null);
-          }
-        } catch (error) {
-          console.error('獲取工單詳情時出錯:', error);
-          setTicket(null);
-        } finally {
-          setLoading(false);
-        }
-      }, 500);
-    }
+    const fetchTicket = async () => {
+      if (!id) return;
+      
+      setLoading(true);
+      try {
+        const ticketData = await ticketService.getTicketById(id as string);
+        setTicket(ticketData);
+      } catch (error) {
+        console.error('獲取工單詳情時出錯:', error);
+        setTicket(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTicket();
   }, [id]);
 
   const getStatusColor = (status: TicketStatus) => {
@@ -171,75 +152,31 @@ export default function TicketDetail() {
       user: { id: '3', name: '系統管理員', role: 'REPORT_PROCESSOR' },
       details: { previousStatus: ticket.status, newStatus }
     };
-
-    const updatedTicket = {
-      ...ticket,
-      status: newStatus,
-      updatedAt: activityLog.timestamp,
-      activityLogs: [...(ticket.activityLogs || []), activityLog]
-    };
-
-    setTicket(updatedTicket);
-
-    // 更新 localStorage 中的工單數據
-    const savedTicketsStr = localStorage.getItem('oms-tickets');
-    if (savedTicketsStr) {
-      try {
-        const savedTickets = JSON.parse(savedTicketsStr);
-        const updatedTickets = savedTickets.map((t: any) => 
-          t.id === ticket.id ? updatedTicket : t
-        );
-        localStorage.setItem('oms-tickets', JSON.stringify(updatedTickets));
-      } catch (e) {
-        console.error('Error updating ticket in localStorage:', e);
-      }
     }
   };
 
-  const handleSubmitComment = (e: React.FormEvent) => {
+  const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ticket || !newComment.trim()) return;
-
-    const now = new Date();
-    const newCommentObj = {
-      id: `comment-${Date.now()}`,
-      content: newComment,
-      createdAt: now.toISOString(),
-      userId: '3', // 假設當前用戶 ID
-      user: { id: '3', name: '系統管理員', role: 'REPORT_PROCESSOR' }
-    };
-
-    // 創建活動記錄
-    const activityLog = {
-      id: `activity-${Date.now()}`,
-      type: 'COMMENT',
-      timestamp: now.toISOString(),
-      user: { id: '3', name: '系統管理員', role: 'REPORT_PROCESSOR' },
-      details: { commentId: newCommentObj.id, comment: newComment }
-    };
-
-    const updatedTicket = {
-      ...ticket,
-      comments: [...(ticket.comments || []), newCommentObj],
-      updatedAt: now.toISOString(),
-      activityLogs: [...(ticket.activityLogs || []), activityLog]
-    };
-
-    setTicket(updatedTicket);
-    setNewComment('');
-
-    // 更新 localStorage 中的工單數據
-    const savedTicketsStr = localStorage.getItem('oms-tickets');
-    if (savedTicketsStr) {
-      try {
-        const savedTickets = JSON.parse(savedTicketsStr);
-        const updatedTickets = savedTickets.map((t: any) => 
-          t.id === ticket.id ? updatedTicket : t
-        );
-        localStorage.setItem('oms-tickets', JSON.stringify(updatedTickets));
-      } catch (e) {
-        console.error('Error updating ticket comments in localStorage:', e);
-      }
+    // 確保 newComment 存在並且不為空
+    if (!newComment?.trim() || !ticket) return;
+    
+    setSubmittingComment(true);
+    
+    try {
+      // 調用 API 添加評論
+      // 在實際應用中，userId 應該從用戶會話中獲取
+      const userId = '1'; // 模擬當前用戶 ID
+      
+      await ticketService.addCommentToTicket(ticket.id, newComment, userId);
+      
+      // 重新獲取工單詳情以獲取最新的評論
+      const updatedTicket = await ticketService.getTicketById(ticket.id);
+      setTicket(updatedTicket);
+      setNewComment('');
+    } catch (error) {
+      console.error('添加評論時出錯:', error);
+    } finally {
+      setSubmittingComment(false);
     }
   };
 
@@ -381,38 +318,37 @@ export default function TicketDetail() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">建立者</h3>
-                  <div className="mt-1 flex items-center">
-                    <div className="flex-shrink-0">
-                      <UserCircleIcon className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <p className="ml-2 text-sm text-gray-900">{ticket.creator.name}</p>
+                  <div className="flex items-center space-x-2">
+                  <div className="flex-shrink-0">
+                    <UserCircleIcon className="h-5 w-5 text-gray-400" />
                   </div>
+                  <p className="text-sm font-medium text-gray-900">{ticket.creator?.name || '未知用戶'}</p>
                 </div>
-                
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">負責人</h3>
-                  <div className="mt-1 flex items-center">
-                    {ticket.assignee ? (
-                      <>
-                        <div className="flex-shrink-0">
-                          <UserCircleIcon className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <p className="ml-2 text-sm text-gray-900">{ticket.assignee.name}</p>
-                      </>
-                    ) : (
-                      <p className="text-sm text-gray-500">未指派</p>
-                    )}
-                  </div>
+                <div className="flex items-center">
+                  {ticket.assignee ? (
+                    <span className="text-sm text-gray-500">
+                      處理人: {ticket.assignee?.name || '未知用戶'}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-gray-500">未指派</span>
+                  )}
+                </div>
                 </div>
                 
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">建立時間</h3>
                   <div className="mt-1 flex items-center">
-                    <div className="flex-shrink-0">
-                      <ClockIcon className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <p className="ml-2 text-sm text-gray-900">{formatDate(ticket.createdAt)}</p>
-                  </div>
+                    <div className="flex items-center space-x-2">
+                  <ClockIcon className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-500">
+                    {new Date(ticket.createdAt as string).toLocaleDateString('zh-TW', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </span>
+                </div>
+                </div>
                 </div>
                 
                 <div>
