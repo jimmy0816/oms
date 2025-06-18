@@ -4,6 +4,7 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../node_modules/.prisma/client"
+  binaryTargets = ["native", "linux-musl"]
 }
 
 datasource db {
@@ -22,6 +23,8 @@ model User {
   ticketsCreated Ticket[] @relation("CreatedTickets")
   ticketsAssigned Ticket[] @relation("AssignedTickets")
   comments      Comment[]
+  reportsCreated Report[] @relation("CreatedReports")
+  reportsAssigned Report[] @relation("AssignedReports")
 }
 
 model Notification {
@@ -34,6 +37,8 @@ model Notification {
   user        User     @relation(fields: [userId], references: [id])
   relatedTicketId String?
   relatedTicket Ticket? @relation(fields: [relatedTicketId], references: [id])
+  relatedReportId String?
+  relatedReport Report? @relation(fields: [relatedReportId], references: [id])
 }
 
 model Ticket {
@@ -57,8 +62,31 @@ model Comment {
   content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  ticketId  String
-  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  ticketId  String?
+  ticket    Ticket?   @relation(fields: [ticketId], references: [id])
+  reportId  String?
+  report    Report?   @relation(fields: [reportId], references: [id])
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  location    String?
+  status      String   @default("PENDING") // PENDING, PROCESSING, RESOLVED, REJECTED
+  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  creatorId   String
+  creator     User     @relation("CreatedReports", fields: [creatorId], references: [id])
+  assigneeId  String?
+  assignee    User?    @relation("AssignedReports", fields: [assigneeId], references: [id])
+  comments    Comment[]
+  notifications Notification[]
+  images      String[]  // URLs to stored images
+  category    String?   // Category of the report (e.g., infrastructure, environment)
+  contactPhone String?  // Reporter's contact phone
+  contactEmail String?  // Reporter's contact email
 }
