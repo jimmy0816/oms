@@ -1,7 +1,8 @@
 import { User, UserRole } from 'shared-types';
 
 // API 基礎 URL
-const API_BASE_URL = '/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 /**
  * 用戶管理服務
@@ -15,25 +16,25 @@ export const userService = {
   async getAllUsers(): Promise<User[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/users`);
-      
+
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
-      
+
       const users = await response.json();
-      
+
       // 確保日期格式正確
       return users.map((user: any) => ({
         ...user,
         createdAt: new Date(user.createdAt),
-        updatedAt: new Date(user.updatedAt)
+        updatedAt: new Date(user.updatedAt),
       }));
     } catch (error) {
       console.error('Error fetching users:', error);
       return [];
     }
   },
-  
+
   /**
    * 根據 ID 獲取用戶
    * @param id 用戶 ID
@@ -42,34 +43,36 @@ export const userService = {
   async getUserById(id: string): Promise<User | null> {
     try {
       const response = await fetch(`${API_BASE_URL}/users/${id}`);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           return null;
         }
         throw new Error(`Error: ${response.status}`);
       }
-      
+
       const user = await response.json();
-      
+
       // 確保日期格式正確
       return {
         ...user,
         createdAt: new Date(user.createdAt),
-        updatedAt: new Date(user.updatedAt)
+        updatedAt: new Date(user.updatedAt),
       };
     } catch (error) {
       console.error(`Error fetching user with ID ${id}:`, error);
       return null;
     }
   },
-  
+
   /**
    * 創建新用戶
    * @param userData 用戶數據（不包含 ID、創建時間和更新時間）
    * @returns 創建的用戶對象
    */
-  async createUser(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
+  async createUser(
+    userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<User> {
     try {
       const response = await fetch(`${API_BASE_URL}/users`, {
         method: 'POST',
@@ -78,33 +81,36 @@ export const userService = {
         },
         body: JSON.stringify(userData),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Error: ${response.status}`);
       }
-      
+
       const newUser = await response.json();
-      
+
       // 確保日期格式正確
       return {
         ...newUser,
         createdAt: new Date(newUser.createdAt),
-        updatedAt: new Date(newUser.updatedAt)
+        updatedAt: new Date(newUser.updatedAt),
       };
     } catch (error) {
       console.error('Error creating user:', error);
       throw new Error('創建用戶失敗');
     }
   },
-  
+
   /**
    * 更新用戶
    * @param id 用戶 ID
    * @param userData 要更新的用戶數據
    * @returns 更新後的用戶對象
    */
-  async updateUser(id: string, userData: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>): Promise<User> {
+  async updateUser(
+    id: string,
+    userData: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<User> {
     try {
       const response = await fetch(`${API_BASE_URL}/users/${id}`, {
         method: 'PUT',
@@ -113,26 +119,26 @@ export const userService = {
         },
         body: JSON.stringify(userData),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Error: ${response.status}`);
       }
-      
+
       const updatedUser = await response.json();
-      
+
       // 確保日期格式正確
       return {
         ...updatedUser,
         createdAt: new Date(updatedUser.createdAt),
-        updatedAt: new Date(updatedUser.updatedAt)
+        updatedAt: new Date(updatedUser.updatedAt),
       };
     } catch (error) {
       console.error(`Error updating user with ID ${id}:`, error);
       throw new Error('更新用戶失敗');
     }
   },
-  
+
   /**
    * 刪除用戶
    * @param id 用戶 ID
@@ -143,21 +149,21 @@ export const userService = {
       const response = await fetch(`${API_BASE_URL}/users/${id}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           return false;
         }
         throw new Error(`Error: ${response.status}`);
       }
-      
+
       return true;
     } catch (error) {
       console.error(`Error deleting user with ID ${id}:`, error);
       return false;
     }
   },
-  
+
   /**
    * 更新用戶角色
    * @param id 用戶 ID
@@ -167,7 +173,7 @@ export const userService = {
   async updateUserRole(id: string, role: UserRole): Promise<User> {
     return this.updateUser(id, { role });
   },
-  
+
   /**
    * 獲取特定角色的所有用戶
    * @param role 角色
@@ -176,41 +182,43 @@ export const userService = {
   async getUsersByRole(role: UserRole): Promise<User[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/users?role=${role}`);
-      
+
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
-      
+
       const users = await response.json();
-      
+
       // 確保日期格式正確
       return users.map((user: any) => ({
         ...user,
         createdAt: new Date(user.createdAt),
-        updatedAt: new Date(user.updatedAt)
+        updatedAt: new Date(user.updatedAt),
       }));
     } catch (error) {
       console.error(`Error fetching users with role ${role}:`, error);
       return [];
     }
   },
-  
+
   /**
    * 獲取所有可用的角色
    * @returns 角色列表
    */
-  async getAllRoles(): Promise<{role: UserRole, count: number}[]> {
+  async getAllRoles(): Promise<{ role: UserRole; count: number }[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/users/roles`);
-      
+
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
-      
+
       return await response.json();
     } catch (error) {
       console.error('Error fetching roles:', error);
-      return Object.values(UserRole).map(role => ({ role, count: 0 }));
+      return Object.values(UserRole).map((role) => ({ role, count: 0 }));
     }
-  }
+  },
 };
+
+export default userService;

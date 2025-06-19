@@ -1,35 +1,20 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
-import { ApiResponse, Ticket, UpdateTicketRequest, TicketStatus, TicketPriority } from 'shared-types';
-import cors from 'cors';
+import {
+  ApiResponse,
+  Ticket,
+  UpdateTicketRequest,
+  TicketStatus,
+  TicketPriority,
+} from 'shared-types';
+import { withApiHandler } from '@/lib/api-handler';
 
-// Helper function to run middleware
-const runMiddleware = (req: NextApiRequest, res: NextApiResponse, fn: Function) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-};
-
-// Initialize CORS middleware
-const corsMiddleware = cors({
-  methods: ['GET', 'PUT', 'DELETE'],
-  origin: '*', // In production, specify your frontend URL
-});
-
-export default async function handler(
+export default withApiHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Ticket>>
 ) {
-  // Run the CORS middleware
-  await runMiddleware(req, res, corsMiddleware);
-
   const { id } = req.query;
-  
+
   if (!id || Array.isArray(id)) {
     return res.status(400).json({ success: false, error: 'Invalid ticket ID' });
   }
@@ -44,15 +29,23 @@ export default async function handler(
         return await deleteTicket(id, res);
       default:
         res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
-        return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
+        return res
+          .status(405)
+          .json({ success: false, error: `Method ${req.method} Not Allowed` });
     }
   } catch (error: any) {
     console.error('Error in ticket API:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Internal Server Error' });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal Server Error',
+    });
   }
-}
+});
 
-async function getTicket(id: string, res: NextApiResponse<ApiResponse<Ticket>>) {
+async function getTicket(
+  id: string,
+  res: NextApiResponse<ApiResponse<Ticket>>
+) {
   const ticket = await prisma.ticket.findUnique({
     where: { id },
     include: {
@@ -104,8 +97,9 @@ async function updateTicket(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Ticket>>
 ) {
-  const { title, description, status, priority, assigneeId } = req.body as UpdateTicketRequest;
-  
+  const { title, description, status, priority, assigneeId } =
+    req.body as UpdateTicketRequest;
+
   // Check if ticket exists
   const existingTicket = await prisma.ticket.findUnique({ where: { id } });
   if (!existingTicket) {
@@ -176,7 +170,10 @@ async function updateTicket(
   return res.status(200).json({ success: true, data: ticketWithCorrectTypes });
 }
 
-async function deleteTicket(id: string, res: NextApiResponse<ApiResponse<Ticket>>) {
+async function deleteTicket(
+  id: string,
+  res: NextApiResponse<ApiResponse<Ticket>>
+) {
   // Check if ticket exists
   const existingTicket = await prisma.ticket.findUnique({ where: { id } });
   if (!existingTicket) {

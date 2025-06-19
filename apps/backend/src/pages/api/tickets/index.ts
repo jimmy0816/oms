@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from 'prisma-client';
+import { prisma } from '@/lib/prisma';
 import {
   ApiResponse,
   CreateTicketRequest,
@@ -8,37 +8,12 @@ import {
   TicketStatus,
   TicketPriority,
 } from 'shared-types';
-import cors from 'cors';
+import { withApiHandler } from '@/lib/api-handler';
 
-// Helper function to run middleware
-const runMiddleware = (
-  req: NextApiRequest,
-  res: NextApiResponse,
-  fn: Function
-) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-};
-
-// Initialize CORS middleware
-const corsMiddleware = cors({
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  origin: '*', // In production, specify your frontend URL
-});
-
-export default async function handler(
+export default withApiHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Ticket | PaginatedResponse<Ticket>>>
 ) {
-  // Run the CORS middleware
-  await runMiddleware(req, res, corsMiddleware);
-
   try {
     switch (req.method) {
       case 'GET':
@@ -53,14 +28,12 @@ export default async function handler(
     }
   } catch (error: any) {
     console.error('Error in tickets API:', error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        error: error.message || 'Internal Server Error',
-      });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal Server Error',
+    });
   }
-}
+});
 
 async function getTickets(
   req: NextApiRequest,
