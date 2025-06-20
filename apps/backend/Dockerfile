@@ -28,12 +28,9 @@ COPY . .
 # This will automatically run `prisma generate` if it's part of the build script.
 RUN pnpm turbo run build --filter=backend...
 
-RUN ls -la /app/apps/backend
-
 # # Use pnpm deploy to create a pruned production-ready folder
 # # This copies only the necessary files and production dependencies for the backend app
 RUN pnpm --filter=backend deploy --prod /prod/app
-RUN ls -la /prod/app
 
 # RUN cp -r /app/apps/backend/.next /prod/app/apps/backend/.next
 
@@ -49,7 +46,7 @@ WORKDIR /app
 RUN apk add --no-cache openssl postgresql-client
 
 # Copy the pruned and built application from the builder stage
-COPY --from=builder /app .
+COPY --from=builder /prod/app .
 
 # Set environment for production
 ENV NODE_ENV=production
@@ -58,8 +55,5 @@ ENV PORT=8080
 # Expose the port the app runs on
 EXPOSE 8080
 
-# Set the working directory to the specific app
-WORKDIR /app/apps/backend
-
 # Start the app
-CMD ["../../node_modules/.bin/next", "start", "-p", "8080"]
+CMD ['./node_modules/.bin/next", "start", "-p", "8080"]
