@@ -48,3 +48,6 @@ images:
 # 替換變數，用於敏感資訊或環境特定配置
 substitutions:
   _DATABASE_URL: "your_actual_database_connection_string_here" # <-- 在 Cloud Build Trigger 中設定
+
+options:
+  logging: CLOUD_LOGGING_ONLY
