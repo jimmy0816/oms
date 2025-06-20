@@ -33,9 +33,9 @@ RUN ls -la /app/apps/backend
 # # Use pnpm deploy to create a pruned production-ready folder
 # # This copies only the necessary files and production dependencies for the backend app
 RUN pnpm --filter=backend deploy --prod /prod/app
-RUN ls -la /prod/app/apps/backend
+RUN ls -la /prod/app
 
-RUN cp -r /app/apps/backend/.next /prod/app/apps/backend/.next
+# RUN cp -r /app/apps/backend/.next /prod/app/apps/backend/.next
 
 
 # ---
@@ -49,7 +49,7 @@ WORKDIR /app
 RUN apk add --no-cache openssl postgresql-client
 
 # Copy the pruned and built application from the builder stage
-COPY --from=builder /prod/app .
+COPY --from=builder /app .
 
 # Set environment for production
 ENV NODE_ENV=production
