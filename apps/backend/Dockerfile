@@ -32,6 +32,8 @@ RUN pnpm turbo run build --filter=backend...
 # This copies only the necessary files and production dependencies for the backend app
 RUN pnpm --filter=backend deploy --prod /prod/app
 
+COPY /app/apps/backend/.next /prod/app/apps/backend/.next
+
 # ---
 
 # Stage 2: Final Runner Image
