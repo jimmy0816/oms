@@ -28,11 +28,15 @@ COPY . .
 # This will automatically run `prisma generate` if it's part of the build script.
 RUN pnpm turbo run build --filter=backend...
 
-# Use pnpm deploy to create a pruned production-ready folder
-# This copies only the necessary files and production dependencies for the backend app
+RUN ls -la /app/apps/backend
+
+# # Use pnpm deploy to create a pruned production-ready folder
+# # This copies only the necessary files and production dependencies for the backend app
 RUN pnpm --filter=backend deploy --prod /prod/app
 
 RUN cp -r /app/apps/backend/.next /prod/app/apps/backend/.next
+
+RUN ls -la /prod/app/apps/backend
 
 # ---
 
