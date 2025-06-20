@@ -43,7 +43,7 @@ steps:
     # - '--timeout' # 請求超時時間 (例如: 300s)
     # - '300'
 images:
-  - "gcr.io/$PROJECT_ID/backend-service:$COMMIT_SHA"
+  - "gcr.io/$PROJECT_ID/oms-backend-service:$COMMIT_SHA"
 
 # 替換變數，用於敏感資訊或環境特定配置
 substitutions:
