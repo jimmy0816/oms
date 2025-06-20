@@ -56,4 +56,5 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Start the app
-CMD ['./node_modules/.bin/next", "start", "-p", "8080"]
+CMD ["node_modules/.bin/next", "start", "-p", "8080"]
+# CMD ["pnpm", "next", "start", "-p", "8080"]
