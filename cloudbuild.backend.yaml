@@ -5,13 +5,17 @@ steps:
     args:
       - "build"
       - "-t"
-      - "gcr.io/$PROJECT_ID/oms-backend-service:$COMMIT_SHA" # 映像名稱和標籤
+      - "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA" # 映像名稱和標籤
       - "-f"
       - "apps/backend/Dockerfile" # 指定 Dockerfile 路徑
       - "." # Docker Build Context 為 monorepo 根目錄 (非常重要)
   # 步驟 2: 推送 Docker 映像到 Google Container Registry (GCR)
   - name: "gcr.io/cloud-builders/docker"
-    args: ["push", "gcr.io/$PROJECT_ID/oms-backend-service:$COMMIT_SHA"]
+    args:
+      [
+        "push",
+        "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA",
+      ]
   # 步驟 3: 部署到 Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
@@ -20,7 +24,7 @@ steps:
       - "deploy"
       - "oms-backend-service" # Cloud Run 服務名稱
       - "--image"
-      - "gcr.io/$PROJECT_ID/oms-backend-service:$COMMIT_SHA"
+      - "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA"
       - "--region"
       - "asia-east1" # 替換為你的 GCP 區域 (例如 asia-east1, us-central1)
       - "--platform"
@@ -43,7 +47,7 @@ steps:
     # - '--timeout' # 請求超時時間 (例如: 300s)
     # - '300'
 images:
-  - "gcr.io/$PROJECT_ID/oms-backend-service:$COMMIT_SHA"
+  - "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA"
 
 # 替換變數，用於敏感資訊或環境特定配置
 substitutions:
