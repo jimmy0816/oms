@@ -4,6 +4,7 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  additionalRoles?: string[]; // 用戶的額外角色列表
   createdAt: Date;
   updatedAt: Date;
 }

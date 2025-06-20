@@ -16,7 +16,7 @@ model User {
   id            String    @id @default(uuid())
   email         String    @unique
   name          String
-  role          String    @default("USER") // USER, ADMIN, MANAGER
+  role          String    @default("USER") // USER, ADMIN, MANAGER (保留向後兼容)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   notifications Notification[]
@@ -25,6 +25,7 @@ model User {
   comments      Comment[]
   reportsCreated Report[] @relation("CreatedReports")
   reportsAssigned Report[] @relation("AssignedReports")
+  userRoles     UserRole[] // 新增多對多關聯
 }
 
 model Notification {
@@ -89,4 +90,25 @@ model Report {
   category    String?   // Category of the report (e.g., infrastructure, environment)
   contactPhone String?  // Reporter's contact phone
   contactEmail String?  // Reporter's contact email
+}
+
+// 角色定義模型
+model Role {
+  id          String    @id @default(uuid())
+  name        String    @unique // 角色名稱，例如 ADMIN, USER 等
+  description String?   // 角色描述
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userRoles   UserRole[] // 與使用者的關聯
+}
+
+// 使用者與角色的多對多關聯表
+model UserRole {
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId    String
+  assignedAt DateTime @default(now())
+
+  @@id([userId, roleId]) // 複合主鍵
 }

@@ -10,6 +10,21 @@ const nextConfig = {
     // 禁用 TypeScript 類型檢查，以便在構建過程中忽略類型錯誤
     ignoreBuildErrors: true
   },
+  // 添加 CORS 配置
+  async headers() {
+    return [
+      {
+        // 對所有 API 路由應用 CORS 標頭
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization' },
+        ],
+      },
+    ];
+  },
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,

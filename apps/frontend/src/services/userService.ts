@@ -1,7 +1,7 @@
 import { User, UserRole } from 'shared-types';
 
 // API 基礎 URL
-const API_BASE_URL = '/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
 
 /**
  * 用戶管理服務
@@ -207,10 +207,72 @@ export const userService = {
         throw new Error(`Error: ${response.status}`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      return data.roles || [];
     } catch (error) {
       console.error('Error fetching roles:', error);
-      return Object.values(UserRole).map(role => ({ role, count: 0 }));
+      return Object.values(UserRole).map(role => ({ 
+        id: role,
+        name: role,
+        description: `${role} 角色`,
+        count: 0,
+        permissions: []
+      }));
+    }
+  },
+  
+  /**
+   * 獲取角色詳細資訊，包含權限和描述
+   * @returns 角色詳細資訊
+   */
+  async getRoleDetails(): Promise<{id: string, name: string, description: string, count: number, permissions: string[]}[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/roles`);
+      
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.roles || [];
+    } catch (error) {
+      console.error('Error fetching role details:', error);
+      return [];
+    }
+  },
+  
+  /**
+   * 更新用戶的多個角色
+   * @param id 用戶 ID
+   * @param roleIds 角色 ID 列表
+   * @returns 更新後的用戶對象
+   */
+  async updateUserRoles(id: string, roleIds: string[]): Promise<User> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${id}/roles`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ roleIds }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error: ${response.status}`);
+      }
+      
+      const updatedUser = await response.json();
+      
+      // 確保日期格式正確
+      return {
+        ...updatedUser,
+        createdAt: new Date(updatedUser.createdAt),
+        updatedAt: new Date(updatedUser.updatedAt)
+      };
+    } catch (error) {
+      console.error(`Error updating roles for user with ID ${id}:`, error);
+      throw new Error('更新用戶角色失敗');
     }
   }
 };

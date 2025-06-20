@@ -1,11 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '../../../lib/prisma';
+import { applyCors } from '../../../utils/cors';
 
 /**
  * 單個用戶 API 處理程序
  * 處理 GET、PUT 和 DELETE 請求
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // 應用 CORS 中間件
+  await applyCors(req, res);
+  
   const { id } = req.query;
   
   if (!id || typeof id !== 'string') {

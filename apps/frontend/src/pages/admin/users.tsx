@@ -9,7 +9,16 @@ import {
   CheckIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
-import { User, UserRole, Permission } from 'shared-types';
+import { User as BaseUser, UserRole, Permission } from 'shared-types';
+
+// 擴展 User 類型，添加 additionalRoles 屬性
+// 这是一个臨時解決方案，直到共享類型包被正確導入
+// 在實際項目中，應該在 shared-types 包中更新 User 類型
+// 然後重新構建項目
+
+interface User extends BaseUser {
+  additionalRoles?: string[];
+}
 import { userService } from '@/services/userService';
 import { PermissionGuard } from '@/components/PermissionGuard';
 
@@ -31,13 +40,20 @@ export default function UsersPage() {
   const [currentEditUser, setCurrentEditUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   
-  // 表單數據
+  // 表單狀態
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: UserRole.USER
+    role: UserRole.USER,
+    password: ''
   });
   
+  // 多角色選擇狀態
+  const [selectedRoles, setSelectedRoles] = useState<{value: string; label: string}[]>([]);
+  
+  // 角色選項
+  const [roleOptions, setRoleOptions] = useState<{ value: string; label: string; description: string; permissions: string[] }[]>([]);
+
   // 加載用戶數據
   useEffect(() => {
     const fetchUsers = async () => {
@@ -56,6 +72,34 @@ export default function UsersPage() {
     fetchUsers();
   }, []);
   
+  // 獲取角色選項
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const roles = await userService.getRoleDetails();
+        const options = roles.map((roleData) => ({
+          value: roleData.id,
+          label: `${roleData.name} (${roleData.count})`,
+          description: roleData.description,
+          permissions: roleData.permissions
+        }));
+        setRoleOptions(options);
+      } catch (error) {
+        console.error('Error fetching roles:', error);
+        // 使用預設角色
+        const defaultOptions = Object.values(UserRole).map((role) => ({
+          value: role,
+          label: role,
+          description: `${role} 角色`,
+          permissions: []
+        }));
+        setRoleOptions(defaultOptions);
+      }
+    };
+
+    fetchRoles();
+  }, []);
+
   // 處理搜索和過濾
   useEffect(() => {
     let result = [...users];
@@ -87,25 +131,42 @@ export default function UsersPage() {
     }));
   };
   
-  // 打開新增用戶模態框
+  // 打開添加用戶模態框
   const openAddModal = () => {
     setCurrentEditUser(null);
     setFormData({
       name: '',
       email: '',
-      role: UserRole.USER
+      role: UserRole.USER,
+      password: ''
     });
+    setSelectedRoles([]);
     setIsModalOpen(true);
   };
   
-  // 打開編輯用戶模態框
-  const openEditModal = (user: User) => {
+  // 編輯用戶
+  const handleEditUser = async (user: User) => {
     setCurrentEditUser(user);
     setFormData({
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      password: '' // 不顯示密碼
     });
+    
+    // 如果用戶有額外角色，載入這些角色
+    if (user.additionalRoles && user.additionalRoles.length > 0) {
+      // 將額外角色轉換為選項格式
+      const additionalRoleOptions = user.additionalRoles.map(roleId => {
+        const roleOption = roleOptions.find(option => option.value === roleId);
+        return roleOption || { value: roleId, label: getRoleName(roleId as UserRole) };
+      });
+      
+      setSelectedRoles(additionalRoleOptions);
+    } else {
+      setSelectedRoles([]);
+    }
+    
     setIsModalOpen(true);
   };
   
@@ -120,17 +181,34 @@ export default function UsersPage() {
     e.preventDefault();
     
     try {
+      let result;
+      
       if (currentEditUser) {
         // 更新用戶
-        await userService.updateUser(currentEditUser.id, formData);
+        result = await userService.updateUser(currentEditUser.id, formData);
+        
+        // 更新用戶角色
+        if (selectedRoles && selectedRoles.length > 0) {
+          const roleIds = selectedRoles.map(role => role.value);
+          await userService.updateUserRoles(currentEditUser.id, roleIds);
+        }
       } else {
         // 創建新用戶
-        await userService.createUser(formData);
+        result = await userService.createUser(formData);
+        
+        // 如果選擇了多個角色，更新用戶角色
+        if (selectedRoles && selectedRoles.length > 1) {
+          const roleIds = selectedRoles.map(role => role.value);
+          await userService.updateUserRoles(result.id, roleIds);
+        }
       }
       
       // 重新加載用戶列表
       const updatedUsers = await userService.getAllUsers();
       setUsers(updatedUsers);
+      
+      // 重置選擇的角色
+      setSelectedRoles([]);
       
       // 關閉模態框
       setIsModalOpen(false);
@@ -173,75 +251,70 @@ export default function UsersPage() {
     
     return roleNames[role] || role;
   };
-  
+
   return (
     <>
       <Head>
-        <title>用戶管理 | OMS 原型</title>
+        <title>用戶管理 | 通報系統後台</title>
       </Head>
-      
-      <PermissionGuard 
-        permission={Permission.VIEW_USERS} 
-        userRole={currentUser.role}
-        fallback={<div className="p-4 text-red-500">您沒有權限訪問此頁面</div>}
-      >
-        <div className="container mx-auto px-4 py-8">
+
+      <PermissionGuard permission={Permission.VIEW_USERS} userRole={currentUser.role}>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">用戶管理</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">用戶管理</h1>
             
             <PermissionGuard permission={Permission.CREATE_USERS} userRole={currentUser.role}>
               <button
                 onClick={openAddModal}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                <UserPlusIcon className="h-5 w-5 mr-2" />
+                <UserPlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
                 新增用戶
               </button>
             </PermissionGuard>
           </div>
           
-          {/* 搜索和過濾 */}
-          <div className="bg-white shadow rounded-lg p-4 mb-6">
-            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-              <div className="flex-1">
-                <div className="relative rounded-md shadow-sm">
+          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
+                <div className="relative rounded-md shadow-sm w-full sm:w-64">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                    <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
                   </div>
                   <input
                     type="text"
+                    name="search"
+                    id="search"
+                    className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+                    placeholder="搜索用戶"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-                    placeholder="搜尋用戶名稱或電子郵件"
                   />
                 </div>
-              </div>
-              <div>
-                <label htmlFor="role" className="sr-only">角色</label>
-                <select
-                  id="role"
-                  name="role"
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value as UserRole | '')}
-                  className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                >
-                  <option value="">所有角色</option>
-                  {Object.values(UserRole).map(role => (
-                    <option key={role} value={role}>{getRoleName(role)}</option>
-                  ))}
-                </select>
+                
+                <div className="flex items-center space-x-2 w-full sm:w-auto">
+                  <FunnelIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <select
+                    id="role-filter"
+                    name="role-filter"
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value as UserRole | '')}
+                  >
+                    <option value="">所有角色</option>
+                    {Object.values(UserRole).map(role => (
+                      <option key={role} value={role}>{getRoleName(role)}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
-          </div>
-          
-          {/* 用戶列表 */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+            
             {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
               </div>
-            ) : (
+            ) : filteredUsers.length > 0 ? (
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -270,10 +343,38 @@ export default function UsersPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                          {getRoleName(user.role)}
-                        </span>
+                      {/* 用戶角色 */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {/* 主要角色 */}
+                        <div className="flex flex-wrap gap-1 items-center">
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {getRoleName(user.role)}
+                          </span>
+                          
+                          {/* 額外角色 */}
+                          {user.additionalRoles && user.additionalRoles.length > 0 && (
+                            <div className="flex items-center">
+                              <span className="text-xs text-gray-500 mx-1">+</span>
+                              <div className="group relative">
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 cursor-help">
+                                  {user.additionalRoles.length} 個額外角色
+                                </span>
+                                {/* 角色提示框 */}
+                                <div className="absolute left-0 mt-1 w-48 bg-white shadow-lg rounded-md p-2 z-10 hidden group-hover:block">
+                                  <p className="text-xs font-medium text-gray-700 mb-1">額外角色：</p>
+                                  <ul className="text-xs">
+                                    {user.additionalRoles.map((roleId, index) => (
+                                      <li key={index} className="mb-1 last:mb-0 flex items-center">
+                                        <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                        {getRoleName(roleId as UserRole)}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(user.createdAt).toLocaleDateString('zh-TW')}
@@ -282,10 +383,10 @@ export default function UsersPage() {
                         <div className="flex justify-end space-x-2">
                           <PermissionGuard permission={Permission.EDIT_USERS} userRole={currentUser.role}>
                             <button
-                              onClick={() => openEditModal(user)}
-                              className="text-blue-600 hover:text-blue-900"
+                              onClick={() => handleEditUser(user)}
+                              className="text-blue-600 hover:text-blue-900 mr-3"
                             >
-                              <PencilIcon className="h-5 w-5" />
+                              編輯
                             </button>
                           </PermissionGuard>
                           
@@ -304,9 +405,7 @@ export default function UsersPage() {
                   ))}
                 </tbody>
               </table>
-            )}
-            
-            {!loading && filteredUsers.length === 0 && (
+            ) : (
               <div className="text-center py-10">
                 <p className="text-gray-500">沒有找到符合條件的用戶</p>
               </div>
@@ -359,7 +458,7 @@ export default function UsersPage() {
                 
                 <div>
                   <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                    角色
+                    主要角色
                   </label>
                   <select
                     id="role"
@@ -373,6 +472,37 @@ export default function UsersPage() {
                       <option key={role} value={role}>{getRoleName(role)}</option>
                     ))}
                   </select>
+                  <p className="mt-1 text-xs text-gray-500">設定用戶的主要角色，將決定用戶的基本權限</p>
+                </div>
+                
+                <div>
+                  <label htmlFor="additionalRoles" className="block text-sm font-medium text-gray-700">
+                    額外角色
+                  </label>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {roleOptions.map(role => (
+                      <div key={role.value} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={`role-${role.value}`}
+                          checked={selectedRoles.some(r => r.value === role.value) || formData.role === role.value}
+                          disabled={formData.role === role.value}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedRoles([...selectedRoles, role]);
+                            } else {
+                              setSelectedRoles(selectedRoles.filter(r => r.value !== role.value));
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor={`role-${role.value}`} className="ml-2 text-sm text-gray-700">
+                          {role.label.split(' ')[0]} {/* 只顯示角色名稱，不顯示計數 */}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">選擇用戶的額外角色，將提供額外的權限</p>
                 </div>
               </div>
               

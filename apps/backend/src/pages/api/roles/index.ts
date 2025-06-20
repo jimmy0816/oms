@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { UserRole } from 'shared-types';
 import { Permission } from '../../../utils/permissions';
 import { withPermission, AuthenticatedRequest } from '../../../middleware/auth';
+import { applyCors } from '../../../utils/cors';
 
 // 模擬數據存儲
 let customRolePermissions: Record<string, Permission[]> = {};
@@ -35,7 +36,17 @@ async function getRolePermissions(req: AuthenticatedRequest, res: NextApiRespons
       rolePermissions[role] = customRolePermissions[role] || [];
     });
     
-    return res.status(200).json({ rolePermissions });
+    // 構建角色列表，包含角色名稱和權限
+    const roles = Object.values(UserRole).map(role => ({
+      id: role,
+      name: role,
+      permissions: rolePermissions[role] || []
+    }));
+    
+    return res.status(200).json({ 
+      roles,
+      rolePermissions 
+    });
   } catch (error) {
     console.error('Error fetching role permissions:', error);
     return res.status(500).json({ message: '獲取角色權限失敗' });
@@ -80,5 +91,8 @@ async function updateRolePermissions(req: AuthenticatedRequest, res: NextApiResp
   }
 }
 
-// 使用權限中間件保護 API
-export default withPermission(Permission.MANAGE_ROLES)(handler);
+// 先應用 CORS 中間件，再應用權限中間件
+export default async function wrappedHandler(req: AuthenticatedRequest, res: NextApiResponse) {
+  await applyCors(req, res);
+  return withPermission(Permission.MANAGE_ROLES)(handler)(req, res);
+}

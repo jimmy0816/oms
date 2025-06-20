@@ -2,6 +2,7 @@ import { NextApiResponse } from 'next';
 import { UserRole } from 'shared-types';
 import { Permission, ROLE_PERMISSIONS } from '../../../utils/permissions';
 import { withPermission, AuthenticatedRequest } from '../../../middleware/auth';
+import { applyCors } from '../../../utils/cors';
 
 // 模擬數據存儲
 let customRolePermissions: Record<string, Permission[]> = {};
@@ -109,5 +110,8 @@ async function resetRolePermission(req: AuthenticatedRequest, res: NextApiRespon
   }
 }
 
-// 使用權限中間件保護 API
-export default withPermission(Permission.MANAGE_ROLES)(handler);
+// 先應用 CORS 中間件，再應用權限中間件
+export default async function wrappedHandler(req: AuthenticatedRequest, res: NextApiResponse) {
+  await applyCors(req, res);
+  return withPermission(Permission.MANAGE_ROLES)(handler)(req, res);
+}

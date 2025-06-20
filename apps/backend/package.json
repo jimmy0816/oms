@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "next": "^14.0.0",
-    "prisma-client": "workspace:*",
-    "shared-types": "workspace:*",
+    "prisma-client": "file:../../packages/prisma-client",
+    "shared-types": "file:../../packages/shared-types",
     "@prisma/client": "^5.5.2",
     "cors": "^2.8.5",
     "jsonwebtoken": "^9.0.2",
