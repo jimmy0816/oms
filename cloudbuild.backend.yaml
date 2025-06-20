@@ -11,7 +11,7 @@ steps:
       - "." # Docker Build Context 為 monorepo 根目錄 (非常重要)
   # 步驟 2: 推送 Docker 映像到 Google Container Registry (GCR)
   - name: "gcr.io/cloud-builders/docker"
-    args: ["push", "gcr.io/$PROJECT_ID/backend-service:$COMMIT_SHA"]
+    args: ["push", "gcr.io/$PROJECT_ID/oms-backend-service:$COMMIT_SHA"]
   # 步驟 3: 部署到 Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
