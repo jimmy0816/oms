@@ -56,4 +56,4 @@ EXPOSE 8080
 WORKDIR /app/apps/backend
 
 # Start the app
-CMD ["node_modules/.bin/next", "start", "-p", "8080"]
+CMD ["../../node_modules/.bin/next", "start", "-p", "8080"]
