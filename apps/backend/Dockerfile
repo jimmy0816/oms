@@ -71,11 +71,11 @@ COPY --from=builder /app/node_modules ./node_modules
 
 # 設置環境變數
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV PORT=8080
 
 # 暴露端口
-EXPOSE 3001
+EXPOSE 8080
 
 # 啟動應用
 WORKDIR /app/apps/backend
-CMD ["npx", "next", "start", "-p", "3001"]
+CMD ["npx", "next", "start", "-p", "8080"]
