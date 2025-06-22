@@ -25,8 +25,8 @@ RUN pnpm --filter shared-types build # 使用 pnpm run build 運行 workspace �
 # 生成 Prisma 客戶端
 # 確保在 Prisma 客戶端使用的所有依賴都已安裝
 # 這裡應該確保 schema.prisma 檔案存在於正確的路徑
-RUN pnpm --filter prisma-client prisma generate # 使用 pnpm run prisma generate
-RUN ls -lR /app/packages/prisma-client/node_modules/.prisma # 檢查子專案的 .prisma
+# RUN pnpm --filter prisma-client prisma generate # 使用 pnpm run prisma generate
+# RUN ls -lR /app/packages/prisma-client/node_modules/.prisma # 檢查子專案的 .prisma
 
 # 建立 prisma-client 包
 RUN pnpm --filter prisma-client build # 使用 pnpm run build 運行 workspace 內的 build script
