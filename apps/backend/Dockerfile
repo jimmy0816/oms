@@ -14,7 +14,7 @@ COPY packages/prisma-client/package.json ./packages/prisma-client/
 COPY apps/backend/package.json ./apps/backend/
 
 # 安裝所有依賴
-RUN pnpm install --prod # 只需要生產依賴，或者 pnpm install
+RUN pnpm install # 只需要生產依賴，或者 pnpm install
 
 # 複製所有源代碼
 COPY . .
@@ -26,6 +26,7 @@ RUN pnpm --filter shared-types build # 使用 pnpm run build 運行 workspace �
 # 確保在 Prisma 客戶端使用的所有依賴都已安裝
 # 這裡應該確保 schema.prisma 檔案存在於正確的路徑
 RUN pnpm --filter prisma-client prisma generate # 使用 pnpm run prisma generate
+RUN ls -lR /app/packages/prisma-client/node_modules/.prisma # 檢查子專案的 .prisma
 
 # 建立 prisma-client 包
 RUN pnpm --filter prisma-client build # 使用 pnpm run build 運行 workspace 內的 build script
@@ -56,7 +57,8 @@ COPY --from=builder /app/apps/backend/package.json ./apps/backend/package.json
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
 COPY --from=builder /app/packages/prisma-client/prisma ./packages/prisma-client/prisma
 # 確保 Prisma 客戶端運行時所需的 engine 檔案被複製
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./node_modules/.prisma
 
 # 設置環境變數
 ENV NODE_ENV=production
