@@ -58,10 +58,10 @@ RUN pnpm install --prod # 重新安裝生產依賴
 
 # 複製構建輸出
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
-COPY --from=builder /app/packages/prisma-client/prisma ./packages/prisma-client/prisma
+# COPY --from=builder /app/packages/prisma-client/prisma ./packages/prisma-client/prisma
 # 確保 Prisma 客戶端運行時所需的 engine 檔案被複製
 # COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./node_modules/.prisma
+# COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./node_modules/.prisma
 
 # 設置環境變數
 ENV NODE_ENV=production
