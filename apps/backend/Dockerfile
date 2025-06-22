@@ -1,60 +1,80 @@
-# Stage 1: Installation and Build
+# 構建階段More actions
 FROM node:18-alpine AS builder
-
-# Install dependencies needed for packages, like openssl for Prisma
-# and python/make/g++ for other native modules.
-RUN apk add --no-cache openssl python3 make g++
-
-# Use pnpm
-RUN npm install -g pnpm
-
 WORKDIR /app
 
-# Copy dependency definition files first to leverage Docker cache
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+# 安裝 pnpm 和 PostgreSQL 客戶端
+RUN apk add --no-cache postgresql-client
+RUN npm install -g pnpm
 
-# Copy all individual package.json files
-COPY apps/backend/package.json ./apps/backend/
-COPY packages/prisma-client/package.json ./packages/prisma-client/
+# 複製 package.json 和 workspace 配置
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/shared-types/package.json ./packages/shared-types/
+COPY packages/prisma-client/package.json ./packages/prisma-client/
+COPY apps/backend/package.json ./apps/backend/
 
-# Install all dependencies (including devDependencies for building)
+# 安裝依賴
 RUN pnpm install
 
-# Copy the rest of the source code
+# 複製源代碼
 COPY . .
 
-# Build the backend app and its dependencies using Turborepo.
-# This will automatically run `prisma generate` if it's part of the build script.
-RUN pnpm turbo run build --filter=backend...
+# 安裝 TypeScript
+RUN npm install -g typescript
 
-# # Use pnpm deploy to create a pruned production-ready folder
-# # This copies only the necessary files and production dependencies for the backend app
-RUN pnpm --filter=backend deploy --prod /prod/app
+# 清除 node_modules 並重新安裝依賴
+RUN rm -rf node_modules
+RUN pnpm install
 
-# RUN cp -r /app/apps/backend/.next /prod/app/apps/backend/.next
+# 安裝 OpenSSL 依賴
+RUN apk add --no-cache openssl
 
+# 建立 shared-types 包
+RUN cd packages/shared-types && tsc
 
-# ---
+# 生成 Prisma 客戶端
+RUN cd packages/prisma-client && npx prisma generate --schema=./prisma/schema.prisma
 
-# Stage 2: Final Runner Image
-# Use the specific alpine version for OpenSSL 1.1 compatibility with Prisma
+# 建立 prisma-client 包
+RUN cd packages/prisma-client && tsc
+
+RUN cd apps/backend && pnpm next build
+
+# 運行階段
+# 使用較舊的 Alpine 版本，其中包含 OpenSSL 1.1
 FROM node:18-alpine3.15 AS runner
 WORKDIR /app
 
-# Install only runtime native dependencies
-RUN apk add --no-cache openssl postgresql-client
+# 安裝 PostgreSQL 客戶端和 OpenSSL 依賴
+RUN apk add --no-cache postgresql-client openssl
 
-# Copy the pruned and built application from the builder stage
-COPY --from=builder /prod/app .
+# 安裝生產依賴
+RUN npm install -g pnpm
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/
+COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-client/
+COPY --from=builder /app/apps/backend/package.json ./apps/backend/
+RUN pnpm install --prod
 
-# Set environment for production
+# 複製構建輸出
+COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
+COPY --from=builder /app/packages/prisma-client/prisma ./packages/prisma-client/prisma
+COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./packages/prisma-client/node_modules/.prisma
+
+# 確保 Prisma 客戶端可以被正確導入
+COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./apps/backend/node_modules/@prisma/client
+RUN mkdir -p ./apps/backend/node_modules/.prisma
+COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./apps/backend/node_modules/.prisma
+
+# 複製必要的依賴
+COPY --from=builder /app/node_modules ./node_modules
+
+# 設置環境變數
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Expose the port the app runs on
+# 暴露端口
 EXPOSE 8080
 
-# Start the app
-CMD ["node_modules/.bin/next", "start", "-p", "8080"]
-# CMD ["pnpm", "next", "start", "-p", "8080"]
+# 啟動應用
+WORKDIR /app/apps/backend
+CMD ["npx", "next", "start", "-p", "8080"]
