@@ -32,7 +32,7 @@ RUN pnpm --filter shared-types build # 使用 pnpm run build 運行 workspace �
 RUN pnpm --filter prisma-client build # 使用 pnpm run build 運行 workspace 內的 build script
 
 # 構建 backend 應用
-RUN pnpm --filter backend next build
+RUN pnpm --filter backend build
 
 # 運行階段
 FROM node:18-alpine3.15 AS runner
