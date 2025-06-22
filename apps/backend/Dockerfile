@@ -42,16 +42,19 @@ WORKDIR /app
 RUN apk add --no-cache postgresql-client openssl
 
 # 從 builder 階段複製 production node_modules
-COPY --from=builder /app/node_modules ./node_modules
+# COPY --from=builder /app/node_modules ./node_modules
 # 複製所有的 package.json 和 pnpm-lock.yaml，以便 pnpm 能正確識別 workspace 結構
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY package.json ./
+COPY pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml ./
 
 # 複製各個 packages 的 package.json，確保 pnpm 的 workspace 結構完整
 COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/package.json
 COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-client/package.json
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/package.json
+
+RUN npm install -g pnpm # 確保 pnpm 在 runner 階段可用
+RUN pnpm install --prod # 重新安裝生產依賴
 
 # 複製構建輸出
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
