@@ -28,6 +28,7 @@ RUN pnpm --filter shared-types build # 使用 pnpm run build 運行 workspace �
 # RUN pnpm --filter prisma-client prisma generate # 使用 pnpm run prisma generate
 # RUN ls -lR /app/packages/prisma-client/node_modules/.prisma # 檢查子專案的 .prisma
 
+RUN pnpm --filter prisma-client db:generate
 # 建立 prisma-client 包
 RUN pnpm --filter prisma-client build # 使用 pnpm run build 運行 workspace 內的 build script
 
@@ -58,12 +59,13 @@ RUN pnpm install --prod # 重新安裝生產依賴
 
 # 複製構建輸出
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
-COPY --from=builder /app/packages/prisma-client ./packages/prisma-client
-COPY --from=builder /app/packages/shared-types ./packages/shared-types
+COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
+COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
 # RUN cd /app/packages/prisma-client && pnpm run build
 # COPY --from=builder /app/packages/prisma-client/prisma ./packages/prisma-client/prisma
 # 確保 Prisma 客戶端運行時所需的 engine 檔案被複製
+COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./node_modules/.prisma
 # COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 # COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./node_modules/.prisma
 
