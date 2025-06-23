@@ -62,10 +62,11 @@ COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
 COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
 COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
+COPY --from=builder /app/node_modules/.pnpm /app/node_modules/.pnpm
 # RUN cd /app/packages/prisma-client && pnpm run build
 # COPY --from=builder /app/packages/prisma-client/prisma ./packages/prisma-client/prisma
 # 確保 Prisma 客戶端運行時所需的 engine 檔案被複製
-COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./node_modules/.prisma
+# sCOPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./node_modules/.prisma
 # COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 # COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./node_modules/.prisma
 
