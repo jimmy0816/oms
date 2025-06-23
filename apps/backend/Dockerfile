@@ -29,6 +29,16 @@ RUN pnpm --filter shared-types build # 使用 pnpm run build 運行 workspace �
 # RUN ls -lR /app/packages/prisma-client/node_modules/.prisma # 檢查子專案的 .prisma
 
 RUN pnpm --filter prisma-client db:generate
+
+# --- 新增除錯步驟：檢查 Query Engine 生成位置 ---
+# 檢查根 node_modules 下的 .prisma
+RUN echo "--- Checking /app/node_modules/.prisma ---" && ls -lR /app/node_modules/.prisma || echo "Not found at /app/node_modules/.prisma"
+# 檢查 prisma-client 包內部 node_modules 下的 .prisma
+RUN echo "--- Checking /app/packages/prisma-client/node_modules/.prisma ---" && ls -lR /app/packages/prisma-client/node_modules/.prisma || echo "Not found at /app/packages/prisma-client/node_modules/.prisma"
+# 檢查 .pnpm 內部 @prisma/client 的 .prisma
+RUN echo "--- Checking /app/node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/node_modules/.prisma ---" && ls -lR /app/node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/node_modules/.prisma || echo "Not found at .pnpm/@prisma+client@5.5.2_prisma@5.5.2/node_modules/.prisma"
+# 確保這些路徑與你的實際版本號一致
+
 # 建立 prisma-client 包
 RUN pnpm --filter prisma-client build # 使用 pnpm run build 運行 workspace 內的 build script
 
@@ -69,6 +79,7 @@ COPY --from=builder /app/node_modules/.pnpm /app/node_modules/.pnpm
 # sCOPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./node_modules/.prisma
 # COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 # COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/packages/prisma-client/node_modules/.prisma /app/node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/node_modules/.prisma
 
 # 設置環境變數
 ENV NODE_ENV=production
