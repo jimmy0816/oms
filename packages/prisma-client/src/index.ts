@@ -1,5 +1,5 @@
-// import { PrismaClient } from '../node_modules/.prisma/client';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../node_modules/.prisma/client';
+// import { PrismaClient } from '@prisma/client';
 
 // Add Prisma Client extensions or middleware here if needed
 const prismaClientSingleton = (): PrismaClient => {
