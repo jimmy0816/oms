@@ -29,7 +29,7 @@ steps:
         export DATABASE_URL="postgresql://${_DB_USER}:${_DB_PASSWORD}@/oms?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME}"
 
         npm install -g pnpm
-        pnpm install # 安裝所有依賴，包括 devDependencies (prisma CLI)
+        pnpm install
 
         cd packages/prisma-client
 
