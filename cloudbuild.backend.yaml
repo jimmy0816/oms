@@ -30,11 +30,10 @@ steps:
       - "--platform"
       - "managed"
       - "--allow-unauthenticated" # 如果是公開 API，允許未經驗證的存取 (可根據需求調整)
-      - "--set-env-vars" # 設定環境變數，這裡放置 DATABASE_URL
-      - "DATABASE_URL=${_DATABASE_URL}" # 使用 Cloud Build 變數，後面會解釋
-    # 如果你的資料庫是 Cloud SQL，則需要設定連接器
-    # - '--add-cloudsql-instances'
-    # - 'your_project_id:asia-east1:your_instance_name' # 替換為你的 Cloud SQL 連接名稱
+      - "--set-env-vars" # 設定環境變數
+      - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@/oms?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME}"
+      - "--add-cloudsql-instances"
+      - "${_CLOUD_SQL_CONNECTION_NAME}"
     # 其他可選配置：
     # - '--cpu' # CPU 配置 (例如: 1 或 2)
     # - '1'
@@ -51,7 +50,9 @@ images:
 
 # 替換變數，用於敏感資訊或環境特定配置
 substitutions:
-  _DATABASE_URL: "your_actual_database_connection_string_here" # <-- 在 Cloud Build Trigger 中設定
+  _DB_USER: "prisma_user"
+  _DB_PASSWORD: "your_actual_database_password"
+  _CLOUD_SQL_CONNECTION_NAME: "your_actual_database_connection_string_here" # <-- 在 Cloud Build Trigger 中設定
 
 options:
   logging: CLOUD_LOGGING_ONLY
