@@ -35,7 +35,7 @@ steps:
 
         pnpm db:migrate
 
-        kill $PROXY_PID
+        kill $$PROXY_PID
   # 步驟 3: 部署到 Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
