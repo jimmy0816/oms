@@ -73,12 +73,7 @@ COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/di
 COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
 COPY --from=builder /app/node_modules/.pnpm /app/node_modules/.pnpm
-# RUN cd /app/packages/prisma-client && pnpm run build
-# COPY --from=builder /app/packages/prisma-client/prisma ./packages/prisma-client/prisma
-# 確保 Prisma 客戶端運行時所需的 engine 檔案被複製
-# sCOPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./node_modules/.prisma
-# COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-# COPY --from=builder /app/packages/prisma-client/node_modules/.prisma ./node_modules/.prisma
+
 COPY --from=builder /app/packages/prisma-client/node_modules/.prisma /app/node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/node_modules/.prisma
 
 # 設置環境變數

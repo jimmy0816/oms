@@ -16,26 +16,35 @@ steps:
         "push",
         "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA",
       ]
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint: "bash"
+  - name: "node:18-alpine" # 或其他你使用的 Node.js 映像
+    entrypoint: sh
     args:
       - "-c"
       - |
-        # 啟動 Cloud SQL Proxy
-        /usr/bin/cloud_sql_proxy -instances=${_CLOUD_SQL_CONNECTION_NAME}=tcp:5432 -dir=/cloudsql &
-        PROXY_PID=$!
-        sleep 5 # 等待 Proxy 啟動
-
+        # 設定 DATABASE_URL 環境變數
         export DATABASE_URL="postgresql://${_DB_USER}:${_DB_PASSWORD}@/oms?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME}"
 
+        # 確保 pnpm 在這個映像中可用，如果 node:18-alpine 沒有預裝 pnpm
         npm install -g pnpm
-        pnpm install
 
-        cd packages/prisma-client
+        # 複製 monorepo 的程式碼和 node_modules/.pnpm 到此步驟的容器中
+        # 從 Cloud Build 的原始工作目錄複製（假設是 monorepo 根目錄）
+        cp -R . /tmp/monorepo
 
+        # 進入 prisma-client 專案的目錄，或者 backend 應用程式目錄（如果 schema 在 backend 中）
+        # 這裡假設你的 schema.prisma 在 packages/prisma-client/prisma
+        cd /tmp/monorepo/packages/prisma-client
+
+        # 執行 Prisma Migrate Deploy
+        # 由於我們只複製了生產依賴，可能需要確保 pnpm install 再次執行以確保 prisma CLI 可用
+        # 但更優雅的方式是確保 pnpm 的 global install 指向了 prisma CLI
+        # 假設 pnpm install --frozen-lockfile 已經在 builder 階段完整執行，
+        # 並且相關的 bin 連結在 .pnpm 下是可用的，則可以直接使用 `pnpm prisma`。
+        # 如果遇到 "command not found"，則需要先執行 pnpm install。
+        # 為了保險起見，我們可以在此階段重新安裝依賴以確保 `prisma` CLI 可用
+        pnpm install --frozen-lockfile # 重新安裝生產依賴，確保 Prisma CLI 可用
         pnpm db:migrate
 
-        kill $$PROXY_PID
   # 步驟 3: 部署到 Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
