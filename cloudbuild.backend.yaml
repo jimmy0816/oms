@@ -21,7 +21,7 @@ steps:
     args:
       - "-c"
       - |
-        wget https://storage.googleapis.com/cloud-sql-proxy/v2.8.2/cloud_sql_proxy.linux.amd64 -O /tmp/cloud_sql_proxy
+        curl -o /tmp/cloud_sql_proxy https://storage.googleapis.com/cloud-sql-proxy/v2.8.2/cloud_sql_proxy.linux.amd64
         chmod +x /tmp/cloud_sql_proxy
         /tmp/cloud_sql_proxy -instances=${_CLOUD_SQL_CONNECTION_NAME}=tcp:5432 &
         sleep 5
