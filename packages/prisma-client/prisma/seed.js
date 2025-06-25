@@ -1,6 +1,7 @@
 // 數據庫種子腳本 - 添加初始數據
 // 使用相對路徑導入 Prisma 客戶端
-const { PrismaClient } = require('../../node_modules/.prisma/client');
+// const { PrismaClient } = require('../../node_modules/.prisma/client');
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
@@ -13,8 +14,8 @@ async function main() {
     create: {
       email: 'admin@example.com',
       name: '管理員',
-      password: 'admin123', // 在實際應用中應該使用加密密碼
-      role: 'ADMIN'
+      // password: 'admin123', // 在實際應用中應該使用加密密碼
+      role: 'ADMIN',
     },
   });
 
@@ -24,8 +25,8 @@ async function main() {
     create: {
       email: 'staff@example.com',
       name: '工作人員',
-      password: 'staff123',
-      role: 'STAFF'
+      // password: 'staff123',
+      role: 'STAFF',
     },
   });
 
@@ -35,8 +36,8 @@ async function main() {
     create: {
       email: 'user@example.com',
       name: '一般用戶',
-      password: 'user123',
-      role: 'USER'
+      // password: 'user123',
+      role: 'USER',
     },
   });
 
@@ -55,7 +56,7 @@ async function main() {
       assigneeId: staffUser.id,
       images: ['https://picsum.photos/id/1/800/600'],
       contactPhone: '0912345678',
-      contactEmail: 'user@example.com'
+      contactEmail: 'user@example.com',
     },
     {
       title: '安全隱患報告',
@@ -68,7 +69,7 @@ async function main() {
       assigneeId: adminUser.id,
       images: ['https://picsum.photos/id/2/800/600'],
       contactPhone: '0923456789',
-      contactEmail: 'staff@example.com'
+      contactEmail: 'staff@example.com',
     },
     {
       title: '環境問題報告',
@@ -81,7 +82,7 @@ async function main() {
       assigneeId: staffUser.id,
       images: ['https://picsum.photos/id/3/800/600'],
       contactPhone: '0934567890',
-      contactEmail: 'user@example.com'
+      contactEmail: 'user@example.com',
     },
     {
       title: '服務投訴',
@@ -93,7 +94,7 @@ async function main() {
       creatorId: staffUser.id,
       images: ['https://picsum.photos/id/4/800/600'],
       contactPhone: '0945678901',
-      contactEmail: 'staff@example.com'
+      contactEmail: 'staff@example.com',
     },
     {
       title: '其他問題報告',
@@ -105,15 +106,15 @@ async function main() {
       creatorId: adminUser.id,
       assigneeId: staffUser.id,
       contactPhone: '0956789012',
-      contactEmail: 'admin@example.com'
-    }
+      contactEmail: 'admin@example.com',
+    },
   ];
 
   // 批量創建通報
   const createdReports = await Promise.all(
-    reports.map(report => 
+    reports.map((report) =>
       prisma.report.create({
-        data: report
+        data: report,
       })
     )
   );
@@ -125,29 +126,29 @@ async function main() {
     {
       content: '已安排維修人員前往處理。',
       reportId: createdReports[0].id,
-      userId: staffUser.id
+      userId: staffUser.id,
     },
     {
       content: '維修完成，請確認是否恢復正常。',
       reportId: createdReports[0].id,
-      userId: staffUser.id
+      userId: staffUser.id,
     },
     {
       content: '已通知保安清理消防通道。',
       reportId: createdReports[1].id,
-      userId: adminUser.id
+      userId: adminUser.id,
     },
     {
       content: '問題已解決，空調溫度已調整。',
       reportId: createdReports[2].id,
-      userId: staffUser.id
-    }
+      userId: staffUser.id,
+    },
   ];
 
   const createdComments = await Promise.all(
-    comments.map(comment =>
+    comments.map((comment) =>
       prisma.comment.create({
-        data: comment
+        data: comment,
       })
     )
   );
@@ -161,28 +162,28 @@ async function main() {
       message: `您被分配處理通報：${createdReports[0].title}`,
       userId: staffUser.id,
       relatedReportId: createdReports[0].id,
-      isRead: false
+      isRead: false,
     },
     {
       title: '通報狀態更新',
       message: '您提交的通報已開始處理',
       userId: userUser.id,
       relatedReportId: createdReports[0].id,
-      isRead: true
+      isRead: true,
     },
     {
       title: '新評論',
       message: '您的通報有新評論',
       userId: userUser.id,
       relatedReportId: createdReports[0].id,
-      isRead: false
-    }
+      isRead: false,
+    },
   ];
 
   const createdNotifications = await Promise.all(
-    notifications.map(notification =>
+    notifications.map((notification) =>
       prisma.notification.create({
-        data: notification
+        data: notification,
       })
     )
   );

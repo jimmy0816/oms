@@ -1,33 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse, Comment, CreateCommentRequest } from 'shared-types';
-import cors from 'cors';
+import { withApiHandler } from '@/lib/api-handler';
 
-// Helper function to run middleware
-const runMiddleware = (req: NextApiRequest, res: NextApiResponse, fn: Function) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-};
-
-// Initialize CORS middleware
-const corsMiddleware = cors({
-  methods: ['GET', 'POST'],
-  origin: '*', // In production, specify your frontend URL
-});
-
-export default async function handler(
+export default withApiHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Comment | Comment[]>>
 ) {
-  // Run the CORS middleware
-  await runMiddleware(req, res, corsMiddleware);
-
   try {
     switch (req.method) {
       case 'GET':
@@ -36,13 +15,20 @@ export default async function handler(
         return await createComment(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
-        return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
+        return res
+          .status(405)
+          .json({ success: false, error: `Method ${req.method} Not Allowed` });
     }
   } catch (error: any) {
     console.error('Error in comments API:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Internal Server Error' });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        error: error.message || 'Internal Server Error',
+      });
   }
-}
+});
 
 async function getComments(
   req: NextApiRequest,
@@ -82,10 +68,10 @@ async function createComment(
   res: NextApiResponse<ApiResponse<Comment>>
 ) {
   const { content, ticketId } = req.body as CreateCommentRequest;
-  
+
   // In a real app, you would get the user ID from the authenticated user
   // For this prototype, we'll use a mock user ID
-  const userId = req.headers['x-user-id'] as string || '1';
+  const userId = (req.headers['x-user-id'] as string) || '1';
 
   if (!content || !ticketId) {
     return res.status(400).json({
@@ -127,12 +113,12 @@ async function createComment(
 
   // Create notifications for relevant users
   const notifyUsers = new Set<string>();
-  
+
   // Notify ticket creator if the commenter is not the creator
   if (ticket.creatorId !== userId) {
     notifyUsers.add(ticket.creatorId);
   }
-  
+
   // Notify ticket assignee if exists and is not the commenter
   if (ticket.assigneeId && ticket.assigneeId !== userId) {
     notifyUsers.add(ticket.assigneeId);

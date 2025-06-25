@@ -1,0 +1,8 @@
+node_modules
+.git
+.vscode
+.env
+dist
+.next/cache
+temp/
+# 其他你不想複製到 Docker 映像中的檔案或資料夾

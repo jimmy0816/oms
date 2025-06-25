@@ -1,33 +1,19 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from 'prisma-client';
-import { ApiResponse, CreateTicketRequest, PaginatedResponse, Ticket, TicketStatus, TicketPriority } from 'shared-types';
-import cors from 'cors';
+import { prisma } from '@/lib/prisma';
+import {
+  ApiResponse,
+  CreateTicketRequest,
+  PaginatedResponse,
+  Ticket,
+  TicketStatus,
+  TicketPriority,
+} from 'shared-types';
+import { withApiHandler } from '@/lib/api-handler';
 
-// Helper function to run middleware
-const runMiddleware = (req: NextApiRequest, res: NextApiResponse, fn: Function) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-};
-
-// Initialize CORS middleware
-const corsMiddleware = cors({
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  origin: '*', // In production, specify your frontend URL
-});
-
-export default async function handler(
+export default withApiHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Ticket | PaginatedResponse<Ticket>>>
 ) {
-  // Run the CORS middleware
-  await runMiddleware(req, res, corsMiddleware);
-
   try {
     switch (req.method) {
       case 'GET':
@@ -36,13 +22,18 @@ export default async function handler(
         return await createTicket(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
-        return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
+        return res
+          .status(405)
+          .json({ success: false, error: `Method ${req.method} Not Allowed` });
     }
   } catch (error: any) {
     console.error('Error in tickets API:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Internal Server Error' });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal Server Error',
+    });
   }
-}
+});
 
 async function getTickets(
   req: NextApiRequest,
@@ -92,7 +83,7 @@ async function getTickets(
   ]);
 
   // 確保每個 ticket 的 status 和 priority 屬性都是正確的枚舉類型
-  const ticketsWithCorrectTypes = tickets.map(ticket => ({
+  const ticketsWithCorrectTypes = tickets.map((ticket) => ({
     ...ticket,
     status: ticket.status as unknown as TicketStatus,
     priority: ticket.priority as unknown as TicketPriority,
@@ -114,11 +105,15 @@ async function createTicket(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Ticket>>
 ) {
-  const { title, description, priority, assigneeId } = req.body as CreateTicketRequest;
-  
+  const { title, description, priority, assigneeId } =
+    req.body as CreateTicketRequest;
+
   // In a real app, you would get the creator ID from the authenticated user
   // For this prototype, we'll use a mock user ID
-  const creatorId = req.headers['x-user-id'] as string || '1';
+  const creator = await prisma.user.findUnique({
+    where: { email: 'admin@example.com' },
+  });
+  const creatorId = creator.id;
 
   if (!title || !description) {
     return res.status(400).json({

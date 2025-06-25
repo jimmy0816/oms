@@ -1,25 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse } from 'shared-types';
-import cors from 'cors';
-
-// Helper function to run middleware
-const runMiddleware = (req: NextApiRequest, res: NextApiResponse, fn: Function) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-};
-
-// Initialize CORS middleware
-const corsMiddleware = cors({
-  methods: ['GET', 'PUT', 'DELETE'],
-  origin: '*', // In production, specify your frontend URL
-});
+import { withApiHandler } from '@/lib/api-handler';
 
 // Define Report type based on Prisma schema
 interface Report {
@@ -74,13 +56,10 @@ interface UpdateReportRequest {
   images?: string[];
 }
 
-export default async function handler(
+export default withApiHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Report>>
 ) {
-  // Run the CORS middleware
-  await runMiddleware(req, res, corsMiddleware);
-
   const { id } = req.query;
 
   if (!id || Array.isArray(id)) {
@@ -100,13 +79,20 @@ export default async function handler(
         return await deleteReport(id, req, res);
       default:
         res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
-        return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
+        return res
+          .status(405)
+          .json({ success: false, error: `Method ${req.method} Not Allowed` });
     }
   } catch (error: any) {
     console.error(`Error in reports/${id} API:`, error);
-    return res.status(500).json({ success: false, error: error.message || 'Internal Server Error' });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        error: error.message || 'Internal Server Error',
+      });
   }
-}
+});
 
 async function getReportById(
   id: string,
