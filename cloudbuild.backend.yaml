@@ -21,7 +21,7 @@ steps:
     args:
       - "-c"
       - |
-        RUN apk add --no-cache postgresql-client openssl
+        apk add --no-cache postgresql-client openssl
 
         # 設定 DATABASE_URL 環境變數
         export DATABASE_URL="postgresql://${_DB_USER}:${_DB_PASSWORD}@/oms?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME}"
