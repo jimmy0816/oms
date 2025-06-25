@@ -24,7 +24,7 @@ steps:
         apk add --no-cache postgresql-client openssl
 
         # 設定 DATABASE_URL 環境變數
-        export DATABASE_URL="postgresql://${_DB_USER}:${_DB_PASSWORD}@/oms?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME}"
+        export DATABASE_URL="postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/oms"
 
         # 確保 pnpm 在這個映像中可用，如果 node:18-alpine 沒有預裝 pnpm
         npm install -g pnpm
@@ -46,6 +46,9 @@ steps:
         # 為了保險起見，我們可以在此階段重新安裝依賴以確保 `prisma` CLI 可用
         pnpm install --frozen-lockfile # 重新安裝生產依賴，確保 Prisma CLI 可用
         pnpm db:migrate
+    env:
+      - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/oms"
+    id: "Run Prisma Migrations"
 
   # 步驟 3: 部署到 Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
@@ -81,6 +84,7 @@ images:
 
 # 替換變數，用於敏感資訊或環境特定配置
 substitutions:
+  _DB_HOST: "localhost"
   _DB_USER: "prisma_user"
   _DB_PASSWORD: "your_actual_database_password"
   _CLOUD_SQL_CONNECTION_NAME: "your_actual_database_connection_string_here" # <-- 在 Cloud Build Trigger 中設定
