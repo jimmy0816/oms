@@ -21,11 +21,8 @@ steps:
     args:
       - "-c"
       - |
-        # 啟動 Cloud SQL Auth Proxy，連線到你的實例連線名稱
-        # 以後台模式運行 (&)
         /cloud_sql_proxy -instances=${_CLOUD_SQL_CONNECTION_NAME}=tcp:5432 &
-        # 等待 Proxy 啟動並監聽端口
-        sleep 5 # 給它一些時間啟動
+        sleep 5
     id: "Start Cloud SQL Proxy"
 
   - name: "node:18-alpine" # 或其他你使用的 Node.js 映像
@@ -45,7 +42,7 @@ steps:
     env:
       - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/oms"
     id: "Run Prisma Migrations"
-    waitFor: "Start Cloud SQL Proxy"
+    waitFor: ["Start Cloud SQL Proxy"]
 
   # 步驟 3: 部署到 Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
