@@ -5,7 +5,8 @@ steps:
     entrypoint: bash
     args:
       - "-c"
-      - "wget https://storage.googleapis.com/cloud-sql-proxy/v2.8.2/cloud_sql_proxy.linux.amd64 -O /workspace/cloud_sql_proxy && chmod +x /workspace/cloud_sql_proxy"
+      - ""
+      - "wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O /workspace/cloud_sql_proxy && chmod +x /workspace/cloud_sql_proxy"
     waitFor: ["-"]
 
   - name: "node:18-alpine" # 或其他你使用的 Node.js 映像
