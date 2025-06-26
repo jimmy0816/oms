@@ -5,7 +5,6 @@ steps:
     entrypoint: bash
     args:
       - "-c"
-      - ""
       - "wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O /workspace/cloud_sql_proxy && chmod +x /workspace/cloud_sql_proxy"
     waitFor: ["-"]
 
