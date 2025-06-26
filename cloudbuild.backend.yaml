@@ -22,7 +22,7 @@ steps:
         cd /tmp/monorepo/packages/prisma-client
         pnpm install --frozen-lockfile
 
-        /workspace/cloud_sql_proxy -dir=/workspace -instances=${_CLOUD_SQL_CONNECTION_NAME}=tcp:5432
+        /workspace/cloud_sql_proxy -dir=/workspace -instances=${_CLOUD_SQL_CONNECTION_NAME}=tcp:5432&
         echo "Waiting for Cloud SQL Proxy to start..."
         sleep 5
 
