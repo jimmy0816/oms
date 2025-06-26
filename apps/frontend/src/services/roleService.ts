@@ -1,7 +1,9 @@
 import { UserRole, Permission, ROLE_PERMISSIONS } from 'shared-types';
 
 // 獲取 API URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = typeof window !== 'undefined' 
+  ? `http://${window.location.hostname}:3001`
+  : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 /**
  * 角色權限管理服務
