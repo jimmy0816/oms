@@ -74,8 +74,6 @@ COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
 COPY --from=builder /app/node_modules/.pnpm /app/node_modules/.pnpm
 
-COPY --from=builder /app/packages/prisma-client/node_modules/.prisma /app/node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/node_modules/.prisma
-
 # 設置環境變數
 ENV NODE_ENV=production
 ENV PORT=8080
