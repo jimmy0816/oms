@@ -10,6 +10,8 @@ steps:
         "apps/frontend/Dockerfile",
         ".",
       ]
+    env:
+      - "NEXT_PUBLIC_API_URL=${_BACKEND_URL}"
 
   # 推送 Docker 鏡像
   - name: "gcr.io/cloud-builders/docker"

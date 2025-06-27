@@ -38,6 +38,7 @@ RUN rm -rf apps/frontend/src/pages/disabled
 
 # 構建應用
 ENV NEXT_SKIP_TYPE_CHECK=1
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN cd apps/frontend && pnpm next build --no-lint
 
 # 運行階段
