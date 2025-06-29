@@ -64,7 +64,7 @@ steps:
       - "managed"
       - "--allow-unauthenticated" # 如果是公開 API，允許未經驗證的存取 (可根據需求調整)
       - "--set-env-vars" # 設定環境變數
-      - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@/oms?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME}"
+      - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}/oms?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME}"
       - "--add-cloudsql-instances"
       - "${_CLOUD_SQL_CONNECTION_NAME}"
     # 其他可選配置：

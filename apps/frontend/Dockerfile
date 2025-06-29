@@ -31,14 +31,21 @@ RUN cd apps/frontend && pnpm add -D typescript@5.2.2 @types/react@18.2.21 @types
 
 # 設置 Docker 構建環境變數
 ENV DOCKER_BUILD=true
-# 不在構建時設置 API URL，而是在運行時通過 Docker Compose 設置
+
+# --- START MODIFICATION ---
+# 1. 定義一個建置參數，用於接收來自 Cloud Build 的 API URL
+ARG NEXT_PUBLIC_API_URL
+
+# 2. 將這個建置參數設定為環境變數，供 Next.js 建置時使用
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# --- END MODIFICATION ---
 
 # 只移除 disabled 目錄，保留 tickets 目錄
 RUN rm -rf apps/frontend/src/pages/disabled
 
 # 構建應用
 ENV NEXT_SKIP_TYPE_CHECK=1
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+# 這裡的 NEXT_PUBLIC_API_URL 現在會是從 ARG 傳入的正確值
 RUN cd apps/frontend && pnpm next build --no-lint
 
 # 運行階段
@@ -63,6 +70,8 @@ COPY --from=builder /app/node_modules ./node_modules
 # 設置環境變數
 ENV NODE_ENV=production
 ENV PORT=8080
+# 確保運行時環境也有這個變數，以防 SSR 時需要
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # 暴露端口
 EXPOSE 8080

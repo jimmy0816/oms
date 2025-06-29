@@ -9,10 +9,9 @@ steps:
         "-f",
         "apps/frontend/Dockerfile",
         ".",
+        "--build-arg",
+        "NEXT_PUBLIC_API_URL=${_BACKEND_URL}",
       ]
-    env:
-      - "NEXT_PUBLIC_API_URL=${_BACKEND_URL}"
-
   # 推送 Docker 鏡像
   - name: "gcr.io/cloud-builders/docker"
     args:
@@ -32,7 +31,6 @@ steps:
       - "--region=asia-east1"
       - "--platform=managed"
       - "--allow-unauthenticated"
-      - "--set-env-vars=NEXT_PUBLIC_API_URL=${_BACKEND_URL}"
 
 # 替換變數
 substitutions:
