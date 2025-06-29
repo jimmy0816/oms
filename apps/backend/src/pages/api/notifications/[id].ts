@@ -1,37 +1,18 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse, Notification } from 'shared-types';
-import cors from 'cors';
+import { withApiHandler } from '@/lib/api-handler';
 
-// Helper function to run middleware
-const runMiddleware = (req: NextApiRequest, res: NextApiResponse, fn: Function) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-};
-
-// Initialize CORS middleware
-const corsMiddleware = cors({
-  methods: ['GET', 'PUT', 'DELETE'],
-  origin: '*', // In production, specify your frontend URL
-});
-
-export default async function handler(
+export default withApiHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Notification>>
 ) {
-  // Run the CORS middleware
-  await runMiddleware(req, res, corsMiddleware);
-
   const { id } = req.query;
-  
+
   if (!id || Array.isArray(id)) {
-    return res.status(400).json({ success: false, error: 'Invalid notification ID' });
+    return res
+      .status(400)
+      .json({ success: false, error: 'Invalid notification ID' });
   }
 
   try {
@@ -44,15 +25,23 @@ export default async function handler(
         return await deleteNotification(id, res);
       default:
         res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
-        return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
+        return res
+          .status(405)
+          .json({ success: false, error: `Method ${req.method} Not Allowed` });
     }
   } catch (error: any) {
     console.error('Error in notification API:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Internal Server Error' });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal Server Error',
+    });
   }
-}
+});
 
-async function getNotification(id: string, res: NextApiResponse<ApiResponse<Notification>>) {
+async function getNotification(
+  id: string,
+  res: NextApiResponse<ApiResponse<Notification>>
+) {
   const notification = await prisma.notification.findUnique({
     where: { id },
     include: {
@@ -61,7 +50,9 @@ async function getNotification(id: string, res: NextApiResponse<ApiResponse<Noti
   });
 
   if (!notification) {
-    return res.status(404).json({ success: false, error: 'Notification not found' });
+    return res
+      .status(404)
+      .json({ success: false, error: 'Notification not found' });
   }
 
   return res.status(200).json({ success: true, data: notification });
@@ -73,11 +64,15 @@ async function updateNotification(
   res: NextApiResponse<ApiResponse<Notification>>
 ) {
   const { isRead } = req.body;
-  
+
   // Check if notification exists
-  const existingNotification = await prisma.notification.findUnique({ where: { id } });
+  const existingNotification = await prisma.notification.findUnique({
+    where: { id },
+  });
   if (!existingNotification) {
-    return res.status(404).json({ success: false, error: 'Notification not found' });
+    return res
+      .status(404)
+      .json({ success: false, error: 'Notification not found' });
   }
 
   // Update notification
@@ -92,11 +87,18 @@ async function updateNotification(
   return res.status(200).json({ success: true, data: updatedNotification });
 }
 
-async function deleteNotification(id: string, res: NextApiResponse<ApiResponse<Notification>>) {
+async function deleteNotification(
+  id: string,
+  res: NextApiResponse<ApiResponse<Notification>>
+) {
   // Check if notification exists
-  const existingNotification = await prisma.notification.findUnique({ where: { id } });
+  const existingNotification = await prisma.notification.findUnique({
+    where: { id },
+  });
   if (!existingNotification) {
-    return res.status(404).json({ success: false, error: 'Notification not found' });
+    return res
+      .status(404)
+      .json({ success: false, error: 'Notification not found' });
   }
 
   // Delete the notification

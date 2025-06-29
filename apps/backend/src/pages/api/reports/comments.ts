@@ -1,25 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse } from 'shared-types';
-import cors from 'cors';
-
-// Helper function to run middleware
-const runMiddleware = (req: NextApiRequest, res: NextApiResponse, fn: Function) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-};
-
-// Initialize CORS middleware
-const corsMiddleware = cors({
-  methods: ['POST'],
-  origin: '*', // In production, specify your frontend URL
-});
+import { withApiHandler } from '@/lib/api-handler';
 
 // Define Comment type
 interface Comment {
@@ -43,26 +25,28 @@ interface CreateCommentRequest {
   userId: string;
 }
 
-export default async function handler(
+export default withApiHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Comment>>
 ) {
-  // Run the CORS middleware
-  await runMiddleware(req, res, corsMiddleware);
-
   try {
     switch (req.method) {
       case 'POST':
         return await addCommentToReport(req, res);
       default:
         res.setHeader('Allow', ['POST']);
-        return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
+        return res
+          .status(405)
+          .json({ success: false, error: `Method ${req.method} Not Allowed` });
     }
   } catch (error: any) {
     console.error('Error in reports/comments API:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Internal Server Error' });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal Server Error',
+    });
   }
-}
+});
 
 async function addCommentToReport(
   req: NextApiRequest,

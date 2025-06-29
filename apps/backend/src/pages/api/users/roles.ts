@@ -1,8 +1,19 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '../../../lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { UserRole, Permission } from 'shared-types';
-import { ROLE_PERMISSIONS } from '../../../utils/permissions';
-import { applyCors } from '../../../utils/cors';
+import { withApiHandler } from '@/lib/api-handler';
+
+// Define ROLE_PERMISSIONS using the correct Permission enum values
+const ROLE_PERMISSIONS: Record<string, Permission[]> = {
+  [UserRole.ADMIN]: [Permission.VIEW_TICKETS, Permission.CREATE_TICKETS, Permission.EDIT_TICKETS, Permission.DELETE_TICKETS, 
+                     Permission.ASSIGN_TICKETS, Permission.MANAGE_ROLES, Permission.ASSIGN_PERMISSIONS],
+  [UserRole.USER]: [Permission.VIEW_REPORTS, Permission.CREATE_REPORTS],
+  [UserRole.MANAGER]: [Permission.VIEW_USERS, Permission.EDIT_USERS, Permission.VIEW_REPORTS, Permission.ASSIGN_TICKETS],
+  [UserRole.REPORT_PROCESSOR]: [Permission.VIEW_REPORTS, Permission.PROCESS_REPORTS],
+  [UserRole.REPORT_REVIEWER]: [Permission.VIEW_REPORTS, Permission.REVIEW_REPORTS],
+  [UserRole.CUSTOMER_SERVICE]: [Permission.VIEW_REPORTS, Permission.VIEW_TICKETS],
+  [UserRole.MAINTENANCE_WORKER]: [Permission.VIEW_REPORTS, Permission.CLAIM_TICKETS, Permission.COMPLETE_TICKETS]
+};
 
 // 角色描述
 const ROLE_DESCRIPTIONS: Record<string, string> = {
@@ -19,15 +30,15 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
  * 用戶角色 API 處理程序
  * 獲取所有可用的用戶角色及其統計信息
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // 應用 CORS 中間件
-  await applyCors(req, res);
-  
+export default withApiHandler(async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
-  
+
   try {
     // 獲取所有用戶
     const users = await prisma.user.findMany();
@@ -50,4 +61,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('Error fetching user roles:', error);
     return res.status(500).json({ error: 'Failed to fetch user roles' });
   }
-}
+});

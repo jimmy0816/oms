@@ -1,53 +1,79 @@
-# 使用單階段構建，避免 pnpm 和 Prisma 的問題
-FROM node:18.18-alpine
+# 使用多階段構建，解決 pnpm 和 Prisma 的問題
+FROM node:18.18-alpine AS builder
 WORKDIR /app
 
 # 設置環境變數以避免 react-native.js 的問題
 ENV PRISMA_CLIENT_ENGINE_TYPE=binary
 ENV NODE_ENV=production
-ENV PORT=3001
 ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/oms
 
 # 安裝必要的套件和全局工具
 RUN apk add --no-cache postgresql-client openssl
-RUN npm install -g typescript prisma
+RUN npm install -g pnpm
 
-# 複製 shared-types 包的源代碼
-COPY packages/shared-types /app/packages/shared-types
+# 複製所有 package.json 和 workspace 配置
+# 這是為了讓 pnpm 能夠正確解析所有依賴
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/shared-types/package.json ./packages/shared-types/
+COPY packages/prisma-client/package.json ./packages/prisma-client/
+COPY apps/backend/package.json ./apps/backend/
+
+# 安裝所有依賴
+RUN pnpm install
+
+# 複製所有源代碼
+COPY . .
 
 # 建立 shared-types 包
-RUN cd /app/packages/shared-types && npm install && npm run build
+RUN pnpm --filter shared-types build
 
-# 複製 prisma-client 包的源代碼
-COPY packages/prisma-client /app/packages/prisma-client
+# 生成 Prisma 客戶端
+RUN pnpm --filter prisma-client db:generate
 
-# 安裝 prisma-client 依賴並生成 Prisma 客戶端
-RUN cd /app/packages/prisma-client && \
-    npm install && \
-    npm install --save-dev @types/node && \
-    npx prisma generate --schema=./prisma/schema.prisma && \
-    npm run build
+# 建立 prisma-client 包
+RUN pnpm --filter prisma-client build
 
-# 複製後端應用的源代碼
-COPY apps/backend /app/apps/backend
+# 構建 backend 應用
+RUN pnpm --filter backend build
 
-# 安裝後端應用依賴並構建應用
-RUN cd /app/apps/backend && \
-    npm install && \
-    mkdir -p /app/apps/backend/node_modules/.prisma && \
-    cp -r /app/packages/prisma-client/node_modules/.prisma/client /app/apps/backend/node_modules/.prisma/ && \
-    cp /app/packages/prisma-client/prisma/schema.prisma /app/apps/backend/node_modules/.prisma/client/ && \
-    npm run build
+# 運行階段
+FROM node:18-alpine3.15 AS runner
+WORKDIR /app
 
-# 確保在運行時也能找到 schema.prisma 文件
-RUN mkdir -p /app/node_modules/.prisma/client && \
-    cp /app/packages/prisma-client/prisma/schema.prisma /app/node_modules/.prisma/client/
+# 安裝 PostgreSQL 客戶端和 OpenSSL 依賴
+RUN apk add --no-cache postgresql-client openssl
+
+# 複製所有的 package.json 和 pnpm-lock.yaml，以便 pnpm 能正確識別 workspace 結構
+COPY package.json ./
+COPY pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml ./
+
+# 複製各個 packages 的 package.json，確保 pnpm 的 workspace 結構完整
+COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/package.json
+COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-client/package.json
+COPY --from=builder /app/apps/backend/package.json ./apps/backend/package.json
+
+RUN npm install -g pnpm
+RUN pnpm install --prod
+
+# 複製構建輸出
+COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
+COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
+COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
+
+COPY --from=builder /app/node_modules/.pnpm /app/node_modules/.pnpm
+COPY --from=builder /app/packages/prisma-client/node_modules/.prisma /app/node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/node_modules/.prisma
+
+# 設置環境變數
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/oms
 
 # 暴露端口
-EXPOSE 3001
+EXPOSE 8080
 
 # 將工作目錄設置為後端應用目錄
 WORKDIR /app/apps/backend
 
 # 啟動應用
-CMD ["npx", "next", "start", "-p", "3001"]
+CMD ["npx", "next", "start", "-p", "8080"]

@@ -1,0 +1,50 @@
+steps:
+  # 構建 Docker 鏡像
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA",
+        "-f",
+        "apps/frontend/Dockerfile",
+        ".",
+      ]
+    env:
+      - "NEXT_PUBLIC_API_URL=${_BACKEND_URL}"
+
+  # 推送 Docker 鏡像
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA",
+      ]
+
+  # 部署到 Cloud Run
+  - name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "oms-frontend-service"
+      - "--image=asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA"
+      - "--region=asia-east1"
+      - "--platform=managed"
+      - "--allow-unauthenticated"
+      - "--set-env-vars=NEXT_PUBLIC_API_URL=${_BACKEND_URL}"
+
+# 替換變數
+substitutions:
+  _BACKEND_URL: "https://oms-backend-url.run.app" # 將在 Cloud Build 觸發器中設置為後端服務的 URL
+
+# 構建的鏡像
+images:
+  - "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA"
+
+# 超時設置
+timeout: "1800s"
+
+# 日誌設置 - 解決服務帳號錯誤
+options:
+  logging: CLOUD_LOGGING_ONLY

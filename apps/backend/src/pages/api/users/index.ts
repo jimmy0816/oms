@@ -1,16 +1,16 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '../../../lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { User, UserRole } from 'shared-types';
-import { applyCors } from '../../../utils/cors';
+import { withApiHandler } from '@/lib/api-handler';
 
 /**
  * 用戶 API 處理程序
  * 處理 GET 和 POST 請求
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // 應用 CORS 中間件
-  await applyCors(req, res);
-  
+export default withApiHandler(async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   switch (req.method) {
     case 'GET':
       return getUsers(req, res);
@@ -18,16 +18,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return createUser(req, res);
     default:
       res.setHeader('Allow', ['GET', 'POST']);
-      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+      return res
+        .status(405)
+        .json({ error: `Method ${req.method} Not Allowed` });
   }
-}
+});
 
 /**
  * 獲取用戶列表
  */
 async function getUsers(req: NextApiRequest, res: NextApiResponse) {
   try {
+    const { role } = req.query;
+
+    // 構建查詢條件
+    const where = role ? { role: role as string } : {};
+
+    // 查詢用戶
     const users = await prisma.user.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
     });
     
@@ -66,21 +75,21 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
 async function createUser(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { email, name, role = UserRole.USER, password = '' } = req.body;
-    
+
     // 驗證必要字段
     if (!email || !name) {
       return res.status(400).json({ error: 'Email and name are required' });
     }
-    
+
     // 檢查郵箱是否已存在
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
-    
+
     if (existingUser) {
       return res.status(409).json({ error: 'Email already exists' });
     }
-    
+
     // 創建新用戶
     // 目前只支援儲存主要角色，額外角色將在用戶創建後透過另一個 API 呼叫更新
     const newUser = await prisma.user.create({

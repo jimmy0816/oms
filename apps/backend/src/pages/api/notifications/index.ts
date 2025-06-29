@@ -1,27 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse, Notification, PaginatedResponse } from 'shared-types';
-import cors from 'cors';
+import { withApiHandler } from '@/lib/api-handler';
 
-// Helper function to run middleware
-const runMiddleware = (req: NextApiRequest, res: NextApiResponse, fn: Function) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-};
-
-// Initialize CORS middleware
-const corsMiddleware = cors({
-  methods: ['GET'],
-  origin: '*', // In production, specify your frontend URL
-});
-
-export default async function handler(
+export default withApiHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<PaginatedResponse<Notification>>>
 ) {
@@ -34,13 +16,20 @@ export default async function handler(
         return await getNotifications(req, res);
       default:
         res.setHeader('Allow', ['GET']);
-        return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
+        return res
+          .status(405)
+          .json({ success: false, error: `Method ${req.method} Not Allowed` });
     }
   } catch (error: any) {
     console.error('Error in notifications API:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Internal Server Error' });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        error: error.message || 'Internal Server Error',
+      });
   }
-}
+});
 
 async function getNotifications(
   req: NextApiRequest,
@@ -49,7 +38,12 @@ async function getNotifications(
   const page = Number(req.query.page) || 1;
   const pageSize = Number(req.query.pageSize) || 10;
   const userId = req.query.userId as string;
-  const isRead = req.query.isRead === 'true' ? true : req.query.isRead === 'false' ? false : undefined;
+  const isRead =
+    req.query.isRead === 'true'
+      ? true
+      : req.query.isRead === 'false'
+      ? false
+      : undefined;
 
   if (!userId) {
     return res.status(400).json({

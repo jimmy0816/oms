@@ -1,25 +1,7 @@
+import { withApiHandler } from '@/lib/api-handler';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse, PaginatedResponse } from 'shared-types';
-import cors from 'cors';
-
-// Helper function to run middleware
-const runMiddleware = (req: NextApiRequest, res: NextApiResponse, fn: Function) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-};
-
-// Initialize CORS middleware
-const corsMiddleware = cors({
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  origin: '*', // In production, specify your frontend URL
-});
 
 // Define Report type based on Prisma schema
 interface Report {
@@ -62,13 +44,10 @@ interface CreateReportRequest {
   assigneeId?: string;
 }
 
-export default async function handler(
+export default withApiHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Report | PaginatedResponse<Report>>>
 ) {
-  // Run the CORS middleware
-  await runMiddleware(req, res, corsMiddleware);
-
   try {
     switch (req.method) {
       case 'GET':
@@ -77,13 +56,18 @@ export default async function handler(
         return await createReport(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
-        return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
+        return res
+          .status(405)
+          .json({ success: false, error: `Method ${req.method} Not Allowed` });
     }
   } catch (error: any) {
     console.error('Error in reports API:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Internal Server Error' });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal Server Error',
+    });
   }
-}
+});
 
 async function getReports(
   req: NextApiRequest,
@@ -150,21 +134,21 @@ async function createReport(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Report>>
 ) {
-  const { 
-    title, 
-    description, 
-    location, 
-    priority, 
+  const {
+    title,
+    description,
+    location,
+    priority,
     category,
     contactPhone,
     contactEmail,
     images = [],
-    assigneeId 
+    assigneeId,
   } = req.body as CreateReportRequest;
-  
+
   // In a real app, you would get the creator ID from the authenticated user
   // For this prototype, we'll use a mock user ID or the one provided in headers
-  const creatorId = req.headers['x-user-id'] as string || '1';
+  const creatorId = (req.headers['x-user-id'] as string) || '1';
 
   if (!title || !description) {
     return res.status(400).json({

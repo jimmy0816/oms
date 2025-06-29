@@ -1,0 +1,92 @@
+# cloudbuild.backend.yaml
+steps:
+  - name: gcr.io/cloud-builders/wget
+    id: proxy-install
+    entrypoint: bash
+    args:
+      - "-c"
+      - "wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O /workspace/cloud_sql_proxy && chmod +x /workspace/cloud_sql_proxy"
+    waitFor: ["-"]
+
+  - name: "node:18-alpine" # 或其他你使用的 Node.js 映像
+    entrypoint: sh
+    args:
+      - "-c"
+      - |
+        apk add --no-cache postgresql-client openssl
+
+        export DATABASE_URL="postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/oms"
+
+        npm install -g pnpm
+        cp -R . /tmp/monorepo
+        cd /tmp/monorepo/packages/prisma-client
+        pnpm install --frozen-lockfile
+
+        /workspace/cloud_sql_proxy -dir=/workspace -instances=${_CLOUD_SQL_CONNECTION_NAME}=tcp:5432&
+        echo "Waiting for Cloud SQL Proxy to start..."
+        sleep 5
+
+        pnpm db:migrate
+        echo "Prisma Migrate completed."
+    env:
+      - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/oms"
+    id: "Run Prisma Migrations"
+    waitFor: ["proxy-install"]
+
+  # 步驟 1: 建構 Docker 映像
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA" # 映像名稱和標籤
+      - "-f"
+      - "apps/backend/Dockerfile" # 指定 Dockerfile 路徑
+      - "." # Docker Build Context 為 monorepo 根目錄 (非常重要)
+  # 步驟 2: 推送 Docker 映像到 Google Container Registry (GCR)
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA",
+      ]
+  # 步驟 3: 部署到 Cloud Run
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "oms-backend-service" # Cloud Run 服務名稱
+      - "--image"
+      - "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA"
+      - "--region"
+      - "asia-east1" # 替換為你的 GCP 區域 (例如 asia-east1, us-central1)
+      - "--platform"
+      - "managed"
+      - "--allow-unauthenticated" # 如果是公開 API，允許未經驗證的存取 (可根據需求調整)
+      - "--set-env-vars" # 設定環境變數
+      - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@/oms?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME}"
+      - "--add-cloudsql-instances"
+      - "${_CLOUD_SQL_CONNECTION_NAME}"
+    # 其他可選配置：
+    # - '--cpu' # CPU 配置 (例如: 1 或 2)
+    # - '1'
+    # - '--memory' # 記憶體配置 (例如: 512Mi, 1Gi)
+    # - '512Mi'
+    # - '--min-instances' # 最小執行個體數 (防止冷啟動，會產生費用)
+    # - '0' # 0 表示按需啟動
+    # - '--max-instances' # 最大執行個體數
+    # - '10'
+    # - '--timeout' # 請求超時時間 (例如: 300s)
+    # - '300'
+images:
+  - "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA"
+
+# 替換變數，用於敏感資訊或環境特定配置
+substitutions:
+  _DB_HOST: "localhost"
+  _DB_USER: "prisma_user"
+  _DB_PASSWORD: "your_actual_database_password"
+  _CLOUD_SQL_CONNECTION_NAME: "your_actual_database_connection_string_here" # <-- 在 Cloud Build Trigger 中設定
+
+options:
+  logging: CLOUD_LOGGING_ONLY
