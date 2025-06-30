@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   BellIcon, 
   TicketIcon, 
@@ -32,24 +33,49 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const router = useRouter();
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(3); // 模擬未讀通知數量
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({}); // 追蹤展開的子選單
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // 監聽用戶變化，更新認證狀態
+  useEffect(() => {
+    setIsAuthenticated(!!user);
+  }, [user]);
 
-  const navigation = [
-    { name: '儀表板', href: '/', icon: HomeIcon },
-    { name: '工單管理', href: '/tickets', icon: ClipboardDocumentListIcon },
-    { name: '通報管理', href: '/reports', icon: DocumentTextIcon },
-    { 
-      name: '系統管理', 
-      href: '#', 
-      icon: Cog6ToothIcon,
-      children: [
-        { name: '用戶管理', href: '/admin/users', icon: UserIcon },
-        { name: '角色權限', href: '/admin/roles', icon: ShieldCheckIcon },
-      ] 
-    },
-  ];
+  // 根據用戶登入狀態和角色加載不同的導航選項
+  const getNavigation = (): NavigationItem[] => {
+    // 基本導航項目，所有用戶都可以訪問
+    const baseNavigation: NavigationItem[] = [
+      { name: '儀表板', href: '/', icon: HomeIcon },
+    ];
+    
+    // 如果用戶已登入，添加工單和通報管理
+    if (isAuthenticated && user) {
+      baseNavigation.push(
+        { name: '工單管理', href: '/tickets', icon: ClipboardDocumentListIcon },
+        { name: '通報管理', href: '/reports', icon: DocumentTextIcon },
+      );
+      
+      // 如果用戶是管理員或經理，添加系統管理選項
+      if (user.role === 'ADMIN' || user.role === 'MANAGER') {
+        baseNavigation.push({
+          name: '系統管理', 
+          href: '#', 
+          icon: Cog6ToothIcon,
+          children: [
+            { name: '用戶管理', href: '/admin/users', icon: UserIcon },
+            { name: '角色權限', href: '/admin/roles', icon: ShieldCheckIcon },
+          ] 
+        });
+      }
+    }
+    
+    return baseNavigation;
+  };
+  
+  const navigation = getNavigation();
 
   const isActive = (path: string) => {
     if (path === '#') return false; // 父選單項目不會被標記為活動狀態
@@ -136,9 +162,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     )}
                   </button>
                   
-                  {/* 子選單 */}
-                  {isExpanded && (
-                    <div className="ml-5 mt-1 flex flex-col gap-1 border-l border-gray-200 pl-2">
+                  {/* 渲染子選單項目 */}
+                  {item.children && expandedMenus[item.name] && (
+                    <div className="ml-6 mt-2 space-y-1">
                       {item.children.map((child) => (
                         <Link
                           key={child.name}
@@ -150,7 +176,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                           }`}
                           onClick={() => setSidebarOpen(false)}
                         >
-                          <child.icon className="h-4 w-4 flex-shrink-0" />
+                          <child.icon className="h-5 w-5 flex-shrink-0" />
                           {child.name}
                         </Link>
                       ))}
@@ -179,15 +205,43 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           })}
         </nav>
         <div className="mt-auto pt-4 border-t border-gray-100 hidden md:block">
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-              <UserIcon className="h-4 w-4 text-gray-600" />
+          {isAuthenticated && user ? (
+            <div className="flex flex-col">
+              <div className="flex items-center gap-3 px-3 py-2">
+                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
+                  <UserIcon className="h-4 w-4 text-gray-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-700">{user.name}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
+                  <p className="text-xs mt-1 bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full inline-block">
+                    {user.role === 'ADMIN' ? '管理員' : 
+                     user.role === 'MANAGER' ? '經理' : 
+                     user.role === 'STAFF' ? '員工' : 
+                     user.role}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={logout}
+                className="mt-2 w-full text-left text-sm text-red-600 hover:text-red-700 px-3 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                登出
+              </button>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700">管理員</p>
-              <p className="text-xs text-gray-500">admin@example.com</p>
+          ) : (
+            <div className="px-3 py-2">
+              <Link href="/login" className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                登入
+              </Link>
             </div>
-          </div>
+          )}
         </div>
       </aside>
 
@@ -205,9 +259,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
               )}
             </Link>
-            <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center md:hidden">
-              <UserIcon className="h-4 w-4 text-gray-600" />
-            </div>
+            {isAuthenticated && user ? (
+              <button 
+                onClick={logout}
+                className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center md:hidden"
+                title="登出"
+              >
+                <UserIcon className="h-4 w-4 text-gray-600" />
+              </button>
+            ) : (
+              <Link 
+                href="/login"
+                className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center md:hidden"
+                title="登入"
+              >
+                <UserIcon className="h-4 w-4 text-gray-600" />
+              </Link>
+            )}
           </div>
         </header>
 
