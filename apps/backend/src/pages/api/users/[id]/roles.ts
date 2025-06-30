@@ -49,6 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
  */
 async function getUserRoles(req: NextApiRequest, res: NextApiResponse, userId: string) {
   try {
+    // 查詢用戶的主要角色
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -61,11 +62,21 @@ async function getUserRoles(req: NextApiRequest, res: NextApiResponse, userId: s
       return res.status(404).json({ error: 'User not found' });
     }
     
-    // 由於目前系統使用單一角色欄位，我們將其作為陣列返回
-    // 未來若遷移到多對多關聯，可以從 userRoles 關聯表中獲取
-    const roles = [user.role];
+    // 查詢用戶的所有角色關聯
+    const userRoles = await prisma.userRole.findMany({
+      where: { userId },
+      include: { role: true }
+    });
     
-    return res.status(200).json({ roles });
+    // 將所有角色名稱收集到一個數組中
+    const roleNames = userRoles.map(ur => ur.role.name);
+    
+    // 確保主要角色也包含在列表中
+    if (!roleNames.includes(user.role)) {
+      roleNames.push(user.role);
+    }
+    
+    return res.status(200).json({ roles: roleNames });
   } catch (error) {
     console.error(`Error fetching roles for user ${userId}:`, error);
     return res.status(500).json({ error: 'Failed to fetch user roles' });
@@ -83,18 +94,59 @@ async function updateUserRoles(req: NextApiRequest, res: NextApiResponse, userId
       return res.status(400).json({ error: 'Invalid role IDs' });
     }
     
-    // 由於目前系統使用單一角色欄位，我們僅使用第一個角色進行更新
-    // 未來若遷移到多對多關聯，可以使用 connect/disconnect 操作更新關聯表
-    const primaryRole = roleIds[0];
+    // 使用第一個角色名稱作為主要角色
+    const primaryRoleName = roleIds[0];
     
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: { role: primaryRole },
+    // 開始一個事務以確保數據一致性
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      // 1. 更新用戶的主要角色
+      const user = await tx.user.update({
+        where: { id: userId },
+        data: { role: primaryRoleName },
+      });
+      
+      // 2. 刪除用戶現有的所有角色關聯
+      await tx.userRole.deleteMany({
+        where: { userId }
+      });
+      
+      // 3. 為每個角色名稱找到或創建角色記錄，然後創建關聯
+      for (const roleName of roleIds) {
+        // 根據角色名稱查找角色
+        let role = await tx.role.findUnique({
+          where: { name: roleName }
+        });
+        
+        // 如果角色不存在，則創建新角色
+        if (!role) {
+          role = await tx.role.create({
+            data: {
+              name: roleName,
+              description: `${roleName} role`
+            }
+          });
+        }
+        
+        // 創建用戶與角色的關聯
+        await tx.userRole.create({
+          data: {
+            userId,
+            roleId: role.id
+          }
+        });
+      }
+      
+      return user;
     });
     
-    // 將額外角色作為響應的一部分返回，即使目前沒有實際儲存
-    // 這樣前端可以顯示這些角色，直到我們實現完整的多角色支援
-    const additionalRoles = roleIds.length > 1 ? roleIds.slice(1) : [];
+    // 獲取用戶的所有角色關聯
+    const userRoles = await prisma.userRole.findMany({
+      where: { userId },
+      include: { role: true }
+    });
+    
+    // 提取角色名稱列表作為額外角色
+    const additionalRoles = userRoles.map(ur => ur.role.name);
     
     // 返回擴展的用戶對象，包含額外角色
     const userWithAdditionalRoles = {
