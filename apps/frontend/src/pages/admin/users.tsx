@@ -74,7 +74,7 @@ function UsersPage() {
       try {
         const roles = await userService.getRoleDetails();
         const options = roles.map((roleData) => ({
-          value: roleData.id,
+          value: roleData.name,
           label: `${roleData.name} (${roleData.count})`,
           description: roleData.description,
           permissions: roleData.permissions
@@ -127,14 +127,14 @@ function UsersPage() {
     }));
   };
   
-  // 打開添加用戶模態框
+  // 打開新增用戶模態框
   const openAddModal = () => {
     setCurrentEditUser(null);
     setFormData({
       name: '',
       email: '',
-      role: UserRole.USER,
-      password: ''
+      password: '', // 新用戶需要密碼欄位
+      role: 'USER'
     });
     setSelectedRoles([]);
     setIsModalOpen(true);
@@ -183,20 +183,38 @@ function UsersPage() {
         // 更新用戶
         result = await userService.updateUser(currentEditUser.id, formData);
         
-        // 更新用戶角色
+        // 更新用戶角色 - 確保主要角色也包含在角色列表中
+        const allRoleIds = [formData.role];
+        
+        // 添加選定的額外角色（排除主要角色以避免重複）
         if (selectedRoles && selectedRoles.length > 0) {
-          const roleIds = selectedRoles.map(role => role.value);
-          await userService.updateUserRoles(currentEditUser.id, roleIds);
+          selectedRoles.forEach(role => {
+            if (role.value !== formData.role && !allRoleIds.includes(role.value)) {
+              allRoleIds.push(role.value);
+            }
+          });
         }
+        
+        // 更新用戶的所有角色
+        await userService.updateUserRoles(currentEditUser.id, allRoleIds);
       } else {
         // 創建新用戶
         result = await userService.createUser(formData);
         
-        // 如果選擇了多個角色，更新用戶角色
-        if (selectedRoles && selectedRoles.length > 1) {
-          const roleIds = selectedRoles.map(role => role.value);
-          await userService.updateUserRoles(result.id, roleIds);
+        // 處理用戶角色 - 確保主要角色也包含在角色列表中
+        const allRoleIds = [formData.role];
+        
+        // 添加選定的額外角色（排除主要角色以避免重複）
+        if (selectedRoles && selectedRoles.length > 0) {
+          selectedRoles.forEach(role => {
+            if (role.value !== formData.role && !allRoleIds.includes(role.value)) {
+              allRoleIds.push(role.value);
+            }
+          });
         }
+        
+        // 更新新創建用戶的所有角色
+        await userService.updateUserRoles(result.id, allRoleIds);
       }
       
       // 重新加載用戶列表
@@ -360,11 +378,11 @@ function UsersPage() {
                                 <div className="absolute left-0 mt-1 w-48 bg-white shadow-lg rounded-md p-2 z-10 hidden group-hover:block">
                                   <p className="text-xs font-medium text-gray-700 mb-1">額外角色：</p>
                                   <ul className="text-xs">
-                                    {user.additionalRoles.map((roleId, index) => (
-                                      <li key={index} className="mb-1 last:mb-0 flex items-center">
-                                        <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
-                                        {getRoleName(roleId as UserRole)}
-                                      </li>
+                                    {user.additionalRoles.map((roleName, index) => (
+                                    <li key={index} className="mb-1 last:mb-0 flex items-center">
+                                      <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                      {getRoleName(roleName as UserRole)}
+                                    </li>
                                     ))}
                                   </ul>
                                 </div>
@@ -453,6 +471,25 @@ function UsersPage() {
                     className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                   />
                 </div>
+                
+                {/* 只在創建新用戶時顯示密碼欄位 */}
+                {!currentEditUser && (
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                      密碼
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      id="password"
+                      value={formData.password || ''}
+                      onChange={handleInputChange}
+                      required={!currentEditUser}
+                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">為新用戶設置初始密碼</p>
+                  </div>
+                )}
                 
                 <div>
                   <label htmlFor="role" className="block text-sm font-medium text-gray-700">

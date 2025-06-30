@@ -40,25 +40,41 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
       orderBy: { createdAt: 'desc' },
     });
     
-    // 模擬額外角色的數據
-    // 在實際實現中，這將從 userRoles 關聯表中獲取
-    const usersWithRoles = users.map(user => {
-      // 隨機模擬一些用戶有額外角色
-      const hasAdditionalRoles = Math.random() > 0.5;
-      let additionalRoles: string[] = [];
-      
-      if (hasAdditionalRoles) {
-        // 隨機選擇 1-2 個額外角色
-        const allRoles = Object.values(UserRole).filter(role => role !== user.role);
-        const numAdditionalRoles = Math.floor(Math.random() * 2) + 1;
-        additionalRoles = allRoles
-          .sort(() => 0.5 - Math.random())
-          .slice(0, Math.min(numAdditionalRoles, allRoles.length));
+    // 獲取所有用戶的角色關聯
+    const userIds = users.map(user => user.id);
+    const userRoles = await prisma.userRole.findMany({
+      where: {
+        userId: { in: userIds }
+      },
+      include: {
+        role: true
       }
+    });
+    
+    // 將用戶角色關聯按用戶ID分組
+    const userRoleMap: Record<string, string[]> = {};
+    
+    // 將用戶角色關聯按用戶ID分組，但存儲角色名稱而不是ID
+    userRoles.forEach(userRole => {
+      if (!userRoleMap[userRole.userId]) {
+        userRoleMap[userRole.userId] = [];
+      }
+      userRoleMap[userRole.userId].push(userRole.role.name);
+    });
+    
+    // 將額外角色添加到用戶对象中
+    const usersWithRoles = users.map(user => {
+      const additionalRoles = userRoleMap[user.id] || [];
+      // 如果主要角色在額外角色中，則移除它
+      const filteredRoles = additionalRoles.filter(roleName => roleName !== user.role);
+      
+      // 删除密码字段，不返回给前端
+      // @ts-ignore - 忽略密碼字段可能不存在的警告
+      const { password: pwd, ...userWithoutPassword } = user;
       
       return {
-        ...user,
-        additionalRoles
+        ...userWithoutPassword,
+        additionalRoles: filteredRoles
       };
     });
     
@@ -90,27 +106,63 @@ async function createUser(req: NextApiRequest, res: NextApiResponse) {
       return res.status(409).json({ error: 'Email already exists' });
     }
 
-    // 創建新用戶
-    // 目前只支援儲存主要角色，額外角色將在用戶創建後透過另一個 API 呼叫更新
-    const newUser = await prisma.user.create({
-      data: {
-        email,
-        name,
-        role: role as string,
-        // 在實際將來的實現中，應該將密碼加密後儲存
-        // 目前只是模擬創建用戶的功能
-        password: password || 'default_password'
+    // 創建新用戶和角色關聯
+    const newUser = await prisma.$transaction(async (tx) => {
+      // 1. 創建用戶
+      const user = await tx.user.create({
+        data: {
+          email,
+          name,
+          role: role as string,
+          // 在實際將來的實現中，應該將密碼加密後儲存
+          // 目前只是模擬創建用戶的功能
+          password: password || 'default_password'
+        }
+      });
+      
+      // 2. 先檢查角色是否存在，如果不存在則創建
+      let roleRecord = await tx.role.findUnique({
+        where: { name: role as string }
+      });
+      
+      if (!roleRecord) {
+        // 如果角色不存在，創建一個新角色
+        roleRecord = await tx.role.create({
+          data: {
+            name: role as string,
+            description: `${role} role`
+          }
+        });
       }
+      
+      // 3. 創建用戶角色關聯
+      await tx.userRole.create({
+        data: {
+          userId: user.id,
+          roleId: roleRecord.id  // 使用角色記錄的 ID
+        }
+      });
+      
+      return user;
     });
     
-    // 返回包含空額外角色陣列的用戶對象
-    // 這樣前端可以一致地處理用戶對象
+    // 獲取用戶的所有角色關聯
+    const userRoles = await prisma.userRole.findMany({
+      where: { userId: newUser.id },
+      include: { role: true }
+    });
+    
+    // 返回包含角色的用戶对象
     const userWithAdditionalRoles = {
       ...newUser,
-      additionalRoles: []
+      additionalRoles: userRoles.map(ur => ur.role.name)
     };
     
-    return res.status(201).json(userWithAdditionalRoles);
+    // 刪除密碼字段，不返回給前端
+    // @ts-ignore - 忽略密碼字段可能不存在的警告
+    const { password: pwd, ...userWithoutPassword } = userWithAdditionalRoles;
+    
+    return res.status(201).json(userWithoutPassword);
   } catch (error) {
     console.error('Error creating user:', error);
     return res.status(500).json({ error: 'Failed to create user' });
