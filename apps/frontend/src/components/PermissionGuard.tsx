@@ -4,7 +4,7 @@ import { hasPermission, hasAnyPermission } from '../utils/permissions';
 
 interface PermissionGuardProps {
   permission: Permission | Permission[];
-  userRole: UserRole;
+  userRole: UserRole | string;
   fallback?: React.ReactNode;
   children: React.ReactNode;
 }

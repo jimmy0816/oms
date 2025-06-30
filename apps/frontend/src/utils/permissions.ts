@@ -6,7 +6,7 @@ import { UserRole, Permission, ROLE_PERMISSIONS } from 'shared-types';
  * @param permission 需要檢查的權限
  * @returns 是否擁有權限
  */
-export const hasPermission = (userRole: UserRole, permission: Permission): boolean => {
+export const hasPermission = (userRole: UserRole | string, permission: Permission): boolean => {
   if (!userRole || !permission) return false;
   
   const permissions = ROLE_PERMISSIONS[userRole] || [];
@@ -19,7 +19,7 @@ export const hasPermission = (userRole: UserRole, permission: Permission): boole
  * @param permissions 需要檢查的權限列表
  * @returns 是否擁有任一權限
  */
-export const hasAnyPermission = (userRole: UserRole, permissions: Permission[]): boolean => {
+export const hasAnyPermission = (userRole: UserRole | string, permissions: Permission[]): boolean => {
   return permissions.some(permission => hasPermission(userRole, permission));
 };
 
@@ -29,7 +29,7 @@ export const hasAnyPermission = (userRole: UserRole, permissions: Permission[]):
  * @param permissions 需要檢查的權限列表
  * @returns 是否擁有所有權限
  */
-export const hasAllPermissions = (userRole: UserRole, permissions: Permission[]): boolean => {
+export const hasAllPermissions = (userRole: UserRole | string, permissions: Permission[]): boolean => {
   return permissions.every(permission => hasPermission(userRole, permission));
 };
 
@@ -38,6 +38,6 @@ export const hasAllPermissions = (userRole: UserRole, permissions: Permission[])
  * @param userRole 用戶角色
  * @returns 權限列表
  */
-export const getUserPermissions = (userRole: UserRole): Permission[] => {
+export const getUserPermissions = (userRole: UserRole | string): Permission[] => {
   return ROLE_PERMISSIONS[userRole] || [];
 };
