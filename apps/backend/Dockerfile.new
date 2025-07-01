@@ -1,0 +1,109 @@
+# Stage 1: Installation and Build
+FROM node:18.17-alpine AS builder
+
+# Install dependencies needed for packages, like openssl for Prisma
+# and python/make/g++ for other native modules.
+RUN apk add --no-cache openssl python3 make g++
+
+# Use pnpm
+RUN npm install -g pnpm
+
+WORKDIR /app
+
+# Copy dependency definition files first to leverage Docker cache
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+
+# Copy backend package.json
+COPY apps/backend/package.json ./apps/backend/
+
+# Install all dependencies (including devDependencies for building)
+RUN pnpm install
+
+# Copy the rest of the source code
+COPY . .
+
+# Generate Prisma client first
+RUN cd apps/backend && npx prisma generate
+
+# Build the backend app directly
+RUN cd apps/backend && npx prisma generate && npm run build
+
+# Create a production-ready folder with the correct directory structure
+RUN mkdir -p /prod/app
+RUN cp -r apps/backend/package.json apps/backend/.next apps/backend/prisma apps/backend/node_modules apps/backend/next.config.js /prod/app/
+
+# Create the necessary directory structure for Next.js
+RUN mkdir -p /prod/app/lib
+RUN mkdir -p /prod/app/utils
+RUN mkdir -p /prod/app/middleware
+RUN mkdir -p /prod/app/types
+RUN mkdir -p /prod/app/pages
+
+# Copy source files to the correct locations
+RUN cp -r apps/backend/src/lib/* /prod/app/lib/
+RUN cp -r apps/backend/src/utils/* /prod/app/utils/
+RUN cp -r apps/backend/src/middleware/* /prod/app/middleware/
+RUN cp -r apps/backend/src/types/* /prod/app/types/
+RUN cp -r apps/backend/src/pages/* /prod/app/pages/
+
+# Install production dependencies
+RUN cd /prod/app && npm install --production
+
+# ---
+
+# Stage 2: Development Image
+FROM node:18.17-alpine AS development
+WORKDIR /app
+
+# Install development dependencies
+RUN apk add --no-cache openssl postgresql-client python3 make g++
+
+# Use pnpm
+RUN npm install -g pnpm
+
+# Copy the source code
+COPY . .
+
+# Generate Prisma client
+RUN cd apps/backend && npx prisma generate
+
+# Install dependencies
+RUN pnpm install
+
+# Set environment variables
+ENV NODE_ENV=development
+ENV PORT=3001
+
+# Expose the port the app runs on
+EXPOSE 3001
+
+# Create symbolic links for Next.js directory structure at the root level
+RUN ln -s /app/apps/backend/src/pages /app/pages
+RUN ln -s /app/apps/backend/src/lib /app/lib
+RUN ln -s /app/apps/backend/src/utils /app/utils
+RUN ln -s /app/apps/backend/src/middleware /app/middleware
+RUN ln -s /app/apps/backend/src/types /app/types
+
+# Start the app in development mode
+CMD ["pnpm", "--filter=backend", "dev"]
+
+# Stage 3: Final Runner Image
+# Use a specific Node.js version that meets Next.js requirements
+FROM node:18.17-alpine AS runner
+WORKDIR /app
+
+# Install only runtime native dependencies
+RUN apk add --no-cache openssl postgresql-client
+
+# Copy the pruned and built application from the builder stage
+COPY --from=builder /prod/app .
+
+# Set environment for production
+ENV NODE_ENV=production
+ENV PORT=8080
+
+# Expose the port the app runs on
+EXPOSE 8080
+
+# Start the app
+CMD ["node_modules/.bin/next", "start", "-p", "8080"]

@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { User, UserRole } from 'shared-types';
 import { withApiHandler } from '@/lib/api-handler';
+import { hashPassword } from '@/lib/auth';
 
 /**
  * 用戶 API 處理程序
@@ -106,6 +107,13 @@ async function createUser(req: NextApiRequest, res: NextApiResponse) {
       return res.status(409).json({ error: 'Email already exists' });
     }
 
+    // 加密密碼
+    const defaultPassword = 'default_password';
+    const passwordToHash = password || defaultPassword;
+    const hashedPassword = await hashPassword(passwordToHash);
+    
+    console.log(`Creating user with email: ${email}, role: ${role}, password is hashed: ${!!hashedPassword}`);
+    
     // 創建新用戶和角色關聯
     const newUser = await prisma.$transaction(async (tx) => {
       // 1. 創建用戶
@@ -114,9 +122,8 @@ async function createUser(req: NextApiRequest, res: NextApiResponse) {
           email,
           name,
           role: role as string,
-          // 在實際將來的實現中，應該將密碼加密後儲存
-          // 目前只是模擬創建用戶的功能
-          password: password || 'default_password'
+          // 使用加密後的密碼
+          password: hashedPassword
         }
       });
       

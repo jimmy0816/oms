@@ -278,7 +278,6 @@ export const userService = {
       console.error(`Error updating roles for user with ID ${id}:`, error);
       throw new Error('更新用戶角色失敗');
     }
-    }
   },
 };
 

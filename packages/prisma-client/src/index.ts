@@ -1,32 +1,38 @@
-import { PrismaClient } from '../node_modules/.prisma/client';
+import { PrismaClient } from '@prisma/client';
+
+// Define global type for Prisma client
+declare global {
+  var prisma: PrismaClient | undefined;
+}
 
 /**
  * Create a singleton instance of PrismaClient with error handling
  */
-const prismaClientSingleton = (): PrismaClient => {
-  try {
-    return new PrismaClient({
-      errorFormat: 'pretty',
+let prismaClient: PrismaClient;
+
+try {
+  if (process.env.NODE_ENV === 'production') {
+    // In production, create a new instance
+    prismaClient = new PrismaClient({
       log: ['error', 'warn'],
     });
-  } catch (error) {
-    console.error('Error initializing PrismaClient:', error);
-    throw error;
+  } else {
+    // In development, reuse the instance to avoid multiple connections
+    if (!global.prisma) {
+      global.prisma = new PrismaClient({
+        log: ['error', 'warn', 'query'],
+      });
+    }
+    prismaClient = global.prisma;
   }
-};
+  console.log('PrismaClient initialized successfully');
+} catch (error) {
+  console.error('Failed to initialize PrismaClient:', error);
+  throw new Error('Database connection failed');
+}
 
-type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>;
+// Export the prisma instance with proper type annotation
+export const prisma: PrismaClient = prismaClient;
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClientSingleton | undefined;
-};
-
-// Create and export the prisma client singleton
-export const prisma: PrismaClientSingleton =
-  globalForPrisma.prisma ?? prismaClientSingleton();
-
-// In development, save the singleton to avoid multiple instances
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
-
-// Export all types from Prisma client
+// Re-export types from Prisma
 export * from '@prisma/client';

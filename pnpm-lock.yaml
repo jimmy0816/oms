@@ -23,6 +23,12 @@ importers:
       '@prisma/client':
         specifier: ^5.5.2
         version: 5.5.2(prisma@5.5.2)
+      '@types/bcryptjs':
+        specifier: ^3.0.0
+        version: 3.0.0
+      bcryptjs:
+        specifier: ^3.0.2
+        version: 3.0.2
       cors:
         specifier: ^2.8.5
         version: 2.8.5
@@ -33,11 +39,11 @@ importers:
         specifier: ^14.0.0
         version: 14.0.0(react-dom@18.3.1)(react@18.3.1)
       prisma-client:
-        specifier: workspace:*
-        version: link:../../packages/prisma-client
+        specifier: file:../../packages/prisma-client
+        version: file:packages/prisma-client
       shared-types:
-        specifier: workspace:*
-        version: link:../../packages/shared-types
+        specifier: file:../../packages/shared-types
+        version: file:packages/shared-types
       zod:
         specifier: ^3.22.4
         version: 3.22.4
@@ -477,6 +483,13 @@ packages:
       tslib: 2.8.1
     dev: true
     optional: true
+
+  /@types/bcryptjs@3.0.0:
+    resolution: {integrity: sha512-WRZOuCuaz8UcZZE4R5HXTco2goQSI2XxjGY3hbM/xDvwmqFWd4ivooImsMx65OKM6CtNKbnZ5YL+YwAwK7c1dg==}
+    deprecated: This is a stub types definition. bcryptjs provides its own type definitions, so you do not need this installed.
+    dependencies:
+      bcryptjs: 3.0.2
+    dev: false
 
   /@types/cors@2.8.15:
     resolution: {integrity: sha512-n91JxbNLD8eQIuXDIChAN1tCKNWCEgpceU9b7ZMbFA+P+Q4yIeh80jizFLEvolRPc1ES0VdwFlGv+kJTSirogw==}
@@ -953,6 +966,11 @@ packages:
   /balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
     dev: true
+
+  /bcryptjs@3.0.2:
+    resolution: {integrity: sha512-k38b3XOZKv60C4E2hVsXTolJWfkGRMbILBIe2IBITXciy5bOsTKot5kDrf3ZfufQtQOUN5mXceUEpU1rTl9Uog==}
+    hasBin: true
+    dev: false
 
   /binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
@@ -3881,4 +3899,18 @@ packages:
 
   /zod@3.22.4:
     resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
+    dev: false
+
+  file:packages/prisma-client:
+    resolution: {directory: packages/prisma-client, type: directory}
+    name: prisma-client
+    dependencies:
+      '@prisma/client': 5.5.2(prisma@5.5.2)
+    transitivePeerDependencies:
+      - prisma
+    dev: false
+
+  file:packages/shared-types:
+    resolution: {directory: packages/shared-types, type: directory}
+    name: shared-types
     dev: false

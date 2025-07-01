@@ -1,0 +1,90 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 24px;
+  background-color: white;
+}
+
+.logoContainer {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.logoContainer h1 {
+  margin-bottom: 8px;
+  color: #1890ff;
+  font-size: 24px;
+}
+
+.logoContainer h3 {
+  margin-top: 0;
+  color: #666;
+  font-size: 16px;
+  font-weight: normal;
+}
+
+.formGroup {
+  margin-bottom: 16px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.input:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  outline: none;
+}
+
+.submitButton {
+  width: 100%;
+  background-color: #1890ff;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  font-size: 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.submitButton:hover {
+  background-color: #40a9ff;
+}
+
+.submitButton:disabled {
+  background-color: #d9d9d9;
+  cursor: not-allowed;
+}
+
+.errorMessage {
+  background-color: #fff2f0;
+  border: 1px solid #ffccc7;
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: #ff4d4f;
+  margin-bottom: 16px;
+}
