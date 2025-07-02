@@ -3,6 +3,7 @@ import { UserRole } from 'shared-types';
 import { Permission } from '../utils/permissions';
 import { hasPermission } from '../utils/permissions';
 import jwt from 'jsonwebtoken';
+import { als } from '@/lib/als';
 
 // 定義擴展的請求類型，包含用戶信息
 export interface AuthenticatedRequest extends NextApiRequest {
@@ -14,7 +15,10 @@ export interface AuthenticatedRequest extends NextApiRequest {
   };
 }
 
-type NextApiHandler = (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void> | void;
+type NextApiHandler = (
+  req: AuthenticatedRequest,
+  res: NextApiResponse
+) => Promise<void> | void;
 
 /**
  * JWT 令牌驗證函數
@@ -44,17 +48,18 @@ export const withAuth = (handler: NextApiHandler): NextApiHandler => {
       if (!token) {
         return res.status(401).json({ message: '未授權訪問' });
       }
-      
+
       // 驗證令牌
       const user = verifyToken(token);
       if (!user) {
         return res.status(401).json({ message: '無效的令牌' });
       }
-      
+
       // 將用戶信息添加到請求中
       req.user = user;
-      
-      return handler(req, res);
+      return await als.run({ actor: user }, () => {
+        return handler(req, res);
+      });
     } catch (error) {
       console.error('Authentication error:', error);
       return res.status(401).json({ message: '授權失敗' });
@@ -74,16 +79,16 @@ export const withPermission = (permission: Permission | Permission[]) => {
       if (!user) {
         return res.status(401).json({ message: '未授權訪問' });
       }
-      
+
       const permissions = Array.isArray(permission) ? permission : [permission];
-      
+
       // 檢查用戶是否擁有所需權限
-      const hasAccess = permissions.some(p => hasPermission(user.role, p));
-      
+      const hasAccess = permissions.some((p) => hasPermission(user.role, p));
+
       if (!hasAccess) {
         return res.status(403).json({ message: '權限不足' });
       }
-      
+
       return handler(req, res);
     });
   };

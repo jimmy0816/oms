@@ -2,8 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl"]
 }
 
@@ -13,49 +12,50 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  name          String
-  password      String    // 密碼欄位，已加密存儲
-  role          String    @default("USER") // USER, ADMIN, MANAGER (保留向後兼容)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  notifications Notification[]
-  ticketsCreated Ticket[] @relation("CreatedTickets")
-  ticketsAssigned Ticket[] @relation("AssignedTickets")
-  comments      Comment[]
-  reportsCreated Report[] @relation("CreatedReports")
-  reportsAssigned Report[] @relation("AssignedReports")
-  userRoles     UserRole[] // 新增多對多關聯
+  id              String         @id @default(uuid())
+  email           String         @unique
+  name            String
+  password        String // 密碼欄位，已加密存儲
+  role            String         @default("USER") // USER, ADMIN, MANAGER (保留向後兼容)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  notifications   Notification[]
+  ticketsCreated  Ticket[]       @relation("CreatedTickets")
+  ticketsAssigned Ticket[]       @relation("AssignedTickets")
+  comments        Comment[]
+  reportsCreated  Report[]       @relation("CreatedReports")
+  reportsAssigned Report[]       @relation("AssignedReports")
+  userRoles       UserRole[] // 新增多對多關聯
+  AuditLog        AuditLog[]
 }
 
 model Notification {
-  id          String   @id @default(uuid())
-  title       String
-  message     String
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  id              String   @id @default(uuid())
+  title           String
+  message         String
+  isRead          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
   relatedTicketId String?
-  relatedTicket Ticket? @relation(fields: [relatedTicketId], references: [id])
+  relatedTicket   Ticket?  @relation(fields: [relatedTicketId], references: [id])
   relatedReportId String?
-  relatedReport Report? @relation(fields: [relatedReportId], references: [id])
+  relatedReport   Report?  @relation(fields: [relatedReportId], references: [id])
 }
 
 model Ticket {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  status      String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
-  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  creatorId   String
-  creator     User     @relation("CreatedTickets", fields: [creatorId], references: [id])
-  assigneeId  String?
-  assignee    User?    @relation("AssignedTickets", fields: [assigneeId], references: [id])
-  comments    Comment[]
+  id            String         @id @default(uuid())
+  title         String
+  description   String
+  status        String         @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  priority      String         @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  creatorId     String
+  creator       User           @relation("CreatedTickets", fields: [creatorId], references: [id])
+  assigneeId    String?
+  assignee      User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  comments      Comment[]
   notifications Notification[]
 }
 
@@ -65,51 +65,62 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   ticketId  String?
-  ticket    Ticket?   @relation(fields: [ticketId], references: [id])
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id])
   reportId  String?
-  report    Report?   @relation(fields: [reportId], references: [id])
+  report    Report?  @relation(fields: [reportId], references: [id])
   userId    String
   user      User     @relation(fields: [userId], references: [id])
 }
 
 model Report {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  location    String?
-  status      String   @default("PENDING") // PENDING, PROCESSING, RESOLVED, REJECTED
-  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  creatorId   String
-  creator     User     @relation("CreatedReports", fields: [creatorId], references: [id])
-  assigneeId  String?
-  assignee    User?    @relation("AssignedReports", fields: [assigneeId], references: [id])
-  comments    Comment[]
+  id            String         @id @default(uuid())
+  title         String
+  description   String
+  location      String?
+  status        String         @default("PENDING") // PENDING, PROCESSING, RESOLVED, REJECTED
+  priority      String         @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  creatorId     String
+  creator       User           @relation("CreatedReports", fields: [creatorId], references: [id])
+  assigneeId    String?
+  assignee      User?          @relation("AssignedReports", fields: [assigneeId], references: [id])
+  comments      Comment[]
   notifications Notification[]
-  images      String[]  // URLs to stored images
-  category    String?   // Category of the report (e.g., infrastructure, environment)
-  contactPhone String?  // Reporter's contact phone
-  contactEmail String?  // Reporter's contact email
+  images        String[] // URLs to stored images
+  category      String? // Category of the report (e.g., infrastructure, environment)
+  contactPhone  String? // Reporter's contact phone
+  contactEmail  String? // Reporter's contact email
 }
 
 // 角色定義模型
 model Role {
-  id          String    @id @default(uuid())
-  name        String    @unique // 角色名稱，例如 ADMIN, USER 等
-  description String?   // 角色描述
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id          String     @id @default(uuid())
+  name        String     @unique // 角色名稱，例如 ADMIN, USER 等
+  description String? // 角色描述
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   userRoles   UserRole[] // 與使用者的關聯
 }
 
 // 使用者與角色的多對多關聯表
 model UserRole {
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  roleId    String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId     String
   assignedAt DateTime @default(now())
 
   @@id([userId, roleId]) // 複合主鍵
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String? // 可選
+  actor      User?    @relation(fields: [actorId], references: [id]) // 關聯也必須可選
+  action     String
+  targetId   String
+  targetType String
+  details    Json?
+  createdAt  DateTime @default(now())
 }

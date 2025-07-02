@@ -2,6 +2,7 @@ import { withApiHandler } from '@/lib/api-handler';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse, PaginatedResponse } from 'shared-types';
+import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 
 // Define Report type based on Prisma schema
 interface Report {
@@ -53,7 +54,7 @@ export default withApiHandler(async function handler(
       case 'GET':
         return await getReports(req, res);
       case 'POST':
-        return await createReport(req, res);
+        return await withAuth(createReport)(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
         return res
@@ -131,7 +132,7 @@ async function getReports(
 }
 
 async function createReport(
-  req: NextApiRequest,
+  req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<Report>>
 ) {
   const {
@@ -148,7 +149,7 @@ async function createReport(
 
   // In a real app, you would get the creator ID from the authenticated user
   // For this prototype, we'll use a mock user ID or the one provided in headers
-  const creatorId = (req.headers['x-user-id'] as string) || '1';
+  const creatorId = req.user.id;
 
   if (!title || !description) {
     return res.status(400).json({

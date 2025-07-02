@@ -9,6 +9,7 @@ import {
   TicketPriority,
 } from 'shared-types';
 import { withApiHandler } from '@/lib/api-handler';
+import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 
 export default withApiHandler(async function handler(
   req: NextApiRequest,
@@ -19,7 +20,7 @@ export default withApiHandler(async function handler(
       case 'GET':
         return await getTickets(req, res);
       case 'POST':
-        return await createTicket(req, res);
+        return await withAuth(createTicket)(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
         return res
@@ -102,7 +103,7 @@ async function getTickets(
 }
 
 async function createTicket(
-  req: NextApiRequest,
+  req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<Ticket>>
 ) {
   const { title, description, priority, assigneeId } =
@@ -110,10 +111,7 @@ async function createTicket(
 
   // In a real app, you would get the creator ID from the authenticated user
   // For this prototype, we'll use a mock user ID
-  const creator = await prisma.user.findUnique({
-    where: { email: 'admin@example.com' },
-  });
-  const creatorId = creator.id;
+  const creatorId = req.user.id;
 
   if (!title || !description) {
     return res.status(400).json({
