@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl"]
@@ -15,18 +12,18 @@ model User {
   id              String         @id @default(uuid())
   email           String         @unique
   name            String
-  password        String // 密碼欄位，已加密存儲
-  role            String         @default("USER") // USER, ADMIN, MANAGER (保留向後兼容)
+  role            String         @default("USER")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-  notifications   Notification[]
-  ticketsCreated  Ticket[]       @relation("CreatedTickets")
-  ticketsAssigned Ticket[]       @relation("AssignedTickets")
+  password        String
   comments        Comment[]
-  reportsCreated  Report[]       @relation("CreatedReports")
+  notifications   Notification[]
   reportsAssigned Report[]       @relation("AssignedReports")
-  userRoles       UserRole[] // 新增多對多關聯
-  AuditLog        AuditLog[]
+  reportsCreated  Report[]       @relation("CreatedReports")
+  ticketsAssigned Ticket[]       @relation("AssignedTickets")
+  ticketsCreated  Ticket[]       @relation("CreatedTickets")
+  userRoles       UserRole[]
+  AuditLogs       AuditLog[]
 }
 
 model Notification {
@@ -36,27 +33,27 @@ model Notification {
   isRead          Boolean  @default(false)
   createdAt       DateTime @default(now())
   userId          String
-  user            User     @relation(fields: [userId], references: [id])
   relatedTicketId String?
-  relatedTicket   Ticket?  @relation(fields: [relatedTicketId], references: [id])
   relatedReportId String?
   relatedReport   Report?  @relation(fields: [relatedReportId], references: [id])
+  relatedTicket   Ticket?  @relation(fields: [relatedTicketId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
 }
 
 model Ticket {
   id            String         @id @default(uuid())
   title         String
   description   String
-  status        String         @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
-  priority      String         @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status        String         @default("OPEN")
+  priority      String         @default("MEDIUM")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   creatorId     String
-  creator       User           @relation("CreatedTickets", fields: [creatorId], references: [id])
   assigneeId    String?
-  assignee      User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
   comments      Comment[]
   notifications Notification[]
+  assignee      User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  creator       User           @relation("CreatedTickets", fields: [creatorId], references: [id])
 }
 
 model Comment {
@@ -65,10 +62,10 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   ticketId  String?
-  ticket    Ticket?  @relation(fields: [ticketId], references: [id])
+  userId    String
   reportId  String?
   report    Report?  @relation(fields: [reportId], references: [id])
-  userId    String
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
 }
 
@@ -77,41 +74,39 @@ model Report {
   title         String
   description   String
   location      String?
-  status        String         @default("PENDING") // PENDING, PROCESSING, RESOLVED, REJECTED
-  priority      String         @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status        String         @default("PENDING")
+  priority      String         @default("MEDIUM")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   creatorId     String
-  creator       User           @relation("CreatedReports", fields: [creatorId], references: [id])
   assigneeId    String?
-  assignee      User?          @relation("AssignedReports", fields: [assigneeId], references: [id])
+  images        String[]
+  category      String?
+  contactPhone  String?
+  contactEmail  String?
   comments      Comment[]
   notifications Notification[]
-  images        String[] // URLs to stored images
-  category      String? // Category of the report (e.g., infrastructure, environment)
-  contactPhone  String? // Reporter's contact phone
-  contactEmail  String? // Reporter's contact email
+  assignee      User?          @relation("AssignedReports", fields: [assigneeId], references: [id])
+  creator       User           @relation("CreatedReports", fields: [creatorId], references: [id])
 }
 
-// 角色定義模型
 model Role {
   id          String     @id @default(uuid())
-  name        String     @unique // 角色名稱，例如 ADMIN, USER 等
-  description String? // 角色描述
+  name        String     @unique
+  description String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  userRoles   UserRole[] // 與使用者的關聯
+  userRoles   UserRole[]
 }
 
-// 使用者與角色的多對多關聯表
 model UserRole {
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     String
-  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
   roleId     String
   assignedAt DateTime @default(now())
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@id([userId, roleId]) // 複合主鍵
+  @@id([userId, roleId])
 }
 
 model AuditLog {
