@@ -5,17 +5,17 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "prisma": {
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.ts"
   },
   "scripts": {
-    "build": "prisma generate && tsc && copyfiles -u 1 prisma/schema.prisma dist/",
+    "build": "prisma generate --schema=./prisma/schema.prisma && tsc && copyfiles -u 1 prisma/schema.prisma dist/",
     "dev": "tsc --watch",
     "lint": "eslint \"src/**/*.ts\"",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
-    "db:migrate": "prisma migrate deploy",
-    "db:seed": "prisma db seed"
+    "db:generate": "prisma generate --schema=./prisma/schema.prisma",
+    "db:push": "prisma db push --schema=./prisma/schema.prisma",
+    "db:studio": "prisma studio --schema=./prisma/schema.prisma",
+    "db:migrate": "prisma migrate deploy --schema=./prisma/schema.prisma",
+    "db:seed": "prisma db seed --schema=./prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^5.5.2"
