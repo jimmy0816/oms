@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse, Comment, CreateCommentRequest } from 'shared-types';
 import { withApiHandler } from '@/lib/api-handler';
+import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 
 export default withApiHandler(async function handler(
   req: NextApiRequest,
@@ -12,7 +13,7 @@ export default withApiHandler(async function handler(
       case 'GET':
         return await getComments(req, res);
       case 'POST':
-        return await createComment(req, res);
+        return await withAuth(createComment)(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
         return res
@@ -21,12 +22,10 @@ export default withApiHandler(async function handler(
     }
   } catch (error: any) {
     console.error('Error in comments API:', error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        error: error.message || 'Internal Server Error',
-      });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal Server Error',
+    });
   }
 });
 
@@ -64,14 +63,14 @@ async function getComments(
 }
 
 async function createComment(
-  req: NextApiRequest,
+  req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<Comment>>
 ) {
   const { content, ticketId } = req.body as CreateCommentRequest;
 
   // In a real app, you would get the user ID from the authenticated user
   // For this prototype, we'll use a mock user ID
-  const userId = (req.headers['x-user-id'] as string) || '1';
+  const userId = req.user.id;
 
   if (!content || !ticketId) {
     return res.status(400).json({
