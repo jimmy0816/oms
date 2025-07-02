@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
@@ -10,9 +10,7 @@ import {
 import CategorySelector from '../../components/CategorySelector';
 import FileUploader, { UploadedFile } from '../../components/FileUploader';
 import reportService, { ReportPriority } from '../../services/reportService';
-// 使用從 reportService 導入的 ReportPriority
-
-// 不再使用舊的分類常量，改用 CategorySelector 中的三層級分類
+import { getLocations, Location } from '../../services/locationService';
 
 // 定義檔案資訊介面
 interface FileInfo {
@@ -41,8 +39,22 @@ export default function NewReport() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [selectedCategoryPath, setSelectedCategoryPath] = useState<string>('');
+  const [locations, setLocations] = useState<Location[]>([]);
   
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<CreateReportRequest>();
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const data = await getLocations();
+        setLocations(data);
+      } catch (error) {
+        console.error("Failed to fetch locations:", error);
+        // Optionally set an error state here to inform the user
+      }
+    };
+    fetchLocations();
+  }, []);
   
   // 確保選擇的類別會更新到表單中
   React.useEffect(() => {
@@ -243,6 +255,7 @@ export default function NewReport() {
                 <input
                   id="location"
                   type="text"
+                  list="locations-list"
                   {...register('location', { 
                     required: '請輸入問題地點',
                     maxLength: { value: 100, message: '地點不能超過 100 個字元' }
@@ -250,6 +263,11 @@ export default function NewReport() {
                   className="form-input"
                   placeholder="例如：總部大樓 3F 會議室"
                 />
+                <datalist id="locations-list">
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.name} />
+                  ))}
+                </datalist>
                 {errors.location && (
                   <p className="mt-1 text-sm text-red-600">{errors.location.message}</p>
                 )}
