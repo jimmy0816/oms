@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword, generateToken, hashPassword } from '@/lib/auth';
 import { withApiHandler } from '@/lib/api-handler';
+import { getUserPermissions, Permission } from '@/utils/permissions';
 
 // 輸出環境變數以便調試
 console.log('Login API - DATABASE_URL:', process.env.DATABASE_URL);
@@ -131,6 +132,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const additionalRoles = userRoles.map(ur => ur.role.name);
 
+    // 合併主角色與額外角色的權限
+    let permissions = new Set(getUserPermissions(user.role));
+    for (const roleName of additionalRoles) {
+      getUserPermissions(roleName as any).forEach(p => permissions.add(p));
+    }
+    // 轉為陣列並轉小寫字串
+    const permissionsArr = Array.from(permissions).map(p =>
+      typeof p === 'string' ? p : (p as Permission)
+    );
+
     // 生成 JWT Token
     const { password: _, ...userWithoutPassword } = user;
     const token = generateToken(userWithoutPassword);
@@ -142,6 +153,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         user: {
           ...userWithoutPassword,
           additionalRoles,
+          permissions: permissionsArr,
         },
         token,
       },

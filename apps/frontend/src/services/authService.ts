@@ -12,6 +12,7 @@ export interface User {
   email: string;
   role: string;
   additionalRoles?: string[];
+  permissions?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,6 +58,7 @@ const authService = {
         ...data.data.user,
         createdAt: new Date(data.data.user.createdAt),
         updatedAt: new Date(data.data.user.updatedAt),
+        permissions: data.data.user.permissions || [],
       };
 
       // 保存令牌到本地存儲
@@ -105,6 +107,7 @@ const authService = {
         ...user,
         createdAt: new Date(user.createdAt),
         updatedAt: new Date(user.updatedAt),
+        permissions: user.permissions || [],
       };
     } catch (error) {
       console.error('解析用戶資訊失敗:', error);
