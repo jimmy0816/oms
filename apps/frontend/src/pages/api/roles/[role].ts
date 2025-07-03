@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { UserRole, Permission, ROLE_PERMISSIONS } from 'shared-types';
-import { applyCors } from '../../../utils/cors'; // 路徑依實際情況調整
+import { applyCors } from '@/utils/cors'; // 路徑依實際情況調整
 
 // 從 localStorage 獲取角色權限，如果不存在則使用默認值
 const getRolePermissionsFromStorage = () => {
