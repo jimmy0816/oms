@@ -265,208 +265,273 @@ export default function ReportDetail() {
             </Link>
           </div>
 
-          <div className="space-y-6">
-            {/* 頁面標題與返回按鈕 */}
-            <div className="flex items-center">
-              <Link
-                href="/reports"
-                className="mr-4 p-2 rounded-full hover:bg-gray-100"
-              >
-                <ArrowLeftIcon className="h-5 w-5 text-gray-500" />
-              </Link>
+          <div className="flex flex-col lg:flex-row lg:space-x-8">
+            {/* 左側主內容 */}
+            <div className="flex-1 space-y-6">
+              {/* 頁面標題 */}
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 truncate">
                   {report.title}
                 </h1>
                 <span className="text-sm text-gray-500">通報 #{report.id}</span>
               </div>
-            </div>
 
-            <div className="flex gap-2">
-              {userPermissions.canProcess &&
-                report.status === ReportStatus.PENDING && (
-                  <>
+              <div className="flex gap-2">
+                {userPermissions.canProcess &&
+                  report.status === ReportStatus.PENDING && (
+                    <>
+                      <button
+                        className="btn-primary"
+                        onClick={() =>
+                          updateReportStatus(
+                            ReportStatus.PROCESSING,
+                            '開始處理通報'
+                          )
+                        }
+                        disabled={processing}
+                      >
+                        {processing ? '處理中...' : '開始處理'}
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        onClick={() =>
+                          updateReportStatus(
+                            ReportStatus.REJECTED,
+                            '此通報不處理'
+                          )
+                        }
+                        disabled={processing}
+                      >
+                        不處理
+                      </button>
+                    </>
+                  )}
+
+                {userPermissions.canClose &&
+                  report.status === ReportStatus.PROCESSING && (
                     <button
                       className="btn-primary"
                       onClick={() =>
                         updateReportStatus(
-                          ReportStatus.PROCESSING,
-                          '開始處理通報'
+                          ReportStatus.RESOLVED,
+                          '處理完成，已解決'
                         )
                       }
                       disabled={processing}
                     >
-                      {processing ? '處理中...' : '開始處理'}
+                      {processing ? '處理中...' : '結案'}
                     </button>
-                    <button
-                      className="btn-secondary"
-                      onClick={() =>
-                        updateReportStatus(
-                          ReportStatus.REJECTED,
-                          '此通報不處理'
-                        )
-                      }
-                      disabled={processing}
-                    >
-                      不處理
-                    </button>
-                  </>
-                )}
-
-              {userPermissions.canClose &&
-                report.status === ReportStatus.PROCESSING && (
-                  <button
-                    className="btn-primary"
-                    onClick={() =>
-                      updateReportStatus(
-                        ReportStatus.RESOLVED,
-                        '處理完成，已解決'
-                      )
-                    }
-                    disabled={processing}
-                  >
-                    {processing ? '處理中...' : '結案'}
-                  </button>
-                )}
-            </div>
-
-            {/* 通報詳細資訊 */}
-            <div className="mt-6 space-y-4">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">描述</h3>
-                <p className="mt-1 text-gray-900 whitespace-pre-line">
-                  {report.description}
-                </p>
+                  )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+              {/* 通報詳細資訊 */}
+              <div className="mt-6 space-y-4">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500">類別</h3>
-                  <p className="mt-1 text-gray-900">
-                    {getCategoryName(report.category)}
+                  <h3 className="text-sm font-medium text-gray-500">描述</h3>
+                  <p className="mt-1 text-gray-900 whitespace-pre-line">
+                    {report.description}
                   </p>
                 </div>
 
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">地點</h3>
-                  <div className="mt-1 flex items-center">
-                    <MapPinIcon className="h-5 w-5 text-gray-400 mr-1" />
-                    <p className="text-gray-900">{report.location}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">建立者</h3>
-                  <div className="mt-1 flex items-center">
-                    <UserCircleIcon className="h-5 w-5 text-gray-400 mr-1" />
-                    <p className="text-gray-900">
-                      {report.creator?.name || '未知'}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">
-                    建立時間
-                  </h3>
-                  <div className="mt-1 flex items-center">
-                    <ClockIcon className="h-5 w-5 text-gray-400 mr-1" />
-                    <p className="text-gray-900">
-                      {formatDate(report.createdAt)}
-                    </p>
-                  </div>
-                </div>
-
-                {report.assignee && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">
-                      處理人員
-                    </h3>
+                    <h3 className="text-sm font-medium text-gray-500">類別</h3>
+                    <p className="mt-1 text-gray-900">
+                      {getCategoryName(report.category)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">地點</h3>
+                    <div className="mt-1 flex items-center">
+                      <MapPinIcon className="h-5 w-5 text-gray-400 mr-1" />
+                      <p className="text-gray-900">{report.location}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">建立者</h3>
                     <div className="mt-1 flex items-center">
                       <UserCircleIcon className="h-5 w-5 text-gray-400 mr-1" />
-                      <p className="text-gray-900">{report.assignee.name}</p>
+                      <p className="text-gray-900">
+                        {report.creator?.name || '未知'}
+                      </p>
                     </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">
+                      建立時間
+                    </h3>
+                    <div className="mt-1 flex items-center">
+                      <ClockIcon className="h-5 w-5 text-gray-400 mr-1" />
+                      <p className="text-gray-900">
+                        {formatDate(report.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {report.assignee && (
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">
+                        處理人員
+                      </h3>
+                      <div className="mt-1 flex items-center">
+                        <UserCircleIcon className="h-5 w-5 text-gray-400 mr-1" />
+                        <p className="text-gray-900">{report.assignee.name}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 顯示上傳的圖片和影片 */}
+                {report.images && report.images.length > 0 && (
+                  <div className="mt-6 border-t border-gray-100 pt-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">
+                      上傳的檔案
+                    </h3>
+                    <FileUploader
+                      files={report.images.map((image, index) => {
+                        // 檢查是否為影片檔案 - 第三個模擬為影片
+                        const isVideo = index === 2;
+
+                        return {
+                          id: `file-${index}`,
+                          name: isVideo
+                            ? `影片檔案 ${index + 1}`
+                            : `圖片檔案 ${index + 1}`,
+                          url: image,
+                          type: isVideo ? 'video' : 'image',
+                          previewUrl: image,
+                        } as UploadedFile;
+                      })}
+                      onFilesChange={() => {}}
+                      viewOnly={true}
+                    />
                   </div>
                 )}
               </div>
 
-              {/* 顯示上傳的圖片和影片 */}
-              {report.images && report.images.length > 0 && (
-                <div className="mt-6 border-t border-gray-100 pt-4">
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
-                    上傳的檔案
-                  </h3>
-                  <FileUploader
-                    files={report.images.map((image, index) => {
-                      // 檢查是否為影片檔案 - 第三個模擬為影片
-                      const isVideo = index === 2;
-
-                      return {
-                        id: `file-${index}`,
-                        name: isVideo
-                          ? `影片檔案 ${index + 1}`
-                          : `圖片檔案 ${index + 1}`,
-                        url: image,
-                        type: isVideo ? 'video' : 'image',
-                        previewUrl: image,
-                      } as UploadedFile;
-                    })}
-                    onFilesChange={() => {}}
-                    viewOnly={true}
-                  />
+              {/* 通報歷程（明顯區隔卡片） */}
+              <div className="p-6 mt-6 bg-white rounded-lg shadow-lg border border-gray-200">
+                <h3 className="text-lg font-bold text-blue-800 mb-4 flex items-center">
+                  <ClockIcon className="h-5 w-5 mr-2 text-blue-400" />處理歷程
+                </h3>
+                <div className="flow-root">
+                  <ul className="-mb-8">
+                    {report.comments && report.comments.length > 0 ? (
+                      report.comments.map((event: any, eventIdx: number) => (
+                        <li key={event.id}>
+                          <div className="relative pb-8">
+                            {eventIdx !== report.comments.length - 1 ? (
+                              <span
+                                className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
+                                aria-hidden="true"
+                              ></span>
+                            ) : null}
+                            <div className="relative flex space-x-3">
+                              <div>
+                                <span
+                                  className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white bg-blue-100 text-blue-800`}
+                                >
+                                  <ClockIcon className="h-5 w-5" />
+                                </span>
+                              </div>
+                              <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                <div>
+                                  <p className="text-sm text-gray-700">
+                                    <span className="font-semibold text-blue-700">{event.user?.name || '系統'}</span>
+                                    <span className="mx-2 text-gray-400">|</span>
+                                    <span className="text-xs text-gray-400">{formatDate(event.createdAt)}</span>
+                                  </p>
+                                  {event.content && (
+                                    <div className="mt-1 text-sm text-gray-900 bg-gray-50 rounded px-3 py-2 border border-gray-100">
+                                      {event.content}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      ))
+                    ) : (
+                      <li>
+                        <div className="text-gray-400 text-sm">尚無處理歷程</div>
+                      </li>
+                    )}
+                  </ul>
                 </div>
-              )}
+              </div>
+
+              {/* 留言功能區塊 */}
+              <div className="p-6 mt-6 bg-white rounded-lg shadow-sm">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">留言討論</h3>
+                {/* 留言列表（靜態假資料） */}
+                <div className="space-y-4 mb-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0">
+                      <UserCircleIcon className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">王小明 <span className="text-xs text-gray-400 ml-2">2024/07/03 15:20</span></div>
+                      <div className="text-sm text-gray-700">這個問題我明天會去現場看。</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0">
+                      <UserCircleIcon className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">林主管 <span className="text-xs text-gray-400 ml-2">2024/07/03 16:05</span></div>
+                      <div className="text-sm text-gray-700">收到，請回報進度。</div>
+                    </div>
+                  </div>
+                </div>
+                {/* 新增留言輸入框 */}
+                <form className="flex items-end space-x-2">
+                  <textarea
+                    className="flex-1 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={2}
+                    placeholder="輸入留言...（僅前端展示）"
+                    disabled
+                  />
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled
+                  >
+                    發佈
+                  </button>
+                </form>
+              </div>
             </div>
-          </div>
 
-          {/* 通報歷程 */}
-          <div className="p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">處理歷程</h3>
-
-            <div className="flow-root">
-              <ul className="-mb-8">
-                {report.comments &&
-                  report.comments.map((event: any, eventIdx: number) => (
-                    <li key={event.id}>
-                      <div className="relative pb-8">
-                        {eventIdx !== report.comments.length - 1 ? (
-                          <span
-                            className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                            aria-hidden="true"
-                          ></span>
-                        ) : null}
-                        <div className="relative flex space-x-3">
-                          <div>
-                            <span
-                              className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white bg-blue-100 text-blue-800`}
-                            >
-                              <ClockIcon className="h-5 w-5" />
-                            </span>
-                          </div>
-                          <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                            <div>
-                              <p className="text-sm text-gray-500">
-                                {report.status && getStatusName(report.status)}
-                                {event.content && (
-                                  <span className="font-medium text-gray-900">
-                                    {' '}
-                                    - {event.content}
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                            <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                              <div>{event.user?.name || '系統'}</div>
-                              <time dateTime={event.createdAt.toISOString()}>
-                                {formatDate(event.createdAt)}
-                              </time>
-                            </div>
-                          </div>
-                        </div>
+            {/* 右側相關工單區塊 */}
+            <div className="w-full lg:w-80 flex-shrink-0 mt-8 lg:mt-0">
+              <div className="p-6 bg-white rounded-lg shadow-sm">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">相關工單</h3>
+                {/* 假設有關聯工單，顯示列表；否則顯示新增按鈕 */}
+                {false ? (
+                  <ul className="divide-y divide-gray-100 mb-4">
+                    <li className="py-2 flex items-center justify-between">
+                      <div>
+                        <span className="font-medium text-blue-700">工單 #12345</span>
+                        <span className="ml-2 text-gray-500">（維修電梯）</span>
                       </div>
+                      <Link href="/tickets/12345" className="text-blue-600 hover:underline text-sm">查看</Link>
                     </li>
-                  ))}
-              </ul>
+                  </ul>
+                ) : (
+                  <div className="text-gray-500 mb-4">目前尚無相關工單</div>
+                )}
+                <Link
+                  href={`/tickets/new?reportId=${report.id}`}
+                  className="btn-primary w-full block text-center"
+                >
+                  新增工單
+                </Link>
+              </div>
             </div>
           </div>
         </div>

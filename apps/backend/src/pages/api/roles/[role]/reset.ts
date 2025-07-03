@@ -1,12 +1,9 @@
 import { NextApiResponse } from 'next';
 import { UserRole } from 'shared-types';
-import { Permission, ROLE_PERMISSIONS } from '@/utils/permissions';
+import { Permission } from '@/utils/permissions';
 import { withPermission, AuthenticatedRequest } from '@/middleware/auth';
 import { withApiHandler } from '@/lib/api-handler';
-
-// 模擬數據存儲 (實際應用中應該使用數據庫)
-// 這裡我們需要從 [role].ts 共享數據，但為了簡化，我們重新定義
-let customRolePermissions: Record<string, Permission[]> = {};
+import { permissionService } from '@/services/permissionService';
 
 /**
  * 重置角色權限 API
@@ -35,15 +32,16 @@ async function resetRolePermission(
   role: UserRole
 ) {
   try {
-    // 在實際應用中，這裡應該從數據庫刪除自定義權限
-    if (customRolePermissions[role]) {
-      delete customRolePermissions[role];
-    }
+    // 從數據庫重置角色權限為默認值
+    await permissionService.resetRolePermissions(role);
+    
+    // 獲取重置後的權限
+    const permissions = await permissionService.getRolePermissions(role);
 
     return res.status(200).json({
       message: '角色權限已重置為默認值',
       role,
-      permissions: ROLE_PERMISSIONS[role] || [],
+      permissions,
     });
   } catch (error) {
     console.error(`Error resetting permissions for role ${role}:`, error);
