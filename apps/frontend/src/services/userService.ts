@@ -1,8 +1,7 @@
 import { User, UserRole } from 'shared-types';
 
 // API 基礎 URL
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 /**
  * 用戶管理服務
@@ -207,7 +206,7 @@ export const userService = {
    */
   async getAllRoles(): Promise<{ role: UserRole; count: number }[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/roles`);
+      const response = await fetch(`${API_BASE_URL}/api/users/roles`);
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
@@ -231,7 +230,7 @@ export const userService = {
    */
   async getRoleDetails(): Promise<{id: string, name: string, description: string, count: number, permissions: string[]}[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/roles`);
+      const response = await fetch(`${API_BASE_URL}/api/users/roles`);
       
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
@@ -253,7 +252,7 @@ export const userService = {
    */
   async updateUserRoles(id: string, roleIds: string[]): Promise<User> {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${id}/roles`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/${id}/roles`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
