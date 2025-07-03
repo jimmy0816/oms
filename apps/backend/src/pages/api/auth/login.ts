@@ -132,19 +132,33 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const additionalRoles = userRoles.map(ur => ur.role.name);
 
-    // 合併主角色與額外角色的權限
-    let permissions = new Set(getUserPermissions(user.role));
-    for (const roleName of additionalRoles) {
-      getUserPermissions(roleName as any).forEach(p => permissions.add(p));
+    // 查詢主角色與 additionalRoles 的所有權限（查資料庫）
+    let permissionsSet = new Set<string>();
+    // 主角色
+    const mainRole = await prisma.role.findUnique({ where: { name: user.role }, select: { id: true } });
+    if (mainRole) {
+      const mainRolePerms = await prisma.rolePermission.findMany({
+        where: { roleId: mainRole.id },
+        include: { permission: { select: { name: true } } }
+      });
+      mainRolePerms.forEach(rp => permissionsSet.add(rp.permission.name));
     }
-    // 轉為陣列並轉小寫字串
-    const permissionsArr = Array.from(permissions).map(p =>
-      typeof p === 'string' ? p : (p as Permission)
-    );
+    // additionalRoles
+    for (const roleName of additionalRoles) {
+      const role = await prisma.role.findUnique({ where: { name: roleName }, select: { id: true } });
+      if (role) {
+        const rolePerms = await prisma.rolePermission.findMany({
+          where: { roleId: role.id },
+          include: { permission: { select: { name: true } } }
+        });
+        rolePerms.forEach(rp => permissionsSet.add(rp.permission.name));
+      }
+    }
+    const permissionsArr = Array.from(permissionsSet);
 
-    // 生成 JWT Token
+    // 生成 JWT Token，包含權限
     const { password: _, ...userWithoutPassword } = user;
-    const token = generateToken(userWithoutPassword);
+    const token = generateToken({ ...userWithoutPassword, permissions: permissionsArr });
 
     // 返回用戶資訊和 Token
     res.status(200).json({

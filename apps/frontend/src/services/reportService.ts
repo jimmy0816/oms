@@ -1,6 +1,6 @@
 import { PaginatedResponse } from 'shared-types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const getAuthHeaders = (): HeadersInit => {
   if (typeof window === 'undefined')
@@ -103,7 +103,7 @@ export const reportService = {
       });
 
       const response = await fetch(
-        `${API_URL}/reports?${queryParams.toString()}`,
+        `${API_URL}/api/reports?${queryParams.toString()}`,
         {
           headers: getAuthHeaders(),
         }
@@ -137,7 +137,7 @@ export const reportService = {
    */
   async getReportById(id: string): Promise<Report> {
     try {
-      const response = await fetch(`${API_URL}/reports/${id}`, {
+      const response = await fetch(`${API_URL}/api/reports/${id}`, {
         headers: getAuthHeaders(),
       });
 
@@ -180,10 +180,11 @@ export const reportService = {
    */
   async createReport(reportData: CreateReportRequest): Promise<Report> {
     try {
-      const response = await fetch(`${API_URL}/reports`, {
+      const response = await fetch(`${API_URL}/api/reports`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(reportData),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -214,7 +215,7 @@ export const reportService = {
    */
   async updateReport(id: string, reportData: Partial<Report>): Promise<Report> {
     try {
-      const response = await fetch(`${API_URL}/reports/${id}`, {
+      const response = await fetch(`${API_URL}/api/reports/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(reportData),
@@ -248,7 +249,7 @@ export const reportService = {
    */
   async deleteReport(id: string): Promise<boolean> {
     try {
-      const response = await fetch(`${API_URL}/reports/${id}`, {
+      const response = await fetch(`${API_URL}/api/reports/${id}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
@@ -275,7 +276,7 @@ export const reportService = {
     userId: string
   ): Promise<any> {
     try {
-      const response = await fetch(`${API_URL}/reports/comments`, {
+      const response = await fetch(`${API_URL}/api/reports/comments`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ reportId, content, userId }),

@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse } from 'shared-types';
 import { withApiHandler } from '@/lib/api-handler';
+import { applyCors } from '@/utils/cors';
 
 // Define Report type based on Prisma schema
 interface Report {
@@ -61,6 +62,8 @@ export default withApiHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Report>>
 ) {
+  await applyCors(req, res);
+
   const { id } = req.query;
 
   if (!id || Array.isArray(id)) {
@@ -129,11 +132,7 @@ async function getReportById(
           },
         },
       },
-      tickets: {
-        include: {
-          ticket: true,
-        },
-      },
+      tickets: { include: { ticket: true } },
     },
   });
 
@@ -144,9 +143,22 @@ async function getReportById(
     });
   }
 
+  // 查詢附件
+  const attachments = await prisma.attachment.findMany({
+    where: {
+      parentId: report.id,
+      parentType: 'REPORT',
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  // 合併附件到回傳物件
   return res.status(200).json({
     success: true,
-    data: report,
+    data: {
+      ...report,
+      attachments, // 前端可用 report.attachments 取得所有圖片/影片
+    },
   });
 }
 

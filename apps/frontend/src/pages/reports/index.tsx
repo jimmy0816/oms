@@ -11,6 +11,7 @@ import {
   XCircleIcon
 } from '@heroicons/react/24/outline';
 import reportService, { Report, ReportStatus, ReportPriority } from '../../services/reportService';
+import { useAuth } from '@/contexts/AuthContext';
 
 // 定義報告類別常量
 const ReportCategory = {
@@ -31,6 +32,7 @@ export default function Reports() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [totalReports, setTotalReports] = useState(0);
+  const { user } = useAuth();
 
   // 從 API 加載報告數據
   const loadReports = async () => {
@@ -84,6 +86,12 @@ export default function Reports() {
     loadReports();
   }, [page, statusFilter, categoryFilter, priorityFilter]);
 
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('目前 user 權限:', user?.permissions);
+    }
+  }, [user]);
+
   // 格式化日期
   const formatDate = (date: Date | string) => {
     if (!date) return '-';
@@ -103,8 +111,6 @@ export default function Reports() {
         return { color: 'bg-gray-100 text-gray-800', icon: <ExclamationCircleIcon className="h-3 w-3 mr-1" /> };
       case ReportStatus.PROCESSING:
         return { color: 'bg-blue-100 text-blue-800', icon: <ClockIcon className="h-3 w-3 mr-1" /> };
-      case ReportStatus.RESOLVED:
-        return { color: 'bg-green-100 text-green-800', icon: <CheckCircleIcon className="h-3 w-3 mr-1" /> };
       case ReportStatus.REJECTED:
         return { color: 'bg-red-100 text-red-800', icon: <XCircleIcon className="h-3 w-3 mr-1" /> };
       default:
@@ -183,10 +189,12 @@ export default function Reports() {
                 >
                   清除篩選
                 </button>
-                <Link href="/reports/new" className="btn-primary flex items-center">
-                  <PlusIcon className="h-4 w-4 mr-1" />
-                  <span>建立通報</span>
-                </Link>
+                {user?.permissions?.includes('create_reports') && (
+                  <Link href="/reports/new" className="btn-primary flex items-center">
+                    <PlusIcon className="h-4 w-4 mr-1" />
+                    <span>建立通報</span>
+                  </Link>
+                )}
               </div>
             </div>
           </div>

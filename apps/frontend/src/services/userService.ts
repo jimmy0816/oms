@@ -2,7 +2,7 @@ import { User, UserRole } from 'shared-types';
 
 // API 基礎 URL
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 /**
  * 用戶管理服務
@@ -15,7 +15,7 @@ export const userService = {
    */
   async getAllUsers(): Promise<User[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/users`);
+      const response = await fetch(`${API_BASE_URL}/api/users`);
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
@@ -42,7 +42,7 @@ export const userService = {
    */
   async getUserById(id: string): Promise<User | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${id}`);
+      const response = await fetch(`${API_BASE_URL}/api/users/${id}`);
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -74,7 +74,7 @@ export const userService = {
     userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<User> {
     try {
-      const response = await fetch(`${API_BASE_URL}/users`, {
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +112,7 @@ export const userService = {
     userData: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>
   ): Promise<User> {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -146,7 +146,7 @@ export const userService = {
    */
   async deleteUser(id: string): Promise<boolean> {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/${id}`, {
         method: 'DELETE',
       });
 
@@ -181,7 +181,7 @@ export const userService = {
    */
   async getUsersByRole(role: UserRole): Promise<User[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/users?role=${role}`);
+      const response = await fetch(`${API_BASE_URL}/api/users?role=${role}`);
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);

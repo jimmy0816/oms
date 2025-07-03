@@ -1,6 +1,6 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextApiRequest, NextApiResponse, NextApiHandler } from 'next';
 
-type ApiHandler = (req: NextApiRequest, res: NextApiResponse) => Promise<void>;
+type ApiHandler = (req: NextApiRequest, res: NextApiResponse) => Promise<void> | NextApiHandler;
 
 export function withApiHandler(handler: ApiHandler) {
   return async (req: NextApiRequest, res: NextApiResponse) => {

@@ -4,6 +4,7 @@ import { Permission } from '../utils/permissions';
 import { hasPermission } from '../utils/permissions';
 import jwt from 'jsonwebtoken';
 import { als } from '@/lib/als';
+import { withApiHandler } from '@/lib/api-handler';
 
 // 定義擴展的請求類型，包含用戶信息
 export interface AuthenticatedRequest extends NextApiRequest {
@@ -12,6 +13,7 @@ export interface AuthenticatedRequest extends NextApiRequest {
     email: string;
     name: string;
     role: UserRole;
+    permissions?: string[];
   };
 }
 
@@ -47,7 +49,7 @@ export const withAuth = (handler: NextApiHandler): NextApiHandler => {
       // 從請求頭中獲取授權令牌
       const token = req.headers.authorization?.split(' ')[1];
       if (!token) {
-        res.status(401).json({ message: '未授權訪問' });
+        res.status(401).json({ message: 'withAuth未授權訪問' });
         return;
       }
 
@@ -80,13 +82,14 @@ export const withPermission = (permission: Permission | Permission[]) => {
     return withAuth(async (req: AuthenticatedRequest, res: NextApiResponse) => {
       const user = req.user;
       if (!user) {
-        return res.status(401).json({ message: '未授權訪問' });
+        return res.status(401).json({ message: 'withPermission未授權訪問' });
       }
 
       const permissions = Array.isArray(permission) ? permission : [permission];
 
-      // 檢查用戶是否擁有所需權限
-      const hasAccess = permissions.some((p) => hasPermission(user.role, p));
+      // 檢查 user.permissions 欄位
+      const userPermissions: string[] = user.permissions || [];
+      const hasAccess = permissions.some((p) => userPermissions.includes(p));
 
       if (!hasAccess) {
         return res.status(403).json({ message: '權限不足' });

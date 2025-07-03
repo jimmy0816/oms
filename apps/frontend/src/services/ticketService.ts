@@ -6,7 +6,7 @@ import {
   CreateTicketRequest,
 } from 'shared-types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const getAuthHeaders = (): HeadersInit => {
   if (typeof window === 'undefined')
@@ -44,7 +44,7 @@ export const ticketService = {
       });
 
       const response = await fetch(
-        `${API_URL}/tickets?${queryParams.toString()}`,
+        `${API_URL}/api/tickets?${queryParams.toString()}`,
         {
           headers: getAuthHeaders(),
         }
@@ -78,7 +78,7 @@ export const ticketService = {
    */
   async getTicketById(id: string): Promise<Ticket> {
     try {
-      const response = await fetch(`${API_URL}/tickets/${id}`, {
+      const response = await fetch(`${API_URL}/api/tickets/${id}`, {
         headers: getAuthHeaders(),
       });
 
@@ -121,7 +121,7 @@ export const ticketService = {
    */
   async createTicket(ticketData: CreateTicketRequest): Promise<Ticket> {
     try {
-      const response = await fetch(`${API_URL}/tickets`, {
+      const response = await fetch(`${API_URL}/api/tickets`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(ticketData),
@@ -155,7 +155,7 @@ export const ticketService = {
    */
   async updateTicket(id: string, ticketData: Partial<Ticket>): Promise<Ticket> {
     try {
-      const response = await fetch(`${API_URL}/tickets/${id}`, {
+      const response = await fetch(`${API_URL}/api/tickets/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(ticketData),
@@ -189,7 +189,7 @@ export const ticketService = {
    */
   async deleteTicket(id: string): Promise<boolean> {
     try {
-      const response = await fetch(`${API_URL}/tickets/${id}`, {
+      const response = await fetch(`${API_URL}/api/tickets/${id}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
@@ -216,7 +216,7 @@ export const ticketService = {
     userId: string
   ): Promise<any> {
     try {
-      const response = await fetch(`${API_URL}/tickets/comments`, {
+      const response = await fetch(`${API_URL}/api/tickets/${ticketId}/comments`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ ticketId, content, userId }),

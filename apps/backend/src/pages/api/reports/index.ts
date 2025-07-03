@@ -4,6 +4,7 @@ import { ApiResponse, PaginatedResponse } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
 import { FileInfo } from 'shared-types'; // Import FileInfo
+import { applyCors } from '@/utils/cors';
 
 // Define Report type based on Prisma schema (updated to include attachments)
 interface Report {
@@ -51,6 +52,8 @@ export default withApiHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Report | PaginatedResponse<Report>>>
 ) {
+  console.log('API /api/reports handler called', req.method, req.url);
+  await applyCors(req, res);
   try {
     switch (req.method) {
       case 'GET':
@@ -155,7 +158,7 @@ async function createReport(
     category,
     contactPhone,
     contactEmail,
-    attachments = [], // Get attachments from request body
+    attachments = [],
     assigneeId,
     ticketIds = [],
   } = req.body as CreateReportRequest;
@@ -169,46 +172,38 @@ async function createReport(
     });
   }
 
+  // 1. 先建立 report
   const report = await prisma.report.create({
     data: {
       title,
       description,
       location,
       priority: priority || 'MEDIUM',
-      status: 'PENDING', // 設置默認狀態為待處理
+      status: 'PENDING',
       creatorId,
       assigneeId,
       category,
       contactPhone,
       contactEmail,
-      // Connect to tickets if ticketIds are provided
-      tickets: {
-        create: ticketIds.map((ticketId) => ({
-          ticket: {
-            connect: { id: ticketId },
-          },
-        })),
-      },
     },
     include: {
-      creator: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-      assignee: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
+      creator: { select: { id: true, name: true, email: true } },
+      assignee: { select: { id: true, name: true, email: true } },
     },
   });
 
-  // Create attachments if any
+  // 2. 建立多對多關聯
+  if (ticketIds.length > 0) {
+    await prisma.reportTicket.createMany({
+      data: ticketIds.filter(Boolean).map((ticketId) => ({
+        reportId: report.id,
+        ticketId,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  // 3. 建立附件資料
   if (attachments.length > 0) {
     const attachmentData = attachments.map((att) => ({
       filename: att.name,
@@ -224,18 +219,7 @@ async function createReport(
     });
   }
 
-  // Create a notification for the assignee if one is assigned
-  if (assigneeId) {
-    await prisma.notification.create({
-      data: {
-        title: 'New Report Assigned',
-        message: `You have been assigned a new report: ${title}`,
-        userId: assigneeId,
-        relatedReportId: report.id,
-      },
-    });
-  }
-
+  // 4. 回傳結果
   return res.status(201).json({
     success: true,
     data: report,

@@ -12,14 +12,19 @@ app.prepare().then(() => {
   
   // Enable CORS for all routes
   server.use(cors({
-    origin: '*', // Allow all origins in development
+    origin: 'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true
   }));
   
   // Handle OPTIONS preflight requests
-  server.options('*', cors());
+  server.options('*', cors({
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true
+  }));
   
   // Forward all requests to Next.js
   server.all('*', (req, res) => {

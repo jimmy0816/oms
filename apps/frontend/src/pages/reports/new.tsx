@@ -12,6 +12,7 @@ import FileUploader from '@/components/FileUploader';
 import reportService, { ReportPriority } from '@/services/reportService';
 import { getLocations, Location } from '@/services/locationService';
 import { uploadService } from '@/services/uploadService';
+import { ticketService } from '@/services/ticketService';
 
 // 定義檔案資訊介面
 interface FileInfo {
@@ -42,6 +43,7 @@ export default function NewReport() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [selectedCategoryPath, setSelectedCategoryPath] = useState<string>('');
   const [locations, setLocations] = useState<Location[]>([]);
+  const [tickets, setTickets] = useState<any[]>([]);
 
   const {
     register,
