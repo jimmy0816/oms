@@ -44,6 +44,7 @@ export interface Ticket {
   creatorId: string;
   assigneeId?: string;
   attachments?: FileInfo[]; // New attachments field
+  activityLogs?: ActivityLog[];
 }
 
 export enum TicketStatus {
@@ -215,6 +216,27 @@ export interface Comment {
   content: string;
   createdAt: Date;
   updatedAt: Date;
-  ticketId: string;
+  ticketId?: string;
+  reportId?: string;
   userId: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface ActivityLog {
+  id: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  parentId: string;
+  parentType: 'TICKET' | 'REPORT';
 }

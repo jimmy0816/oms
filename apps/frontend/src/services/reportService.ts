@@ -50,6 +50,35 @@ export interface Report {
       email: string;
     };
   }>;
+  tickets?: Ticket[];
+  attachments?: Array<{
+    id: string;
+    filename: string;
+    url: string;
+    fileType: string;
+    fileSize: number;
+    createdAt: Date;
+    createdById?: string | null;
+    createdBy?: {
+      id: string;
+      name: string;
+      email: string;
+    } | null;
+  }>;
+  activityLogs?: Array<{
+    id: string;
+    content: string;
+    createdAt: Date;
+    updatedAt: Date;
+    userId: string;
+    user: {
+      id: string;
+      name: string;
+      email: string;
+    };
+    parentId: string;
+    parentType: string;
+  }>;
 }
 
 // 創建通報請求類型
@@ -71,7 +100,7 @@ export enum ReportStatus {
   PROCESSING = 'PROCESSING',
   REJECTED = 'REJECTED',
   PENDING_REVIEW = 'PENDING_REVIEW', // 待審核
-  REVIEWED = 'REVIEWED',             // 已歸檔
+  REVIEWED = 'REVIEWED', // 已歸檔
 }
 
 // 通報優先級枚舉
@@ -164,6 +193,16 @@ export const reportService = {
             updatedAt: new Date(comment.updatedAt),
           }));
         }
+
+        if (report.activityLogs) {
+          report.activityLogs = report.activityLogs.map((activityLog: any) => ({
+            ...activityLog,
+            createdAt: new Date(activityLog.createdAt),
+            updatedAt: new Date(activityLog.updatedAt),
+          }));
+        }
+
+        console.log(report);
 
         return report;
       }
@@ -312,13 +351,54 @@ export const reportService = {
   },
 
   /**
+   * 添加活動日誌
+   */
+  async addActivityLog(
+    reportId: string,
+    content: string,
+    userId: string
+  ): Promise<any> {
+    try {
+      const response = await fetch(`${API_URL}/activitylogs`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          content,
+          userId,
+          parentId: reportId,
+          parentType: 'REPORT',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '添加活動日誌失敗');
+      }
+
+      const result = await response.json();
+
+      // 處理日期格式
+      if (result.success && result.data) {
+        return {
+          ...result.data,
+          createdAt: new Date(result.data.createdAt),
+          updatedAt: new Date(result.data.updatedAt),
+        };
+      }
+
+      throw new Error('添加活動日誌失敗');
+    } catch (error) {
+      console.error('添加活動日誌失敗:', error);
+      throw error;
+    }
+  },
+
+  /**
    * 分配通報給用戶
    */
   async assignReport(id: string, assigneeId: string): Promise<Report> {
     return this.updateReport(id, { assigneeId });
   },
-
-  
 };
 
 export default reportService;

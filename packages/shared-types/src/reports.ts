@@ -41,6 +41,8 @@ export interface Report {
   images?: string[];  // URLs to images
   attachments?: FileInfo[]; // Add attachments
   tickets?: ReportTicket[]; // Add tickets
+  comments?: Comment[]; // Add comments
+  activityLogs?: ActivityLog[]; // Add activity logs
 }
 
 export interface ReportTicket {
@@ -51,20 +53,10 @@ export interface ReportTicket {
   ticket?: Ticket;
 }
 
-export interface ReportHistory {
-  id: string;
-  reportId: string;
-  status: ReportStatus;
-  comment: string;
-  createdAt: Date;
-  userId: string;
-}
-
 export interface ReportWithDetails extends Report {
   creator: User;
   assignee?: User;
   reviewer?: User;
-  history: ReportHistory[];
 }
 
 // API Request types
