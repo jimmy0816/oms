@@ -275,8 +275,9 @@ export default function ReportDetail() {
                 <span className="text-sm text-gray-500">通報 #{report.id}</span>
               </div>
 
+              
               {/* 狀態處理按鈕區塊 - debug 訊息 */}
-              <div className="mb-2 text-xs text-gray-400">
+              <div className="mb-2 text-xs text-gray-400" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>
                 <div>DEBUG: userPermissions = {JSON.stringify(userPermissions)}</div>
                 <div>DEBUG: user.permissions = {JSON.stringify(user?.permissions)}</div>
                 <div>DEBUG: report.status = {report.status}</div>
@@ -547,16 +548,17 @@ export default function ReportDetail() {
             <div className="w-full lg:w-80 flex-shrink-0 mt-8 lg:mt-0">
               <div className="p-6 bg-white rounded-lg shadow-sm">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">相關工單</h3>
-                {/* 假設有關聯工單，顯示列表；否則顯示新增按鈕 */}
-                {false ? (
+                {report.tickets && report.tickets.length > 0 ? (
                   <ul className="divide-y divide-gray-100 mb-4">
-                    <li className="py-2 flex items-center justify-between">
-                      <div>
-                        <span className="font-medium text-blue-700">工單 #12345</span>
-                        <span className="ml-2 text-gray-500">（維修電梯）</span>
-                      </div>
-                      <Link href="/tickets/12345" className="text-blue-600 hover:underline text-sm">查看</Link>
-                    </li>
+                    {report.tickets.map((reportTicket) => (
+                      <li key={reportTicket.ticket.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-blue-700 text-sm break-words">{reportTicket.ticket.title}</p>
+                          <p className="text-gray-500 text-xs mt-0.5 break-all">工單 #{reportTicket.ticket.id}</p>
+                        </div>
+                        <Link href={`/tickets/${reportTicket.ticket.id}`} className="text-blue-600 hover:underline text-sm mt-2 sm:mt-0 sm:ml-4 flex-shrink-0">查看</Link>
+                      </li>
+                    ))}
                   </ul>
                 ) : (
                   <div className="text-gray-500 mb-4">目前尚無相關工單</div>
