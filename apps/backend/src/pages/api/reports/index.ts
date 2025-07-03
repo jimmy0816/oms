@@ -1,10 +1,11 @@
 import { withApiHandler } from '@/lib/api-handler';
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from 'prisma-client';
 import { ApiResponse, PaginatedResponse } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
+import { prisma } from '@/lib/prisma';
+import { FileInfo } from 'shared-types'; // Import FileInfo
 
-// Define Report type based on Prisma schema
+// Define Report type based on Prisma schema (updated to include attachments)
 interface Report {
   id: string;
   title: string;
@@ -16,23 +17,23 @@ interface Report {
   updatedAt: Date;
   creatorId: string;
   assigneeId?: string | null;
-  images: string[];
+  attachments?: FileInfo[]; // New attachments field
   category?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
   creator?: {
     id: string;
-    name: string;
-    email: string;
+    name: true;
+    email: true;
   };
   assignee?: {
     id: string;
-    name: string;
-    email: string;
+    name: true;
+    email: true;
   } | null;
 }
 
-// Define CreateReportRequest type
+// Define CreateReportRequest type (updated to include attachments)
 interface CreateReportRequest {
   title: string;
   description: string;
@@ -41,7 +42,7 @@ interface CreateReportRequest {
   category?: string;
   contactPhone?: string;
   contactEmail?: string;
-  images?: string[];
+  attachments?: FileInfo[]; // New attachments field
   assigneeId?: string;
 }
 
@@ -92,7 +93,7 @@ async function getReports(
   if (category) where.category = category;
   if (assigneeId) where.assigneeId = assigneeId;
   if (creatorId) where.creatorId = creatorId;
-  
+
   // 處理搜尋關鍵字
   if (search) {
     where.OR = [
@@ -153,12 +154,10 @@ async function createReport(
     category,
     contactPhone,
     contactEmail,
-    images = [],
+    attachments = [], // Get attachments from request body
     assigneeId,
   } = req.body as CreateReportRequest;
 
-  // In a real app, you would get the creator ID from the authenticated user
-  // For this prototype, we'll use a mock user ID or the one provided in headers
   const creatorId = req.user.id;
 
   if (!title || !description) {
@@ -180,7 +179,6 @@ async function createReport(
       category,
       contactPhone,
       contactEmail,
-      images,
     },
     include: {
       creator: {
@@ -199,6 +197,22 @@ async function createReport(
       },
     },
   });
+
+  // Create attachments if any
+  if (attachments.length > 0) {
+    const attachmentData = attachments.map((att) => ({
+      filename: att.name,
+      url: att.url,
+      fileType: att.type,
+      fileSize: att.size,
+      createdById: creatorId,
+      parentId: report.id,
+      parentType: 'REPORT',
+    }));
+    await prisma.attachment.createMany({
+      data: attachmentData,
+    });
+  }
 
   // Create a notification for the assignee if one is assigned
   if (assigneeId) {

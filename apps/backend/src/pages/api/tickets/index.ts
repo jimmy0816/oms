@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '@/lib/prisma';
+import { prisma, getPrismaClientWithAudit } from '@/lib/prisma';
 import {
   ApiResponse,
   CreateTicketRequest,
@@ -7,6 +7,7 @@ import {
   Ticket,
   TicketStatus,
   TicketPriority,
+  FileInfo,
 } from 'shared-types';
 import { withApiHandler } from '@/lib/api-handler';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
@@ -106,12 +107,11 @@ async function createTicket(
   req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<Ticket>>
 ) {
-  const { title, description, priority, assigneeId } =
+  const { title, description, priority, assigneeId, attachments = [] } =
     req.body as CreateTicketRequest;
 
-  // In a real app, you would get the creator ID from the authenticated user
-  // For this prototype, we'll use a mock user ID
   const creatorId = req.user.id;
+  const actor = req.user;
 
   if (!title || !description) {
     return res.status(400).json({
@@ -120,7 +120,9 @@ async function createTicket(
     });
   }
 
-  const ticket = await prisma.ticket.create({
+  const prismaWithAudit = getPrismaClientWithAudit(actor);
+
+  const ticket = await prismaWithAudit.ticket.create({
     data: {
       title,
       description,
@@ -131,9 +133,25 @@ async function createTicket(
     },
   });
 
+  // Create attachments if any
+  if (attachments.length > 0) {
+    const attachmentData = attachments.map((att) => ({
+      filename: att.name,
+      url: att.url,
+      fileType: att.type,
+      fileSize: att.size,
+      uploadedById: creatorId,
+      parentId: ticket.id,
+      parentType: 'TICKET',
+    }));
+    await prismaWithAudit.attachment.createMany({
+      data: attachmentData,
+    });
+  }
+
   // Create a notification for the assignee if one is assigned
   if (assigneeId) {
-    await prisma.notification.create({
+    await prismaWithAudit.notification.create({
       data: {
         title: 'New Ticket Assigned',
         message: `You have been assigned a new ticket: ${title}`,

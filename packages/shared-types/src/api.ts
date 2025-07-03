@@ -6,6 +6,7 @@ export interface CreateTicketRequest {
   description: string;
   priority: TicketPriority;
   assigneeId?: string;
+  attachments?: FileInfo[];
 }
 
 export interface UpdateTicketRequest {

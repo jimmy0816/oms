@@ -199,6 +199,33 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.USER]: [Permission.VIEW_TICKETS, Permission.CREATE_REPORTS],
 };
 
+// Define FileInfo interface for attachments
+export interface FileInfo {
+  id: string;
+  name: string;
+  url: string;
+  type: 'image' | 'video' | 'document' | 'other'; // 更通用的類型
+  size?: number;
+}
+
+// Report related types
+export interface Report {
+  id: string;
+  title: string;
+  description: string;
+  location?: string;
+  status: string;
+  priority: string;
+  createdAt: Date;
+  updatedAt: Date;
+  creatorId: string;
+  assigneeId?: string;
+  attachments?: FileInfo[]; // New attachments field
+  category?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+}
+
 // Comment related types
 export interface Comment {
   id: string;
