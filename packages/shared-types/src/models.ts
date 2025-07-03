@@ -43,6 +43,7 @@ export interface Ticket {
   updatedAt: Date;
   creatorId: string;
   assigneeId?: string;
+  attachments?: FileInfo[]; // New attachments field
 }
 
 export enum TicketStatus {

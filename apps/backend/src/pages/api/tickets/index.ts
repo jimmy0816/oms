@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma, getPrismaClientWithAudit } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import {
   ApiResponse,
   CreateTicketRequest,
@@ -19,7 +19,8 @@ export default withApiHandler(async function handler(
   try {
     switch (req.method) {
       case 'GET':
-        return await getTickets(req, res);
+        // GET 請求也應該經過認證，以獲取 req.user
+        return await withAuth(getTickets)(req, res);
       case 'POST':
         return await withAuth(createTicket)(req, res);
       default:
@@ -38,7 +39,7 @@ export default withApiHandler(async function handler(
 });
 
 async function getTickets(
-  req: NextApiRequest,
+  req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<PaginatedResponse<Ticket>>>
 ) {
   const page = Number(req.query.page) || 1;
@@ -59,6 +60,7 @@ async function getTickets(
 
   // Get tickets with pagination
   const [tickets, total] = await Promise.all([
+    // 直接使用導入的 prisma 實例
     prisma.ticket.findMany({
       where,
       skip,
@@ -104,14 +106,18 @@ async function getTickets(
 }
 
 async function createTicket(
-  req: AuthenticatedRequest,
+  req: AuthenticatedRequest, // <-- 這裡必須是 AuthenticatedRequest
   res: NextApiResponse<ApiResponse<Ticket>>
 ) {
-  const { title, description, priority, assigneeId, attachments = [] } =
-    req.body as CreateTicketRequest;
+  const {
+    title,
+    description,
+    priority,
+    assigneeId,
+    attachments = [],
+  } = req.body as CreateTicketRequest;
 
-  const creatorId = req.user.id;
-  const actor = req.user;
+  const creatorId = req.user.id; // req.user 來自 AuthenticatedRequest
 
   if (!title || !description) {
     return res.status(400).json({
@@ -120,9 +126,8 @@ async function createTicket(
     });
   }
 
-  const prismaWithAudit = getPrismaClientWithAudit(actor);
-
-  const ticket = await prismaWithAudit.ticket.create({
+  // 直接使用導入的 prisma 實例，它已經包含了稽核中介軟體
+  const ticket = await prisma.ticket.create({
     data: {
       title,
       description,
@@ -140,18 +145,20 @@ async function createTicket(
       url: att.url,
       fileType: att.type,
       fileSize: att.size,
-      uploadedById: creatorId,
+      createdById: creatorId,
       parentId: ticket.id,
       parentType: 'TICKET',
     }));
-    await prismaWithAudit.attachment.createMany({
+    // 直接使用導入的 prisma 實例
+    await prisma.attachment.createMany({
       data: attachmentData,
     });
   }
 
   // Create a notification for the assignee if one is assigned
   if (assigneeId) {
-    await prismaWithAudit.notification.create({
+    // 直接使用導入的 prisma 實例
+    await prisma.notification.create({
       data: {
         title: 'New Ticket Assigned',
         message: `You have been assigned a new ticket: ${title}`,

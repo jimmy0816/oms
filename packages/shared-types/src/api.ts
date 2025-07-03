@@ -45,6 +45,7 @@ export interface TicketWithDetails extends Ticket {
   creator: User;
   assignee?: User;
   comments: Comment[];
+  attachments?: FileInfo[]; // New attachments field
 }
 
 export interface NotificationWithDetails extends Notification {
