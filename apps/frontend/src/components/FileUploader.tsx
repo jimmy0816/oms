@@ -1,174 +1,94 @@
-import React, { useState, useRef } from 'react';
-import { 
-  PhotoIcon,
-  XMarkIcon,
-  FilmIcon
-} from '@heroicons/react/24/outline';
+import React, { useState, useCallback } from 'react';
 
-// 定義上傳檔案類型
-export interface UploadedFile {
+// Define FileInfo interface
+interface FileInfo {
   id: string;
-  file: File;
-  previewUrl: string;
-  type: 'image' | 'video';
   name: string;
+  url: string;
+  type: 'image' | 'video';
   size?: number;
-  url?: string;
 }
 
 interface FileUploaderProps {
-  files: UploadedFile[];
-  onFilesChange: (files: UploadedFile[]) => void;
-  maxFiles?: number;
-  acceptedFileTypes?: string[];
-  label?: string;
-  helpText?: string;
-  viewOnly?: boolean;
+  onFilesChange: (files: FileInfo[]) => void;
+  uploadFunction: (file: File) => Promise<FileInfo>;
+  onUploadStart?: () => void;
+  onUploadEnd?: () => void;
 }
 
-const FileUploader: React.FC<FileUploaderProps> = ({
-  files,
+const FileUploader: React.FC<FileUploaderProps> = ({ 
   onFilesChange,
-  maxFiles = 10,
-  acceptedFileTypes = ['image/*', 'video/*'],
-  label = '選擇圖片或影片',
-  helpText = '支援 JPG, PNG, GIF, MP4 等格式',
-  viewOnly = false
+  uploadFunction,
+  onUploadStart,
+  onUploadEnd 
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
 
-  // 處理檔案上傳
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = event.target.files;
-    if (!selectedFiles || selectedFiles.length === 0) return;
+  const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    // 檢查是否超過最大檔案數
-    if (files.length + selectedFiles.length > maxFiles) {
-      alert(`最多只能上傳 ${maxFiles} 個檔案`);
-      return;
-    }
+    setUploading(true);
+    setError(null);
+    onUploadStart?.();
 
-    // 處理每個選擇的檔案
-    const newFiles: UploadedFile[] = [];
-    
-    Array.from(selectedFiles).forEach(file => {
-      // 檢查檔案類型
-      const isImage = file.type.startsWith('image/');
-      const isVideo = file.type.startsWith('video/');
+    try {
+      const newFile = await uploadFunction(file);
+      const updatedFiles = [...uploadedFiles, newFile];
+      setUploadedFiles(updatedFiles);
+      onFilesChange(updatedFiles);
       
-      if (!isImage && !isVideo) {
-        alert('只支援圖片和影片檔案');
-        return;
-      }
-
-      // 建立預覽 URL
-      const previewUrl = URL.createObjectURL(file);
-      
-      // 新增到上傳檔案列表
-      newFiles.push({
-        id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        file,
-        previewUrl,
-        type: isImage ? 'image' : 'video',
-        name: file.name,
-        size: file.size
-      });
-    });
-    
-    onFilesChange([...files, ...newFiles]);
-    
-    // 清空 input 值，允許重複上傳相同檔案
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || '上傳時發生錯誤');
+    } finally {
+      setUploading(false);
+      onUploadEnd?.();
     }
-  };
-
-  // 移除上傳的檔案
-  const removeFile = (id: string) => {
-    const updatedFiles = files.filter(file => file.id !== id);
-    
-    // 釋放已移除檔案的 URL
-    const fileToRemove = files.find(file => file.id === id);
-    if (fileToRemove && fileToRemove.previewUrl) {
-      URL.revokeObjectURL(fileToRemove.previewUrl);
-    }
-    
-    onFilesChange(updatedFiles);
-  };
+  }, [onFilesChange, onUploadStart, onUploadEnd, uploadedFiles, uploadFunction]);
 
   return (
-    <div>
-      {!viewOnly && (
-        <div className="flex items-center">
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleFileUpload}
-            accept={acceptedFileTypes.join(',')}
-            multiple
-            className="hidden"
-            id="file-upload"
-          />
-          <label
-            htmlFor="file-upload"
-            className="cursor-pointer py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+    <div className="flex flex-col items-center justify-center w-full">
+      <label
+        htmlFor="dropzone-file"
+        className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+      >
+        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+          <svg
+            className="w-8 h-8 mb-4 text-gray-500"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 20 16"
           >
-            <div className="flex items-center">
-              <PhotoIcon className="h-5 w-5 mr-2 text-gray-500" />
-              <span>{label}</span>
-            </div>
-          </label>
-          <p className="ml-3 text-xs text-gray-500">
-            {helpText}
+            <path
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
+            />
+          </svg>
+          <p className="mb-2 text-sm text-gray-500">
+            <span className="font-semibold">點擊上傳</span> 或拖曳檔案到此處
+          </p>
+          <p className="text-xs text-gray-500">
+            支援圖片及影片 (PNG, JPG, GIF, MP4, MOV)
           </p>
         </div>
-      )}
-      
-      {/* 預覽上傳的檔案 */}
-      {files.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
-          {files.map(file => (
-            <div key={file.id} className="relative group border rounded-md overflow-hidden">
-              {file.type === 'image' ? (
-                <a 
-                  href={file.url || file.previewUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block"
-                >
-                  <img
-                    src={file.url || file.previewUrl}
-                    alt={file.name}
-                    className="h-32 w-full object-cover"
-                    onError={(e) => {
-                      // 處理圖片載入錯誤
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = `https://via.placeholder.com/800x600?text=${encodeURIComponent(file.name)}`;
-                    }}
-                  />
-                </a>
-              ) : (
-                <div className="h-32 w-full bg-gray-100 flex items-center justify-center">
-                  <FilmIcon className="h-12 w-12 text-gray-400" />
-                  <span className="sr-only">{file.name}</span>
-                </div>
-              )}
-              {!viewOnly && (
-                <button
-                  type="button"
-                  onClick={() => removeFile(file.id)}
-                  className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm opacity-70 hover:opacity-100"
-                >
-                  <XMarkIcon className="h-4 w-4 text-gray-700" />
-                </button>
-              )}
-              <div className="p-1 bg-white text-xs truncate">
-                {file.name}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+        <input
+          id="dropzone-file"
+          type="file"
+          className="hidden"
+          onChange={handleFileChange}
+          disabled={uploading}
+          accept="image/*,video/*"
+        />
+      </label>
+      {uploading && <p className="mt-2 text-sm text-blue-600">上傳中...</p>}
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>
   );
 };

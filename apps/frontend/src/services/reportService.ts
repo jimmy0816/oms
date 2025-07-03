@@ -316,6 +316,8 @@ export const reportService = {
   async assignReport(id: string, assigneeId: string): Promise<Report> {
     return this.updateReport(id, { assigneeId });
   },
+
+  
 };
 
 export default reportService;
