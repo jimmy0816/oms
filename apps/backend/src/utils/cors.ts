@@ -7,6 +7,7 @@ const cors = Cors({
     'http://localhost:3000',
     'http://localhost:8080',
     'http://frontend:8080',
+    process.env.PUBLIC_FRONTEND_URL,
   ], // 加入前端本地開發網址
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // 允許的 HTTP 方法
   credentials: true, // 允許帶憑證的請求
