@@ -27,8 +27,9 @@ type NextApiHandler = (
  */
 export const verifyToken = (token: string): any => {
   try {
-    // 在實際應用中，應該從環境變量獲取密鑰
-    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    // 從環境變量獲取密鑰
+    const secret = process.env.JWT_SECRET || 'local_development_secret';
+    console.log('Using JWT_SECRET:', secret.substring(0, 3) + '...');
     return jwt.verify(token, secret);
   } catch (error) {
     console.error('Token verification failed:', error);
@@ -46,23 +47,25 @@ export const withAuth = (handler: NextApiHandler): NextApiHandler => {
       // 從請求頭中獲取授權令牌
       const token = req.headers.authorization?.split(' ')[1];
       if (!token) {
-        return res.status(401).json({ message: '未授權訪問' });
+        res.status(401).json({ message: '未授權訪問' });
+        return;
       }
 
       // 驗證令牌
       const user = verifyToken(token);
       if (!user) {
-        return res.status(401).json({ message: '無效的令牌' });
+        res.status(401).json({ message: '無效的令牌' });
+        return;
       }
 
       // 將用戶信息添加到請求中
       req.user = user;
-      return await als.run({ actor: user }, () => {
-        return handler(req, res);
+      await als.run({ actor: user }, async () => {
+        await handler(req, res);
       });
     } catch (error) {
       console.error('Authentication error:', error);
-      return res.status(401).json({ message: '授權失敗' });
+      res.status(401).json({ message: '授權失敗' });
     }
   };
 };

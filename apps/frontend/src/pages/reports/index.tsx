@@ -62,7 +62,7 @@ export default function Reports() {
   const handleSearch = () => {
     // 重置頁碼並觸發重新加載
     setPage(1);
-    // loadReports 會在 useEffect 中被調用
+    loadReports(); // 直接調用 loadReports 立即執行搜尋
   };
   
   // 處理頁碼變化
@@ -82,7 +82,7 @@ export default function Reports() {
   // 初始化時加載數據
   useEffect(() => {
     loadReports();
-  }, [page, statusFilter, categoryFilter, priorityFilter, searchTerm]);
+  }, [page, statusFilter, categoryFilter, priorityFilter]);
 
   // 格式化日期
   const formatDate = (date: Date | string) => {
@@ -175,22 +175,15 @@ export default function Reports() {
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl font-semibold text-gray-900">通報管理</h1>
               <div className="flex space-x-2">
-                <button 
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  onClick={handleSearch}
-                >
-                  <FunnelIcon className="-ml-0.5 mr-2 h-4 w-4" />
-                  篩選
-                </button>
-                <button 
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                <button
+                  className="btn-outline flex items-center space-x-1"
                   onClick={clearFilters}
                 >
                   清除篩選
                 </button>
-                <Link href="/reports/new" className="btn-primary">
-                  <PlusIcon className="-ml-0.5 mr-2 h-4 w-4" />
-                  建立通報
+                <Link href="/reports/new" className="btn-primary flex items-center">
+                  <PlusIcon className="h-4 w-4 mr-1" />
+                  <span>建立通報</span>
                 </Link>
               </div>
             </div>
@@ -199,69 +192,84 @@ export default function Reports() {
         
         {/* 篩選和搜尋 */}
         <div className="bg-white shadow-sm rounded-lg p-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="flex flex-wrap gap-4 mb-6">
             {/* 搜索和過濾區域 */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="flex-1">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="搜尋通報..."
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  />
+            <div className="w-full md:w-1/3 lg:w-1/4">
+              <div className="relative flex">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
                 </div>
+                <input
+                  type="text"
+                  placeholder="搜尋通報..."
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                />
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  className="ml-2 inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
+                >
+                  <MagnifyingGlassIcon className="h-4 w-4 mr-1" />
+                  搜尋
+                </button>
               </div>
-              
-              {/* 狀態篩選 */}
-              <div>
+            </div>
+            
+            {/* 狀態篩選 */}
+            <div className="w-full md:w-auto">
+              <div className="relative">
                 <select
-                  className="form-input"
+                  className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
-                  <option value="">全部狀態</option>
-                  <option value={ReportStatus.PENDING}>待處理</option>
-                  <option value={ReportStatus.PROCESSING}>處理中</option>
-                  <option value={ReportStatus.RESOLVED}>已解決</option>
-                  <option value={ReportStatus.REJECTED}>已拒絕</option>
-                </select>
+                <option value="">全部狀態</option>
+                <option value={ReportStatus.PENDING}>待處理</option>
+                <option value={ReportStatus.PROCESSING}>處理中</option>
+                <option value={ReportStatus.RESOLVED}>已解決</option>
+                <option value={ReportStatus.REJECTED}>已拒絕</option>
+              </select>
+
               </div>
-              
-              {/* 類別篩選 */}
-              <div>
+            </div>
+            
+            {/* 類別篩選 */}
+            <div className="w-full md:w-auto">
+              <div className="relative">
                 <select
-                  className="form-input"
+                  className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                 >
-                  <option value="">全部類別</option>
-                  <option value={ReportCategory.FACILITY}>設施故障</option>
-                  <option value={ReportCategory.SECURITY}>安全問題</option>
-                  <option value={ReportCategory.ENVIRONMENT}>環境問題</option>
-                  <option value={ReportCategory.SERVICE}>服務問題</option>
-                  <option value={ReportCategory.OTHER}>其他</option>
-                </select>
+                <option value="">全部類別</option>
+                <option value={ReportCategory.FACILITY}>設施故障</option>
+                <option value={ReportCategory.SECURITY}>安全問題</option>
+                <option value={ReportCategory.ENVIRONMENT}>環境問題</option>
+                <option value={ReportCategory.SERVICE}>服務問題</option>
+                <option value={ReportCategory.OTHER}>其他</option>
+              </select>
+
               </div>
-              
-              {/* 優先級篩選 */}
-              <div>
+            </div>
+            
+            {/* 優先級篩選 */}
+            <div className="w-full md:w-auto">
+              <div className="relative">
                 <select
-                  className="form-input"
+                  className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
                 >
-                  <option value="">全部優先級</option>
-                  <option value={ReportPriority.LOW}>低</option>
-                  <option value={ReportPriority.MEDIUM}>中</option>
-                  <option value={ReportPriority.HIGH}>高</option>
-                  <option value={ReportPriority.URGENT}>緊急</option>
-                </select>
+                <option value="">全部優先級</option>
+                <option value={ReportPriority.LOW}>低</option>
+                <option value={ReportPriority.MEDIUM}>中</option>
+                <option value={ReportPriority.HIGH}>高</option>
+                <option value={ReportPriority.URGENT}>緊急</option>
+              </select>
+
               </div>
             </div>
           </div>

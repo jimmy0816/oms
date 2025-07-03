@@ -81,6 +81,7 @@ async function getReports(
   const category = req.query.category as string | undefined;
   const assigneeId = req.query.assigneeId as string | undefined;
   const creatorId = req.query.creatorId as string | undefined;
+  const search = req.query.search as string | undefined;
 
   const skip = (page - 1) * pageSize;
 
@@ -91,6 +92,15 @@ async function getReports(
   if (category) where.category = category;
   if (assigneeId) where.assigneeId = assigneeId;
   if (creatorId) where.creatorId = creatorId;
+  
+  // 處理搜尋關鍵字
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+      { location: { contains: search, mode: 'insensitive' } },
+    ];
+  }
 
   // Get reports with pagination
   const [reports, total] = await Promise.all([
