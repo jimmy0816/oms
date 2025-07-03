@@ -209,24 +209,6 @@ export interface FileInfo {
   size?: number;
 }
 
-// Report related types
-export interface Report {
-  id: string;
-  title: string;
-  description: string;
-  location?: string;
-  status: string;
-  priority: string;
-  createdAt: Date;
-  updatedAt: Date;
-  creatorId: string;
-  assigneeId?: string;
-  attachments?: FileInfo[]; // New attachments field
-  category?: string;
-  contactPhone?: string;
-  contactEmail?: string;
-}
-
 // Comment related types
 export interface Comment {
   id: string;

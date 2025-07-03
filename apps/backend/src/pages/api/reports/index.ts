@@ -44,6 +44,7 @@ interface CreateReportRequest {
   contactEmail?: string;
   attachments?: FileInfo[]; // New attachments field
   assigneeId?: string;
+  ticketIds?: string[];
 }
 
 export default withApiHandler(async function handler(
@@ -156,6 +157,7 @@ async function createReport(
     contactEmail,
     attachments = [], // Get attachments from request body
     assigneeId,
+    ticketIds = [],
   } = req.body as CreateReportRequest;
 
   const creatorId = req.user.id;
@@ -179,6 +181,14 @@ async function createReport(
       category,
       contactPhone,
       contactEmail,
+      // Connect to tickets if ticketIds are provided
+      tickets: {
+        create: ticketIds.map((ticketId) => ({
+          ticket: {
+            connect: { id: ticketId },
+          },
+        })),
+      },
     },
     include: {
       creator: {

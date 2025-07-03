@@ -75,6 +75,11 @@ async function getTicket(
         },
         orderBy: { createdAt: 'asc' },
       },
+      reports: {
+        include: {
+          report: true,
+        },
+      },
     },
   });
 
@@ -97,7 +102,7 @@ async function updateTicket(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Ticket>>
 ) {
-  const { title, description, status, priority, assigneeId } =
+  const { title, description, status, priority, assigneeId, reportIds } =
     req.body as UpdateTicketRequest;
 
   // Check if ticket exists
@@ -113,6 +118,16 @@ async function updateTicket(
   if (status !== undefined) updateData.status = status;
   if (priority !== undefined) updateData.priority = priority;
   if (assigneeId !== undefined) updateData.assigneeId = assigneeId;
+
+  // Handle reportIds update
+  if (reportIds !== undefined) {
+    updateData.reports = {
+      set: reportIds.map((reportId) => ({
+        reportId: reportId,
+        ticketId: id,
+      })),
+    };
+  }
 
   // Update ticket
   const updatedTicket = await prisma.ticket.update({
@@ -131,6 +146,12 @@ async function updateTicket(
           id: true,
           name: true,
           email: true,
+        },
+      },
+      reports: {
+        // Include reports in the response
+        include: {
+          report: true,
         },
       },
     },

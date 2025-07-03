@@ -31,6 +31,7 @@ interface CreateReportRequest {
   categoryPath: string;
   location: string;
   attachments?: FileInfo[];
+  ticketIds?: string[];
 }
 
 export default function NewReport() {
@@ -60,6 +61,16 @@ export default function NewReport() {
       }
     };
     fetchLocations();
+
+    const fetchTickets = async () => {
+      try {
+        const data = await ticketService.getAllTickets();
+        setTickets(data.items);
+      } catch (error) {
+        console.error('Failed to fetch tickets:', error);
+      }
+    };
+    fetchTickets();
   }, []);
 
   // 確保選擇的類別會更新到表單中
@@ -122,6 +133,7 @@ export default function NewReport() {
         category: selectedCategoryPath.split('/')[0] || 'OTHER', // 使用第一級分類作為主分類
         location: data.location,
         attachments: uploadedFiles,
+        ticketIds: data.ticketIds,
       };
 
       console.log('提交通報資料到後端 API:', reportData);

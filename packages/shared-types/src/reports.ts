@@ -1,4 +1,4 @@
-import { User } from './models';
+import { User, FileInfo, Ticket } from './models';
 
 // Report related types
 export enum ReportStatus {
@@ -39,6 +39,16 @@ export interface Report {
   assigneeId?: string;
   reviewerId?: string;
   images?: string[];  // URLs to images
+  attachments?: FileInfo[]; // Add attachments
+  tickets?: ReportTicket[]; // Add tickets
+}
+
+export interface ReportTicket {
+  reportId: string;
+  ticketId: string;
+  assignedAt: Date;
+  report?: Report;
+  ticket?: Ticket;
 }
 
 export interface ReportHistory {
@@ -65,6 +75,8 @@ export interface CreateReportRequest {
   category: ReportCategory;
   location: string;
   images?: string[];
+  attachments?: FileInfo[];
+  ticketIds?: string[];
 }
 
 export interface ProcessReportRequest {

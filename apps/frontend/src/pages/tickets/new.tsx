@@ -8,6 +8,7 @@ import FileUploader from '@/components/FileUploader';
 import ticketService from '@/services/ticketService';
 import userService from '@/services/userService';
 import { uploadService } from '@/services/uploadService';
+import reportService from '@/services/reportService';
 
 // 定義表單資料型別
 interface TicketFormData {
@@ -16,6 +17,7 @@ interface TicketFormData {
   priority: TicketPriority;
   assigneeId?: string;
   attachments?: FileInfo[];
+  reportIds?: string[];
 }
 
 // 定義檔案資訊介面
@@ -29,23 +31,37 @@ interface FileInfo {
 
 export default function NewTicket() {
   const router = useRouter();
+  const { query } = router;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-
-  // 從後端 API 獲取用戶數據
-  useEffect(() => {
-    userService.getUsersByRole(UserRole.STAFF).then((users) => {
-      setUsers(users);
-    });
-  }, []);
+  const [reports, setReports] = useState<any[]>([]);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<TicketFormData>();
+
+  useEffect(() => {
+    userService.getUsersByRole(UserRole.STAFF).then((users) => {
+      setUsers(users);
+    });
+
+    // 獲取所有通報，將 pageSize 設置為足夠大的數字以避免分頁問題
+
+    reportService.getAllReports(1, 1000).then((reportsData) => {
+      setReports(reportsData.items);
+
+      // 如果 URL 中有 reportId 參數，則預設選中該通報
+
+      if (query.reportId && typeof query.reportId === 'string') {
+        setValue('reportIds', [query.reportId]);
+      }
+    });
+  }, [query.reportId, setValue]); // 將 query.reportId 和 setValue 加入依賴項
 
   // 處理檔案變更
   const handleFilesChange = (files: FileInfo[]) => {
@@ -95,6 +111,7 @@ export default function NewTicket() {
         priority: data.priority,
         assigneeId: data.assigneeId || undefined,
         attachments: uploadedFiles,
+        reportIds: data.reportIds, // Add reportIds here
       };
 
       // 調用 ticketService 將數據發送到後端 API
@@ -259,6 +276,28 @@ export default function NewTicket() {
                   {users.map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 關聯通報 */}
+              <div>
+                <label
+                  htmlFor="reportIds"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  關聯通報
+                </label>
+                <select
+                  id="reportIds"
+                  multiple
+                  {...register('reportIds')}
+                  className="form-input h-40" // Adjust height for multiple selection
+                >
+                  {reports.map((report) => (
+                    <option key={report.id} value={report.id}>
+                      {report.title}
                     </option>
                   ))}
                 </select>

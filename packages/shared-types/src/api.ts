@@ -1,4 +1,12 @@
-import { Notification, Ticket, Comment, User, TicketStatus, TicketPriority } from './models';
+import {
+  Notification,
+  Ticket,
+  Comment,
+  User,
+  TicketStatus,
+  TicketPriority,
+  FileInfo,
+} from './models';
 
 // API Request types
 export interface CreateTicketRequest {
@@ -6,7 +14,8 @@ export interface CreateTicketRequest {
   description: string;
   priority: TicketPriority;
   assigneeId?: string;
-  attachments?: FileInfo[];
+  attachments?: FileInfo[]; // New attachments field
+  reportIds?: string[];
 }
 
 export interface UpdateTicketRequest {
@@ -15,6 +24,7 @@ export interface UpdateTicketRequest {
   status?: TicketStatus;
   priority?: TicketPriority;
   assigneeId?: string;
+  reportIds?: string[];
 }
 
 export interface CreateCommentRequest {

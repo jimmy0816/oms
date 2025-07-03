@@ -115,6 +115,7 @@ async function createTicket(
     priority,
     assigneeId,
     attachments = [],
+    reportIds = [],
   } = req.body as CreateTicketRequest;
 
   const creatorId = req.user.id; // req.user 來自 AuthenticatedRequest
@@ -135,6 +136,13 @@ async function createTicket(
       status: TicketStatus.PENDING, // 設置默認狀態為待接單
       creatorId,
       assigneeId,
+      reports: {
+        create: reportIds.map((reportId) => ({
+          report: {
+            connect: { id: reportId },
+          },
+        })),
+      },
     },
   });
 

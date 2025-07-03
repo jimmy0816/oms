@@ -54,6 +54,7 @@ interface UpdateReportRequest {
   contactPhone?: string;
   contactEmail?: string;
   images?: string[];
+  ticketIds?: string[];
 }
 
 export default withApiHandler(async function handler(
@@ -128,6 +129,11 @@ async function getReportById(
           },
         },
       },
+      tickets: {
+        include: {
+          ticket: true,
+        },
+      },
     },
   });
 
@@ -187,6 +193,16 @@ async function updateReport(
   if (contactEmail !== undefined) updateData.contactEmail = contactEmail;
   if (images !== undefined) updateData.images = images;
 
+  // Handle ticketIds update
+  if (ticketIds !== undefined) {
+    updateData.tickets = {
+      set: ticketIds.map(ticketId => ({
+        ticketId: ticketId,
+        reportId: id,
+      })),
+    };
+  }
+
   // Update report
   const updatedReport = await prisma.report.update({
     where: { id },
@@ -204,6 +220,11 @@ async function updateReport(
           id: true,
           name: true,
           email: true,
+        },
+      },
+      tickets: { // Include tickets in the response
+        include: {
+          ticket: true,
         },
       },
     },
