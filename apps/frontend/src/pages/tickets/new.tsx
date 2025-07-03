@@ -3,10 +3,11 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
 import { ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
-import { TicketPriority, TicketStatus, UserRole } from 'shared-types';
-import FileUploader, { UploadedFile } from '../../components/FileUploader';
-import ticketService from '../../services/ticketService';
-import userService from '../../services/userService';
+import { TicketPriority, UserRole } from 'shared-types';
+import FileUploader from '@/components/FileUploader';
+import ticketService from '@/services/ticketService';
+import userService from '@/services/userService';
+import { uploadService } from '@/services/uploadService';
 
 // 定義表單資料型別
 interface TicketFormData {
@@ -14,33 +15,30 @@ interface TicketFormData {
   description: string;
   priority: TicketPriority;
   assigneeId?: string;
+  attachments?: FileInfo[];
 }
 
-// 使用共用元件中的 UploadedFile 類型
+// 定義檔案資訊介面
+interface FileInfo {
+  id: string;
+  name: string;
+  url: string;
+  type: 'image' | 'video';
+  size?: number;
+}
 
 export default function NewTicket() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
   const [users, setUsers] = useState<any[]>([]);
 
   // 從後端 API 獲取用戶數據
   useEffect(() => {
-    // 在實際應用中，這裡會從 API 獲取用戶列表
-    // 目前使用模擬數據
-
     userService.getUsersByRole(UserRole.STAFF).then((users) => {
       setUsers(users);
     });
-
-    // setUsers([
-    //   { id: '1', name: '李小明', role: 'REPORT_PROCESSOR' },
-    //   { id: '2', name: '王大明', role: 'REPORT_REVIEWER' },
-    //   { id: '3', name: '張小芳', role: 'CUSTOMER_SERVICE' },
-    //   { id: '4', name: '陳志明', role: 'MAINTENANCE_WORKER' },
-    //   { id: '5', name: '林小楠', role: 'MAINTENANCE_WORKER' },
-    // ]);
   }, []);
 
   const {
@@ -50,8 +48,36 @@ export default function NewTicket() {
   } = useForm<TicketFormData>();
 
   // 處理檔案變更
-  const handleFilesChange = (files: UploadedFile[]) => {
+  const handleFilesChange = (files: FileInfo[]) => {
     setUploadedFiles(files);
+  };
+
+  const ticketUploadFunction = async (file: File): Promise<FileInfo> => {
+    const { signedUrl, fileUrl, fileId } = await uploadService.getUploadUrl(
+      file.name,
+      file.type,
+      'tickets'
+    );
+
+    const response = await fetch(signedUrl, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': file.type,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('上傳失敗');
+    }
+
+    return {
+      id: fileId,
+      name: file.name,
+      url: fileUrl,
+      type: file.type.startsWith('image/') ? 'image' : 'video',
+      size: file.size,
+    };
   };
 
   const onSubmit = async (data: TicketFormData) => {
@@ -68,13 +94,7 @@ export default function NewTicket() {
         description: data.description,
         priority: data.priority,
         assigneeId: data.assigneeId || undefined,
-        // 如果有上傳文件，將其轉換為 URL 數組
-        attachments: uploadedFiles.map((file) => ({
-          name: file.file.name,
-          type: file.type,
-          size: file.file.size,
-          url: file.previewUrl, // 實際環境中這會是伺服器上的 URL
-        })),
+        attachments: uploadedFiles,
       };
 
       // 調用 ticketService 將數據發送到後端 API
@@ -250,13 +270,29 @@ export default function NewTicket() {
                   附件
                 </label>
                 <FileUploader
-                  files={uploadedFiles}
                   onFilesChange={handleFilesChange}
-                  maxFiles={10}
-                  acceptedFileTypes={['image/*', 'video/*']}
-                  label="選擇圖片或影片"
-                  helpText="支援 JPG, PNG, GIF, MP4 等格式"
+                  uploadFunction={ticketUploadFunction} // <-- 新增這個 prop，傳入您已定義的上傳函式
                 />
+                {/* 顯示已上傳的檔案列表 (可選) */}
+                {uploadedFiles.length > 0 && (
+                  <div className="mt-2 text-sm text-gray-600">
+                    <p>已上傳檔案:</p>
+                    <ul className="list-disc list-inside">
+                      {uploadedFiles.map((file) => (
+                        <li key={file.id}>
+                          <a
+                            href={file.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500 hover:underline"
+                          >
+                            {file.name}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               {/* 提交按鈕 */}

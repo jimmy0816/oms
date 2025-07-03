@@ -7,9 +7,11 @@ import {
   DocumentTextIcon,
   PhotoIcon,
 } from '@heroicons/react/24/outline';
-import CategorySelector from '../../components/CategorySelector';
+import CategorySelector from '@/components/CategorySelector';
 import FileUploader from '@/components/FileUploader';
-import { uploadService } from '../../services/uploadService';
+import reportService, { ReportPriority } from '@/services/reportService';
+import { getLocations, Location } from '@/services/locationService';
+import { uploadService } from '@/services/uploadService';
 
 // 定義檔案資訊介面
 interface FileInfo {
@@ -344,7 +346,7 @@ export default function NewReport() {
               {/* 上傳圖片 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  上傳圖片（選填）
+                  上傳檔案（選填）
                 </label>
                 <FileUploader
                   onFilesChange={handleFilesChange}
