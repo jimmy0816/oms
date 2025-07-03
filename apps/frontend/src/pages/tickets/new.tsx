@@ -103,9 +103,6 @@ export default function NewTicket() {
     setError(null);
 
     try {
-      console.log('提交工單資料:', data);
-      console.log('上傳檔案:', uploadedFiles);
-
       // 準備要發送到後端 API 的數據
       const ticketData = {
         title: data.title,
@@ -119,15 +116,12 @@ export default function NewTicket() {
       // 調用 ticketService 將數據發送到後端 API
       const createdTicket = await ticketService.createTicket(ticketData);
 
-      console.log('工單創建成功:', createdTicket);
-
       // 顯示成功訊息
       alert('工單已成功建立！');
 
       // 導向到工單列表頁面
       router.push('/tickets');
     } catch (err: any) {
-      console.error('建立工單時發生錯誤:', err);
       setError(err.message || '建立工單時發生錯誤，請稍後再試。');
     } finally {
       setIsSubmitting(false);

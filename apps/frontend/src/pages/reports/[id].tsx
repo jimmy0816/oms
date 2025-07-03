@@ -300,6 +300,7 @@ export default function ReportDetail() {
               </div>
 
               {/* 狀態處理按鈕區塊 - debug 訊息 */}
+              {/*
               <div
                 className="mb-2 text-xs text-gray-400"
                 style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}
@@ -312,6 +313,7 @@ export default function ReportDetail() {
                 </div>
                 <div>DEBUG: report.status = {report.status}</div>
               </div>
+              */}
               <div className="flex gap-2">
                 {/* PENDING 狀態：處理者可操作 */}
                 {userPermissions.canProcess &&

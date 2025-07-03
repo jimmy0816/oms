@@ -197,18 +197,6 @@ export default function TicketDetail() {
               <div>
                 <h3 className="text-sm font-medium text-gray-500">指派角色</h3>
                 <p className="mt-1">{ticket.role?.name || '未指定'}</p>
-                {/* Debug 資訊 */}
-                <pre style={{fontSize: '12px', color: 'red', background: '#fffbe6', padding: 4, borderRadius: 4}}>
-                  {JSON.stringify({
-                    user,
-                    userPermissions: user?.permissions,
-                    userRole: user?.role,
-                    additionalRoles: user?.additionalRoles,
-                    ticketRole: ticket.role?.name,
-                    ticketStatus: ticket.status,
-                    assigneeId: ticket.assigneeId
-                  }, null, 2)}
-                </pre>
                 {/* 認領工單按鈕顯示條件：未認領、狀態為待接單、用戶有權限且屬於該角色 */}
                 {ticket.assigneeId == null && ticket.status === 'PENDING' && user && user.permissions?.includes('claim_tickets') && (user.role === ticket.role?.name || (user.additionalRoles && user.additionalRoles.includes(ticket.role?.name))) && (
                   <button className="btn-primary mt-2" onClick={handleClaim}>認領工單</button>

@@ -360,7 +360,7 @@ export const reportService = {
     userId: string
   ): Promise<any> {
     try {
-      const response = await fetch(`${API_URL}/activitylogs`, {
+      const response = await fetch(`${API_URL}/api/activitylogs`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
