@@ -38,7 +38,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     res.status(200).json({
       signedUrl,
-      fileUrl: signedUrl.split('?')[0], // The final URL after upload
+      fileUrl: `${process.env.R2_PUBLIC_URL_PREFIX}/${fileKey}`, // Use public URL
       fileId: fileKey,
     });
   } catch (error) {
