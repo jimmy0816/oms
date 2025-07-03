@@ -91,12 +91,13 @@ model Report {
 }
 
 model Role {
-  id          String     @id @default(uuid())
-  name        String     @unique
-  description String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  userRoles   UserRole[]
+  id             String           @id @default(uuid())
+  name           String           @unique
+  description    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  userRoles      UserRole[]
+  rolePermissions RolePermission[]
 }
 
 model UserRole {
@@ -118,4 +119,23 @@ model AuditLog {
   targetType String
   details    Json?
   createdAt  DateTime @default(now())
+}
+
+model Permission {
+  id             String           @id @default(uuid())
+  name           String           @unique
+  description    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  roleId        String
+  permissionId  String
+  assignedAt    DateTime    @default(now())
+  role          Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission    Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
 }

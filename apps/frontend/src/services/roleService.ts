@@ -1,4 +1,4 @@
-import { UserRole, Permission, ROLE_PERMISSIONS } from 'shared-types';
+import { UserRole, Permission } from 'shared-types';
 
 // 獲取 API URL
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -22,11 +22,11 @@ export const roleService = {
       }
       
       const data = await response.json();
-      return data;
+      return data.rolePermissions || {};
     } catch (error) {
       console.error('Error fetching role permissions:', error);
-      // 如果出錯，返回默認權限
-      return { ...ROLE_PERMISSIONS };
+      // 如果出錯，返回空對象
+      return {};
     }
   },
   
@@ -48,8 +48,8 @@ export const roleService = {
       return data.permissions || [];
     } catch (error) {
       console.error(`Error fetching permissions for role ${role}:`, error);
-      // 如果出錯，返回默認權限
-      return [...ROLE_PERMISSIONS[role]];
+      // 如果出錯，返回空數組
+      return [];
     }
   },
   
