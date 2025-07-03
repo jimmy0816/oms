@@ -12,6 +12,7 @@ export default function TicketDetail() {
   const [loading, setLoading] = useState(true);
   const [ticket, setTicket] = useState<any>(null);
   const [newCommentContent, setNewCommentContent] = useState('');
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   
   // 從 API 獲取工單詳情
   useEffect(() => {
@@ -195,6 +196,65 @@ export default function TicketDetail() {
               <div className="text-gray-500 mb-4">目前尚無相關通報</div>
             )}
             </div>
+          
+          {/* 顯示上傳的圖片和影片（支援 attachments，含 Lightbox） */}
+          {ticket.attachments && ticket.attachments.length > 0 && (
+            <div className="mt-6 border-t border-gray-100 pt-4">
+              <h3 className="text-sm font-medium text-gray-500 mb-2">
+                上傳的檔案
+              </h3>
+              <div className="flex flex-wrap gap-4">
+                {ticket.attachments.map((file: any) => (
+                  <div key={file.id} className="w-40">
+                    {file.fileType.startsWith('image') ? (
+                      <>
+                        <img
+                          src={file.url}
+                          alt={file.filename}
+                          className="rounded shadow border w-full h-32 object-cover cursor-pointer transition-transform hover:scale-105"
+                          onClick={() => setPreviewImage(file.url)}
+                        />
+                        <div className="text-xs text-gray-500 mt-1 truncate">{file.filename}</div>
+                      </>
+                    ) : file.fileType.startsWith('video') ? (
+                      <>
+                        <video
+                          src={file.url}
+                          controls
+                          className="rounded shadow border w-full h-32 object-cover"
+                        />
+                        <div className="text-xs text-gray-500 mt-1 truncate">{file.filename}</div>
+                      </>
+                    ) : (
+                      <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                        {file.filename}
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {/* Lightbox 放大預覽 */}
+              {previewImage && (
+                <div
+                  className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
+                  onClick={() => setPreviewImage(null)}
+                >
+                  <img
+                    src={previewImage}
+                    alt="預覽"
+                    className="max-h-[80vh] max-w-[90vw] rounded shadow-lg border-4 border-white"
+                    onClick={e => e.stopPropagation()}
+                  />
+                  <button
+                    className="absolute top-8 right-8 text-white text-3xl font-bold"
+                    onClick={() => setPreviewImage(null)}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           
           {/* 留言區塊 */}
           <div className="p-6">

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from 'prisma-client';
+import { prisma } from '@/lib/prisma';
 import { ApiResponse, Ticket } from 'shared-types';
 import { withApiHandler } from '@/lib/api-handler';
 import { applyCors } from '@/utils/cors';
