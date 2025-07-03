@@ -63,16 +63,8 @@ steps:
       - "--platform"
       - "managed"
       - "--allow-unauthenticated" # 如果是公開 API，允許未經驗證的存取 (可根據需求調整)
-      - "--set-env-vars" # 設定環境變數
-      - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}/oms?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME}"
-      - "JWT_SECRET=${_JWT_SECRET}"
-      - "DEFAULT_ADMIN_EMA＠IL=${_DEFAULT_ADMIN_EMAIL}"
-      - "DEFAULT_ADMIN_PASSWORD=${_DEFAULT_ADMIN_PASSWORD}"
-      - "R2_ACCOUNT_ID=${_R2_ACCOUNT_ID}"
-      - "R2_ACCESS_KEY_ID=${_R2_ACCESS_KEY_ID}"
-      - "R2_SECRET_ACCESS_KEY=${_R2_SECRET_ACCESS_KEY}"
-      - "R2_BUCKET_NAME=${_R2_BUCKET_NAME}"
-      - "R2_PUBLIC_URL_PREFIX=${_R2_PUBLIC_URL_PREFIX}"
+      - "--set-env-vars"
+      - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}/oms?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME},JWT_SECRET=${_JWT_SECRET},DEFAULT_ADMIN_EMAIL=${_DEFAULT_ADMIN_EMAIL},DEFAULT_ADMIN_PASSWORD=${_DEFAULT_ADMIN_PASSWORD},R2_ACCOUNT_ID=${_R2_ACCOUNT_ID},R2_ACCESS_KEY_ID=${_R2_ACCESS_KEY_ID},R2_SECRET_ACCESS_KEY=${_R2_SECRET_ACCESS_KEY},R2_BUCKET_NAME=${_R2_BUCKET_NAME},R2_PUBLIC_URL_PREFIX=${_R2_PUBLIC_URL_PREFIX}"
       - "--add-cloudsql-instances"
       - "${_CLOUD_SQL_CONNECTION_NAME}"
     # 其他可選配置：
