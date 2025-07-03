@@ -69,8 +69,9 @@ export interface CreateReportRequest {
 export enum ReportStatus {
   PENDING = 'PENDING',
   PROCESSING = 'PROCESSING',
-  RESOLVED = 'RESOLVED',
   REJECTED = 'REJECTED',
+  PENDING_REVIEW = 'PENDING_REVIEW', // 待審核
+  REVIEWED = 'REVIEWED',             // 已歸檔
 }
 
 // 通報優先級枚舉

@@ -43,12 +43,11 @@ export default function ReportDetail() {
 
   // 模擬用戶角色與權限
   useEffect(() => {
-    // 假設當前用戶為通報處理者，有 process_reports 和 close_reports 權限
-    // 在實際應用中，這裡會從用戶授權系統中獲取權限
+    // 測試用：全部權限都給 true
     setUserPermissions({
       canProcess: true,
       canClose: true,
-      canReview: false,
+      canReview: true,
     });
   }, []);
 
@@ -276,7 +275,13 @@ export default function ReportDetail() {
                 <span className="text-sm text-gray-500">通報 #{report.id}</span>
               </div>
 
+              {/* 狀態處理按鈕區塊 - debug 訊息 */}
+              <div className="mb-2 text-xs text-gray-400">
+                <div>DEBUG: userPermissions = {JSON.stringify(userPermissions)}</div>
+                <div>DEBUG: report.status = {report.status}</div>
+              </div>
               <div className="flex gap-2">
+                {/* PENDING 狀態：處理者可操作 */}
                 {userPermissions.canProcess &&
                   report.status === ReportStatus.PENDING && (
                     <>
@@ -306,21 +311,51 @@ export default function ReportDetail() {
                       </button>
                     </>
                   )}
-
+                {/* PROCESSING 狀態：處理者可結案，直接進入待審核 */}
                 {userPermissions.canClose &&
                   report.status === ReportStatus.PROCESSING && (
                     <button
                       className="btn-primary"
                       onClick={() =>
                         updateReportStatus(
-                          ReportStatus.RESOLVED,
-                          '處理完成，已解決'
+                          ReportStatus.PENDING_REVIEW,
+                          '處理完成，送審核'
                         )
                       }
                       disabled={processing}
                     >
                       {processing ? '處理中...' : '結案'}
                     </button>
+                  )}
+                {/* PENDING_REVIEW 狀態：審核者可通過/退回 */}
+                {userPermissions.canReview &&
+                  report.status === ReportStatus.PENDING_REVIEW && (
+                    <>
+                      <button
+                        className="btn-primary"
+                        onClick={() =>
+                          updateReportStatus(
+                            ReportStatus.REVIEWED,
+                            '審核通過'
+                          )
+                        }
+                        disabled={processing}
+                      >
+                        {processing ? '處理中...' : '通過'}
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        onClick={() =>
+                          updateReportStatus(
+                            ReportStatus.PROCESSING,
+                            '退回處理'
+                          )
+                        }
+                        disabled={processing}
+                      >
+                        退回
+                      </button>
+                    </>
                   )}
               </div>
 

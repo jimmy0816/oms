@@ -153,8 +153,10 @@ export default function Reports() {
         return '待處理';
       case ReportStatus.PROCESSING:
         return '處理中';
-      case ReportStatus.RESOLVED:
-        return '已解決';
+      case ReportStatus.PENDING_REVIEW:
+        return '待審核';
+      case ReportStatus.REVIEWED:
+        return '已歸檔';
       case ReportStatus.REJECTED:
         return '已拒絕';
       default:
@@ -229,7 +231,8 @@ export default function Reports() {
                 <option value="">全部狀態</option>
                 <option value={ReportStatus.PENDING}>待處理</option>
                 <option value={ReportStatus.PROCESSING}>處理中</option>
-                <option value={ReportStatus.RESOLVED}>已解決</option>
+                <option value={ReportStatus.PENDING_REVIEW}>待審核</option>
+                <option value={ReportStatus.REVIEWED}>已歸檔</option>
                 <option value={ReportStatus.REJECTED}>已拒絕</option>
               </select>
 
