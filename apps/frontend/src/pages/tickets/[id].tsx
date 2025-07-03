@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { TicketStatus, TicketPriority } from 'shared-types';
 import ticketService from '../../services/ticketService';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function TicketDetail() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function TicketDetail() {
   const [ticket, setTicket] = useState<any>(null);
   const [newCommentContent, setNewCommentContent] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const { user } = useAuth();
   
   // 從 API 獲取工單詳情
   useEffect(() => {
@@ -97,6 +99,32 @@ export default function TicketDetail() {
     }
   };
 
+  // 認領工單
+  const handleClaim = async () => {
+    if (!ticket?.id) return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`http://localhost:3001/api/tickets/${ticket.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ action: 'claim' }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTicket(data.data);
+        alert('認領成功！');
+      } else {
+        alert(data.error || '認領失敗');
+      }
+    } catch (err) {
+      alert('認領失敗');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -165,6 +193,26 @@ export default function TicketDetail() {
               <div>
                 <h3 className="text-sm font-medium text-gray-500">更新時間</h3>
                 <p className="mt-1">{formatDate(ticket.updatedAt)}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">指派角色</h3>
+                <p className="mt-1">{ticket.role?.name || '未指定'}</p>
+                {/* Debug 資訊 */}
+                <pre style={{fontSize: '12px', color: 'red', background: '#fffbe6', padding: 4, borderRadius: 4}}>
+                  {JSON.stringify({
+                    user,
+                    userPermissions: user?.permissions,
+                    userRole: user?.role,
+                    additionalRoles: user?.additionalRoles,
+                    ticketRole: ticket.role?.name,
+                    ticketStatus: ticket.status,
+                    assigneeId: ticket.assigneeId
+                  }, null, 2)}
+                </pre>
+                {/* 認領工單按鈕顯示條件：未認領、狀態為待接單、用戶有權限且屬於該角色 */}
+                {ticket.assigneeId == null && ticket.status === 'PENDING' && user && user.permissions?.includes('claim_tickets') && (user.role === ticket.role?.name || (user.additionalRoles && user.additionalRoles.includes(ticket.role?.name))) && (
+                  <button className="btn-primary mt-2" onClick={handleClaim}>認領工單</button>
+                )}
               </div>
             </div>
           </div>

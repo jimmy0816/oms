@@ -1,0 +1,26 @@
+﻿
+
+StatusCode        : 200
+StatusDescription : OK
+Content           : {"rolePermissions":{"ADMIN":["view_tickets","create_tickets","edit_tickets","delet
+                    e_tickets","assign_tickets","claim_tickets","complete_tickets","verify_tickets","v
+                    iew_reports","create_reports","proce...
+RawContent        : HTTP/1.1 200 OK
+                    Vary: Accept-Encoding
+                    Connection: keep-alive
+                    Keep-Alive: timeout=5
+                    Content-Length: 957
+                    Content-Type: application/json; charset=utf-8
+                    Date: Thu, 03 Jul 2025 21:05:42 GMT
+                    ETag: "k...
+Forms             : {}
+Headers           : {[Vary, Accept-Encoding], [Connection, keep-alive], [Keep-Alive, timeout=5], [Cont
+                    ent-Length, 957]...}
+Images            : {}
+InputFields       : {}
+Links             : {}
+ParsedHtml        : mshtml.HTMLDocumentClass
+RawContentLength  : 957
+
+
+

@@ -1,13 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import {
-  ApiResponse,
-  Ticket,
-  UpdateTicketRequest,
-  TicketStatus,
-  TicketPriority,
-} from 'shared-types';
+import { ApiResponse, Ticket, UpdateTicketRequest, TicketStatus, TicketPriority } from 'shared-types';
 import { withApiHandler } from '@/lib/api-handler';
+import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 
 export default withApiHandler(async function handler(
   req: NextApiRequest,
@@ -25,10 +20,12 @@ export default withApiHandler(async function handler(
         return await getTicket(id, res);
       case 'PUT':
         return await updateTicket(id, req, res);
+      case 'PATCH':
+        return await withAuth(claimTicket)(req, res);
       case 'DELETE':
         return await deleteTicket(id, res);
       default:
-        res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
+        res.setHeader('Allow', ['GET', 'PUT', 'PATCH', 'DELETE']);
         return res
           .status(405)
           .json({ success: false, error: `Method ${req.method} Not Allowed` });
@@ -80,6 +77,7 @@ async function getTicket(
           report: true,
         },
       },
+      role: true,
     },
   });
 
@@ -262,4 +260,47 @@ async function deleteTicket(
   };
 
   return res.status(200).json({ success: true, data: ticketWithCorrectTypes });
+}
+
+async function claimTicket(
+  req: NextApiRequest,
+  res: NextApiResponse<ApiResponse<Ticket>>
+) {
+  const { id } = req.query;
+  if (!id || Array.isArray(id)) {
+    return res.status(400).json({ success: false, error: 'Invalid ticket ID' });
+  }
+  const user = (req as any).user;
+  if (!user) {
+    return res.status(401).json({ success: false, error: '未登入' });
+  }
+  const { action } = req.body;
+  if (action !== 'claim') {
+    return res.status(400).json({ success: false, error: '不支援的操作' });
+  }
+  // 查詢工單
+  const ticket = await prisma.ticket.findUnique({ where: { id: id as string } });
+  if (!ticket) {
+    return res.status(404).json({ success: false, error: '工單不存在' });
+  }
+  if (ticket.assigneeId) {
+    return res.status(400).json({ success: false, error: '工單已被認領' });
+  }
+  if (ticket.status !== 'PENDING') {
+    return res.status(400).json({ success: false, error: '工單狀態非待接單' });
+  }
+  // 權限判斷
+  const hasClaimPermission = user.permissions?.includes('claim_tickets');
+  if (!hasClaimPermission) {
+    return res.status(403).json({ success: false, error: '沒有認領工單權限' });
+  }
+  // 認領
+  const updated = await prisma.ticket.update({
+    where: { id: id as string },
+    data: {
+      assigneeId: user.id,
+      status: 'IN_PROGRESS',
+    },
+  });
+  return res.status(200).json({ success: true, data: updated });
 }

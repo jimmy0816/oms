@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { UserRole, Permission, ROLE_PERMISSIONS } from 'shared-types';
+import { applyCors } from '../../../utils/cors'; // 路徑依實際情況調整
 
 // 從 localStorage 獲取角色權限，如果不存在則使用默認值
 const getRolePermissionsFromStorage = () => {
@@ -31,12 +32,13 @@ const saveRolePermissionsToStorage = (rolePermissions: Record<string, Permission
   }
 };
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  await applyCors(req, res);
   const { role } = req.query;
   
   // 確保 role 是一個有效的 UserRole
   if (!role || typeof role !== 'string' || !Object.values(UserRole).includes(role as UserRole)) {
-    return res.status(400).json({ message: '無效的角色' });
+    return res.status(400).json({ message: '[role]無效的角色' });
   }
 
   const userRole = role as UserRole;

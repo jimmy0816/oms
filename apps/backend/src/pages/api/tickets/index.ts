@@ -113,12 +113,12 @@ async function createTicket(
     title,
     description,
     priority,
-    assigneeId,
+    roleId, // 改為 roleId
     attachments = [],
     reportIds = [],
-  } = req.body as CreateTicketRequest;
+  } = req.body as any; // 型別同步調整
 
-  const creatorId = req.user.id; // req.user 來自 AuthenticatedRequest
+  const creatorId = req.user.id;
 
   if (!title || !description) {
     return res.status(400).json({
@@ -127,15 +127,15 @@ async function createTicket(
     });
   }
 
-  // 直接使用導入的 prisma 實例，它已經包含了稽核中介軟體
   const ticket = await prisma.ticket.create({
     data: {
       title,
       description,
       priority,
-      status: TicketStatus.PENDING, // 設置默認狀態為待接單
+      status: TicketStatus.PENDING,
       creatorId,
-      assigneeId,
+      roleId, // 存 roleId
+      // assigneeId 預設為空
       reports: {
         create: reportIds.map((reportId) => ({
           report: {
@@ -146,7 +146,7 @@ async function createTicket(
     },
   });
 
-  // Create attachments if any
+  // 建立附件
   if (attachments.length > 0) {
     const attachmentData = attachments.map((att) => ({
       filename: att.name,
@@ -157,26 +157,11 @@ async function createTicket(
       parentId: ticket.id,
       parentType: 'TICKET',
     }));
-    // 直接使用導入的 prisma 實例
     await prisma.attachment.createMany({
       data: attachmentData,
     });
   }
 
-  // Create a notification for the assignee if one is assigned
-  if (assigneeId) {
-    // 直接使用導入的 prisma 實例
-    await prisma.notification.create({
-      data: {
-        title: 'New Ticket Assigned',
-        message: `You have been assigned a new ticket: ${title}`,
-        userId: assigneeId,
-        relatedTicketId: ticket.id,
-      },
-    });
-  }
-
-  // 確保 status 和 priority 屬性都是正確的枚舉類型
   const ticketWithCorrectTypes: Ticket = {
     ...ticket,
     status: ticket.status as unknown as TicketStatus,
