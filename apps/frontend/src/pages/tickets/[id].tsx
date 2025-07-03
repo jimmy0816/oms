@@ -155,6 +155,26 @@ export default function TicketDetail() {
               <p>{ticket.description}</p>
             </div>
           </div>
+
+          {/* 相關通報區塊 */}
+          <div className="p-6 border-b border-gray-100">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">相關通報</h3>
+            {ticket.reports && ticket.reports.length > 0 ? (
+              <ul className="divide-y divide-gray-100 mb-4">
+                {ticket.reports.map((ticketReport) => (
+                  <li key={ticketReport.report.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-blue-700 text-sm break-words">{ticketReport.report.title}</p>
+                      <p className="text-gray-500 text-xs mt-0.5 break-all">通報 #{ticketReport.report.id}</p>
+                    </div>
+                    <Link href={`/reports/${ticketReport.report.id}`} className="text-blue-600 hover:underline text-sm mt-2 sm:mt-0 sm:ml-4 flex-shrink-0">查看</Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-gray-500 mb-4">目前尚無相關通報</div>
+            )}
+            </div>
           
           {/* 留言區塊 */}
           <div className="p-6">
