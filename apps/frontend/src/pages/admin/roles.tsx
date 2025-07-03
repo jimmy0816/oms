@@ -35,63 +35,8 @@ const RolesManagementPage: React.FC = () => {
   const fetchRolePermissions = async (role: UserRole) => {
     try {
       setIsLoading(true);
-      // 在實際應用中，這裡應該調用 API 獲取角色權限
-      // 目前使用模擬數據
-      // 模擬不同角色的默認權限
-      let permissions: Permission[] = [];
-      
-      switch(role) {
-        case UserRole.ADMIN:
-          permissions = [
-            Permission.VIEW_TICKETS, Permission.CREATE_TICKETS, Permission.EDIT_TICKETS,
-            Permission.DELETE_TICKETS, Permission.ASSIGN_TICKETS, Permission.CLAIM_TICKETS,
-            Permission.COMPLETE_TICKETS, Permission.VERIFY_TICKETS, Permission.VIEW_REPORTS,
-            Permission.CREATE_REPORTS, Permission.PROCESS_REPORTS, Permission.REVIEW_REPORTS,
-            Permission.VIEW_USERS, Permission.CREATE_USERS, Permission.EDIT_USERS,
-            Permission.DELETE_USERS, Permission.MANAGE_ROLES, Permission.ASSIGN_PERMISSIONS
-          ];
-          break;
-        case UserRole.MANAGER:
-          permissions = [
-            Permission.VIEW_TICKETS, Permission.CREATE_TICKETS, Permission.EDIT_TICKETS,
-            Permission.ASSIGN_TICKETS, Permission.VERIFY_TICKETS, Permission.VIEW_REPORTS,
-            Permission.PROCESS_REPORTS, Permission.REVIEW_REPORTS, Permission.VIEW_USERS
-          ];
-          break;
-        case UserRole.REPORT_PROCESSOR:
-          permissions = [
-            Permission.VIEW_TICKETS, Permission.CREATE_TICKETS, Permission.EDIT_TICKETS,
-            Permission.ASSIGN_TICKETS, Permission.VIEW_REPORTS, Permission.CREATE_REPORTS,
-            Permission.PROCESS_REPORTS
-          ];
-          break;
-        case UserRole.REPORT_REVIEWER:
-          permissions = [
-            Permission.VIEW_TICKETS, Permission.VIEW_REPORTS, Permission.REVIEW_REPORTS,
-            Permission.VERIFY_TICKETS
-          ];
-          break;
-        case UserRole.MAINTENANCE_WORKER:
-          permissions = [
-            Permission.VIEW_TICKETS, Permission.CLAIM_TICKETS, Permission.COMPLETE_TICKETS
-          ];
-          break;
-        case UserRole.CUSTOMER_SERVICE:
-          permissions = [
-            Permission.VIEW_TICKETS, Permission.CREATE_TICKETS, Permission.VIEW_REPORTS,
-            Permission.CREATE_REPORTS
-          ];
-          break;
-        case UserRole.USER:
-          permissions = [
-            Permission.VIEW_TICKETS, Permission.CREATE_REPORTS
-          ];
-          break;
-      }
-      
-      // 模擬 API 調用延遲
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      // 呼叫 API 取得權限
+      const permissions = await roleService.getRolePermissions(role);
       setRolePermissions(permissions);
     } catch (error) {
       console.error(`Error fetching permissions for role ${role}:`, error);

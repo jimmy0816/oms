@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { TicketPriority, UserRole } from 'shared-types';
 import FileUploader from '@/components/FileUploader';
-import ticketService from '@/services/ticketService';
+import { ticketService } from '@/services/ticketService';
 import userService from '@/services/userService';
 import { uploadService } from '@/services/uploadService';
 import reportService from '@/services/reportService';

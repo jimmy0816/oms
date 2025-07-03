@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse, Ticket } from 'shared-types';
 import { withApiHandler } from '@/lib/api-handler';
+import { applyCors } from '@/utils/cors';
 
 // Define Report type based on Prisma schema
 interface Report {
@@ -89,6 +90,8 @@ export default withApiHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Report>>
 ) {
+  await applyCors(req, res);
+
   const { id } = req.query;
 
   if (!id || Array.isArray(id)) {
@@ -155,11 +158,7 @@ async function getReportById(
           },
         },
       },
-      tickets: {
-        include: {
-          ticket: true,
-        },
-      },
+      tickets: { include: { ticket: true } },
     },
   });
 

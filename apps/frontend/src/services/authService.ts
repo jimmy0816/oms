@@ -1,5 +1,5 @@
 // Fix the import path to resolve the module not found error
-import { API_BASE_URL } from '../config';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export interface LoginCredentials {
   email: string;
@@ -34,7 +34,7 @@ const authService = {
    */
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

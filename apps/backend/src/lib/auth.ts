@@ -43,12 +43,13 @@ export const verifyPassword = async (
  * @param user 用戶資訊
  * @returns JWT Token
  */
-export const generateToken = (user: Omit<User, 'password'>): string => {
+export const generateToken = (user: Omit<User, 'password'> & { permissions?: string[] }): string => {
   const payload = {
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
+    permissions: user.permissions || [],
   };
 
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });

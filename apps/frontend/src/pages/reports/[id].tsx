@@ -33,6 +33,7 @@ export default function ReportDetail() {
   const [report, setReport] = useState<Report | null>(null);
   const [processing, setProcessing] = useState(false);
   const { user } = useAuth();
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [newCommentContent, setNewCommentContent] = useState('');
 
   // 根據用戶角色設置權限
@@ -449,30 +450,62 @@ export default function ReportDetail() {
                   )}
                 </div>
 
-                {/* 顯示上傳的圖片和影片 */}
-                {report.images && report.images.length > 0 && (
+                {/* 顯示上傳的圖片和影片（新版，支援 attachments，含 Lightbox） */}
+                {report.attachments && report.attachments.length > 0 && (
                   <div className="mt-6 border-t border-gray-100 pt-4">
                     <h3 className="text-sm font-medium text-gray-500 mb-2">
                       上傳的檔案
                     </h3>
-                    <FileUploader
-                      files={report.images.map((image, index) => {
-                        // 檢查是否為影片檔案 - 第三個模擬為影片
-                        const isVideo = index === 2;
-
-                        return {
-                          id: `file-${index}`,
-                          name: isVideo
-                            ? `影片檔案 ${index + 1}`
-                            : `圖片檔案 ${index + 1}`,
-                          url: image,
-                          type: isVideo ? 'video' : 'image',
-                          previewUrl: image,
-                        } as UploadedFile;
-                      })}
-                      onFilesChange={() => {}}
-                      viewOnly={true}
-                    />
+                    <div className="flex flex-wrap gap-4">
+                      {report.attachments.map((file: any) => (
+                        <div key={file.id} className="w-40">
+                          {file.fileType.startsWith('image') ? (
+                            <>
+                              <img
+                                src={file.url}
+                                alt={file.filename}
+                                className="rounded shadow border w-full h-32 object-cover cursor-pointer transition-transform hover:scale-105"
+                                onClick={() => setPreviewImage(file.url)}
+                              />
+                              <div className="text-xs text-gray-500 mt-1 truncate">{file.filename}</div>
+                            </>
+                          ) : file.fileType.startsWith('video') ? (
+                            <>
+                              <video
+                                src={file.url}
+                                controls
+                                className="rounded shadow border w-full h-32 object-cover"
+                              />
+                              <div className="text-xs text-gray-500 mt-1 truncate">{file.filename}</div>
+                            </>
+                          ) : (
+                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                              {file.filename}
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Lightbox 放大預覽 */}
+                    {previewImage && (
+                      <div
+                        className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
+                        onClick={() => setPreviewImage(null)}
+                      >
+                        <img
+                          src={previewImage}
+                          alt="預覽"
+                          className="max-h-[80vh] max-w-[90vw] rounded shadow-lg border-4 border-white"
+                          onClick={e => e.stopPropagation()}
+                        />
+                        <button
+                          className="absolute top-8 right-8 text-white text-3xl font-bold"
+                          onClick={() => setPreviewImage(null)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

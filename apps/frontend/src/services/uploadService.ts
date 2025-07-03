@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const getAuthHeaders = (): HeadersInit => {
   if (typeof window === 'undefined')
@@ -18,7 +18,7 @@ export const uploadService = {
     module: 'reports' | 'tickets' | 'general'
   ): Promise<{ signedUrl: string; fileUrl: string; fileId: string }> {
     try {
-      const response = await fetch(`${API_URL}/upload-url`,
+      const response = await fetch(`${API_URL}/api/upload-url`,
         {
           method: 'POST',
           headers: getAuthHeaders(),
