@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { withApiHandler } from '@/lib/api-handler';
+import { getUserPermissions, Permission } from '@/utils/permissions';
 
 /**
  * 單個用戶 API 處理程序
@@ -44,7 +45,27 @@ async function getUser(req: NextApiRequest, res: NextApiResponse, id: string) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    return res.status(200).json(user);
+    // 查詢用戶的所有角色關聯
+    const userRoles = await prisma.userRole.findMany({
+      where: { userId: user.id },
+      include: { role: true },
+    });
+    const additionalRoles = userRoles.map(ur => ur.role.name);
+
+    // 合併主角色與額外角色的權限
+    let permissions = new Set(getUserPermissions(user.role));
+    for (const roleName of additionalRoles) {
+      getUserPermissions(roleName as any).forEach(p => permissions.add(p));
+    }
+    const permissionsArr = Array.from(permissions).map(p =>
+      typeof p === 'string' ? p : (p as Permission)
+    );
+
+    return res.status(200).json({
+      ...user,
+      additionalRoles,
+      permissions: permissionsArr,
+    });
   } catch (error) {
     console.error(`Error fetching user with ID ${id}:`, error);
     return res.status(500).json({ error: 'Failed to fetch user' });

@@ -43,13 +43,13 @@ export default function ReportDetail() {
 
   // 模擬用戶角色與權限
   useEffect(() => {
-    // 測試用：全部權限都給 true
+    if (!user) return;
     setUserPermissions({
-      canProcess: true,
-      canClose: true,
-      canReview: true,
+      canProcess: user.permissions?.includes('process_reports'),
+      canClose: user.permissions?.includes('process_reports'),
+      canReview: user.permissions?.includes('review_reports'),
     });
-  }, []);
+  }, [user]);
 
   // 從API獲取通報資料
   useEffect(() => {
@@ -278,6 +278,7 @@ export default function ReportDetail() {
               {/* 狀態處理按鈕區塊 - debug 訊息 */}
               <div className="mb-2 text-xs text-gray-400">
                 <div>DEBUG: userPermissions = {JSON.stringify(userPermissions)}</div>
+                <div>DEBUG: user.permissions = {JSON.stringify(user?.permissions)}</div>
                 <div>DEBUG: report.status = {report.status}</div>
               </div>
               <div className="flex gap-2">
