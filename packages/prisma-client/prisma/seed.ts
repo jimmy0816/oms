@@ -1,5 +1,6 @@
 import { PrismaClient } from '../dist';
 import * as bcrypt from 'bcryptjs';
+import { permissionService } from '../../apps/backend/src/services/permissionService';
 
 // Define enums locally to avoid shared-types dependency
 enum TicketStatus {
@@ -27,6 +28,12 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 async function main() {
+  // 初始化權限和角色權限
+  console.log('初始化權限...');
+  await permissionService.initializePermissions();
+  console.log('初始化角色權限...');
+  await permissionService.initializeRolePermissions();
+
   // 加密密碼
   const adminPassword = await hashPassword('admin123');
   const staffPassword = await hashPassword('staff123');
