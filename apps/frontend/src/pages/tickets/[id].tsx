@@ -11,6 +11,7 @@ export default function TicketDetail() {
   const { id } = router.query;
   const [loading, setLoading] = useState(true);
   const [ticket, setTicket] = useState<any>(null);
+  const [newCommentContent, setNewCommentContent] = useState('');
   
   // 從 API 獲取工單詳情
   useEffect(() => {
@@ -31,6 +32,25 @@ export default function TicketDetail() {
     
     fetchTicket();
   }, [id]);
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentContent.trim() || !ticket?.id) return;
+
+    try {
+      await ticketService.addCommentToTicket(
+        ticket.id,
+        newCommentContent
+      );
+      setNewCommentContent('');
+      // 重新獲取更新後的工單資料
+      const updatedTicket = await ticketService.getTicketById(ticket.id);
+      setTicket(updatedTicket);
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      alert('新增留言失敗，請稍後再試');
+    }
+  };
 
   const getStatusColor = (status: TicketStatus) => {
     switch (status) {
@@ -198,6 +218,20 @@ export default function TicketDetail() {
                 <p className="text-center text-gray-500 py-4">尚無留言</p>
               )}
             </div>
+
+            {/* 新增留言輸入框 */}
+            <form onSubmit={handleAddComment} className="flex items-end space-x-2">
+              <textarea
+                className="flex-1 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={2}
+                placeholder="輸入留言..."
+                value={newCommentContent}
+                onChange={(e) => setNewCommentContent(e.target.value)}
+              />
+              <button type="submit" className="btn-primary">
+                發佈
+              </button>
+            </form>
           </div>
         </div>
       </div>

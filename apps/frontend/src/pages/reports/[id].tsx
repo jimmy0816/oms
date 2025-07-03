@@ -34,6 +34,7 @@ export default function ReportDetail() {
   const [processing, setProcessing] = useState(false);
   const { user } = useAuth();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [newCommentContent, setNewCommentContent] = useState('');
 
   // 根據用戶角色設置權限
   const [userPermissions, setUserPermissions] = useState({
@@ -73,8 +74,31 @@ export default function ReportDetail() {
     }
   }, [id]);
 
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentContent.trim() || !report?.id) return;
+
+    setProcessing(true);
+    try {
+      await reportService.addCommentToReport(
+        report.id,
+        newCommentContent,
+        user?.id.toString()
+      );
+      setNewCommentContent('');
+      // 重新獲取更新後的通報資料
+      const updatedReport = await reportService.getReportById(report.id);
+      setReport(updatedReport);
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      alert('新增留言失敗，請稍後再試');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   // 處理通報狀態更新
-  const updateReportStatus = async (newStatus: string, comment: string) => {
+  const updateReportStatus = async (newStatus: string, log: string) => {
     if (!report || !id) return;
 
     setProcessing(true);
@@ -86,11 +110,10 @@ export default function ReportDetail() {
         newStatus as ReportStatus
       );
 
-      // 添加評論（如果有）
-      if (comment) {
-        await reportService.addCommentToReport(
+      if (log) {
+        await reportService.addActivityLog(
           id.toString(),
-          comment,
+          log,
           user?.id.toString()
         );
       }
@@ -276,11 +299,17 @@ export default function ReportDetail() {
                 <span className="text-sm text-gray-500">通報 #{report.id}</span>
               </div>
 
-              
               {/* 狀態處理按鈕區塊 - debug 訊息 */}
-              <div className="mb-2 text-xs text-gray-400" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>
-                <div>DEBUG: userPermissions = {JSON.stringify(userPermissions)}</div>
-                <div>DEBUG: user.permissions = {JSON.stringify(user?.permissions)}</div>
+              <div
+                className="mb-2 text-xs text-gray-400"
+                style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}
+              >
+                <div>
+                  DEBUG: userPermissions = {JSON.stringify(userPermissions)}
+                </div>
+                <div>
+                  DEBUG: user.permissions = {JSON.stringify(user?.permissions)}
+                </div>
                 <div>DEBUG: report.status = {report.status}</div>
               </div>
               <div className="flex gap-2">
@@ -337,10 +366,7 @@ export default function ReportDetail() {
                       <button
                         className="btn-primary"
                         onClick={() =>
-                          updateReportStatus(
-                            ReportStatus.REVIEWED,
-                            '審核通過'
-                          )
+                          updateReportStatus(ReportStatus.REVIEWED, '審核通過')
                         }
                         disabled={processing}
                       >
@@ -388,7 +414,9 @@ export default function ReportDetail() {
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">建立者</h3>
+                    <h3 className="text-sm font-medium text-gray-500">
+                      建立者
+                    </h3>
                     <div className="mt-1 flex items-center">
                       <UserCircleIcon className="h-5 w-5 text-gray-400 mr-1" />
                       <p className="text-gray-900">
@@ -485,49 +513,60 @@ export default function ReportDetail() {
               {/* 通報歷程（明顯區隔卡片） */}
               <div className="p-6 mt-6 bg-white rounded-lg shadow-lg border border-gray-200">
                 <h3 className="text-lg font-bold text-blue-800 mb-4 flex items-center">
-                  <ClockIcon className="h-5 w-5 mr-2 text-blue-400" />處理歷程
+                  <ClockIcon className="h-5 w-5 mr-2 text-blue-400" />
+                  處理歷程
                 </h3>
                 <div className="flow-root">
                   <ul className="-mb-8">
-                    {report.comments && report.comments.length > 0 ? (
-                      report.comments.map((event: any, eventIdx: number) => (
-                        <li key={event.id}>
-                          <div className="relative pb-8">
-                            {eventIdx !== report.comments.length - 1 ? (
-                              <span
-                                className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                                aria-hidden="true"
-                              ></span>
-                            ) : null}
-                            <div className="relative flex space-x-3">
-                              <div>
+                    {report.activityLogs && report.activityLogs.length > 0 ? (
+                      report.activityLogs.map(
+                        (event: any, eventIdx: number) => (
+                          <li key={event.id}>
+                            <div className="relative pb-8">
+                              {eventIdx !== report.activityLogs.length - 1 ? (
                                 <span
-                                  className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white bg-blue-100 text-blue-800`}
-                                >
-                                  <ClockIcon className="h-5 w-5" />
-                                </span>
-                              </div>
-                              <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                  className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
+                                  aria-hidden="true"
+                                ></span>
+                              ) : null}
+                              <div className="relative flex space-x-3">
                                 <div>
-                                  <p className="text-sm text-gray-700">
-                                    <span className="font-semibold text-blue-700">{event.user?.name || '系統'}</span>
-                                    <span className="mx-2 text-gray-400">|</span>
-                                    <span className="text-xs text-gray-400">{formatDate(event.createdAt)}</span>
-                                  </p>
-                                  {event.content && (
-                                    <div className="mt-1 text-sm text-gray-900 bg-gray-50 rounded px-3 py-2 border border-gray-100">
-                                      {event.content}
-                                    </div>
-                                  )}
+                                  <span
+                                    className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white bg-blue-100 text-blue-800`}
+                                  >
+                                    <ClockIcon className="h-5 w-5" />
+                                  </span>
+                                </div>
+                                <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                  <div>
+                                    <p className="text-sm text-gray-700">
+                                      <span className="font-semibold text-blue-700">
+                                        {event.user?.name || '系統'}
+                                      </span>
+                                      <span className="mx-2 text-gray-400">
+                                        |
+                                      </span>
+                                      <span className="text-xs text-gray-400">
+                                        {formatDate(event.createdAt)}
+                                      </span>
+                                    </p>
+                                    {event.content && (
+                                      <div className="mt-1 text-sm text-gray-900 bg-gray-50 rounded px-3 py-2 border border-gray-100">
+                                        {event.content}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </li>
-                      ))
+                          </li>
+                        )
+                      )
                     ) : (
                       <li>
-                        <div className="text-gray-400 text-sm">尚無處理歷程</div>
+                        <div className="text-gray-400 text-sm">
+                          尚無處理歷程
+                        </div>
                       </li>
                     )}
                   </ul>
@@ -536,42 +575,56 @@ export default function ReportDetail() {
 
               {/* 留言功能區塊 */}
               <div className="p-6 mt-6 bg-white rounded-lg shadow-sm">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">留言討論</h3>
-                {/* 留言列表（靜態假資料） */}
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  留言討論
+                </h3>
+                {/* 留言列表 */}
                 <div className="space-y-4 mb-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0">
-                      <UserCircleIcon className="h-8 w-8 text-gray-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">王小明 <span className="text-xs text-gray-400 ml-2">2024/07/03 15:20</span></div>
-                      <div className="text-sm text-gray-700">這個問題我明天會去現場看。</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0">
-                      <UserCircleIcon className="h-8 w-8 text-gray-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">林主管 <span className="text-xs text-gray-400 ml-2">2024/07/03 16:05</span></div>
-                      <div className="text-sm text-gray-700">收到，請回報進度。</div>
-                    </div>
-                  </div>
+                  {report.comments && report.comments.length > 0 ? (
+                    report.comments.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="flex items-start space-x-3"
+                      >
+                        <div className="flex-shrink-0">
+                          <UserCircleIcon className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900">
+                            {comment.user?.name || '未知用戶'}{' '}
+                            <span className="text-xs text-gray-400 ml-2">
+                              {formatDate(comment.createdAt)}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-700">
+                            {comment.content}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-gray-500 text-sm">目前尚無留言</div>
+                  )}
                 </div>
                 {/* 新增留言輸入框 */}
-                <form className="flex items-end space-x-2">
+                <form
+                  className="flex items-end space-x-2"
+                  onSubmit={handleAddComment}
+                >
                   <textarea
                     className="flex-1 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={2}
-                    placeholder="輸入留言...（僅前端展示）"
-                    disabled
+                    placeholder="輸入留言..."
+                    value={newCommentContent}
+                    onChange={(e) => setNewCommentContent(e.target.value)}
+                    disabled={processing}
                   />
                   <button
-                    type="button"
+                    type="submit"
                     className="btn-primary"
-                    disabled
+                    disabled={processing}
                   >
-                    發佈
+                    {processing ? '發佈中...' : '發佈'}
                   </button>
                 </form>
               </div>
@@ -580,16 +633,30 @@ export default function ReportDetail() {
             {/* 右側相關工單區塊 */}
             <div className="w-full lg:w-80 flex-shrink-0 mt-8 lg:mt-0">
               <div className="p-6 bg-white rounded-lg shadow-sm">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">相關工單</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  相關工單
+                </h3>
                 {report.tickets && report.tickets.length > 0 ? (
                   <ul className="divide-y divide-gray-100 mb-4">
                     {report.tickets.map((reportTicket) => (
-                      <li key={reportTicket.ticket.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                      <li
+                        key={reportTicket.ticket.id}
+                        className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between"
+                      >
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-blue-700 text-sm break-words">{reportTicket.ticket.title}</p>
-                          <p className="text-gray-500 text-xs mt-0.5 break-all">工單 #{reportTicket.ticket.id}</p>
+                          <p className="font-medium text-blue-700 text-sm break-words">
+                            {reportTicket.ticket.title}
+                          </p>
+                          <p className="text-gray-500 text-xs mt-0.5 break-all">
+                            工單 #{reportTicket.ticket.id}
+                          </p>
                         </div>
-                        <Link href={`/tickets/${reportTicket.ticket.id}`} className="text-blue-600 hover:underline text-sm mt-2 sm:mt-0 sm:ml-4 flex-shrink-0">查看</Link>
+                        <Link
+                          href={`/tickets/${reportTicket.ticket.id}`}
+                          className="text-blue-600 hover:underline text-sm mt-2 sm:mt-0 sm:ml-4 flex-shrink-0"
+                        >
+                          查看
+                        </Link>
                       </li>
                     ))}
                   </ul>

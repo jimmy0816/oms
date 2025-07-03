@@ -29,11 +29,18 @@ export interface UpdateTicketRequest {
 
 export interface CreateCommentRequest {
   content: string;
-  ticketId: string;
+  ticketId?: string;
+  reportId?: string;
 }
 
 export interface MarkNotificationReadRequest {
   notificationId: string;
+}
+
+export interface CreateActivityLogRequest {
+  content: string;
+  parentId: string;
+  parentType: 'TICKET' | 'REPORT';
 }
 
 // API Response types

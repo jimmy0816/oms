@@ -87,11 +87,49 @@ async function getTicket(
     return res.status(404).json({ success: false, error: 'Ticket not found' });
   }
 
+  // Fetch attachments separately using polymorphic relation
+  const attachments = await prisma.attachment.findMany({
+    where: {
+      parentId: id,
+      parentType: 'TICKET',
+    },
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  // Fetch activity logs separately using polymorphic relation
+  const activityLogs = await prisma.activityLog.findMany({
+    where: {
+      parentId: id,
+      parentType: 'TICKET',
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
   // 確保 status 和 priority 屬性都是正確的枚舉類型
   const ticketWithCorrectTypes: Ticket = {
     ...ticket,
     status: ticket.status as unknown as TicketStatus,
     priority: ticket.priority as unknown as TicketPriority,
+    attachments,
+    activityLogs,
   };
 
   return res.status(200).json({ success: true, data: ticketWithCorrectTypes });

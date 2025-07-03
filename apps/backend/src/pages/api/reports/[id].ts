@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
-import { ApiResponse } from 'shared-types';
+import { ApiResponse, Ticket } from 'shared-types';
 import { withApiHandler } from '@/lib/api-handler';
 import { applyCors } from '@/utils/cors';
 
@@ -16,7 +16,6 @@ interface Report {
   updatedAt: Date;
   creatorId: string;
   assigneeId?: string | null;
-  images: string[];
   category?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
@@ -41,6 +40,35 @@ interface Report {
       email: string;
     };
   }>;
+  tickets?: Ticket[];
+  attachments?: Array<{
+    id: string;
+    filename: string;
+    url: string;
+    fileType: string;
+    fileSize: number;
+    createdAt: Date;
+    createdById?: string | null;
+    createdBy?: {
+      id: string;
+      name: string;
+      email: string;
+    } | null;
+  }>;
+  activityLogs?: Array<{
+    id: string;
+    content: string;
+    createdAt: Date;
+    updatedAt: Date;
+    userId: string;
+    user: {
+      id: string;
+      name: string;
+      email: string;
+    };
+    parentId: string;
+    parentType: string;
+  }>;
 }
 
 // Define UpdateReportRequest type
@@ -54,8 +82,8 @@ interface UpdateReportRequest {
   category?: string;
   contactPhone?: string;
   contactEmail?: string;
-  images?: string[];
   ticketIds?: string[];
+  attachments?: any[];
 }
 
 export default withApiHandler(async function handler(
@@ -89,12 +117,10 @@ export default withApiHandler(async function handler(
     }
   } catch (error: any) {
     console.error(`Error in reports/${id} API:`, error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        error: error.message || 'Internal Server Error',
-      });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal Server Error',
+    });
   }
 });
 
@@ -143,22 +169,52 @@ async function getReportById(
     });
   }
 
-  // 查詢附件
+  // Fetch attachments separately using polymorphic relation
   const attachments = await prisma.attachment.findMany({
     where: {
-      parentId: report.id,
+      parentId: id,
       parentType: 'REPORT',
+    },
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
     },
     orderBy: { createdAt: 'asc' },
   });
 
-  // 合併附件到回傳物件
+  // Fetch activity logs separately using polymorphic relation
+  const activityLogs = await prisma.activityLog.findMany({
+    where: {
+      parentId: id,
+      parentType: 'REPORT',
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  // Manually attach attachments and activityLogs to the report object
+  const reportWithRelations = {
+    ...report,
+    attachments,
+    activityLogs,
+  };
+
   return res.status(200).json({
     success: true,
-    data: {
-      ...report,
-      attachments, // 前端可用 report.attachments 取得所有圖片/影片
-    },
+    data: reportWithRelations,
   });
 }
 
@@ -177,7 +233,8 @@ async function updateReport(
     category,
     contactPhone,
     contactEmail,
-    images,
+    attachments,
+    ticketIds,
   } = req.body as UpdateReportRequest;
 
   // Check if report exists
@@ -203,12 +260,11 @@ async function updateReport(
   if (category !== undefined) updateData.category = category;
   if (contactPhone !== undefined) updateData.contactPhone = contactPhone;
   if (contactEmail !== undefined) updateData.contactEmail = contactEmail;
-  if (images !== undefined) updateData.images = images;
 
   // Handle ticketIds update
   if (ticketIds !== undefined) {
     updateData.tickets = {
-      set: ticketIds.map(ticketId => ({
+      set: ticketIds.map((ticketId) => ({
         ticketId: ticketId,
         reportId: id,
       })),
@@ -234,7 +290,8 @@ async function updateReport(
           email: true,
         },
       },
-      tickets: { // Include tickets in the response
+      tickets: {
+        // Include tickets in the response
         include: {
           ticket: true,
         },
