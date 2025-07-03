@@ -24,6 +24,7 @@ model User {
   ticketsCreated  Ticket[]       @relation("CreatedTickets")
   userRoles       UserRole[]
   AuditLogs       AuditLog[]
+  Attachment      Attachment[]
 }
 
 model Notification {
@@ -80,7 +81,6 @@ model Report {
   updatedAt     DateTime       @updatedAt
   creatorId     String
   assigneeId    String?
-  images        String[]
   category      String?
   contactPhone  String?
   contactEmail  String?
@@ -91,12 +91,12 @@ model Report {
 }
 
 model Role {
-  id             String           @id @default(uuid())
-  name           String           @unique
-  description    String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  userRoles      UserRole[]
+  id              String           @id @default(uuid())
+  name            String           @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  userRoles       UserRole[]
   rolePermissions RolePermission[]
 }
 
@@ -122,20 +122,36 @@ model AuditLog {
 }
 
 model Permission {
-  id             String           @id @default(uuid())
-  name           String           @unique
-  description    String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id              String           @id @default(uuid())
+  name            String           @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   rolePermissions RolePermission[]
 }
 
 model RolePermission {
-  roleId        String
-  permissionId  String
-  assignedAt    DateTime    @default(now())
-  role          Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission    Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  roleId       String
+  permissionId String
+  assignedAt   DateTime   @default(now())
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
+}
+
+model Attachment {
+  id          String   @id @default(uuid())
+  filename    String
+  url         String
+  fileType    String // 例如 "image/jpeg", "application/pdf"
+  fileSize    Int // 檔案大小，單位為位元組
+  createdAt   DateTime @default(now())
+  createdById String? // 上傳者的 ID
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  // 多型關聯欄位
+  parentId    String // 關聯的工單或通報的 ID
+  parentType  String // 關聯的實體類型 (例如 "TICKET", "REPORT")
+
+  @@index([parentId, parentType]) // 為了查詢效率，建立複合索引
 }
