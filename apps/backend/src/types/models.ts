@@ -92,42 +92,42 @@ export enum Permission {
 
 // 保留舊的工單權限枚舉以保持兼容性
 export enum TicketPermission {
-  VIEW_ORDERS = 'view_orders', // 檢視所有工單
-  CREATE_WORK_ORDERS = 'create_work_orders', // 建立工單
-  CLAIM_WORK_ORDERS = 'claim_work_orders', // 認領工單
-  COMPLETE_OR_FAIL_WORK_ORDERS = 'complete_or_fail_work_orders', // 完成或無法完成工單
-  VERIFY_ORDERS = 'verify_orders', // 驗收工單
+  VIEW_TICKETS = 'view_tickets', // 檢視所有工單
+  CREATE_TICKETS = 'create_tickets', // 建立工單
+  CLAIM_TICKETS = 'claim_tickets', // 認領工單
+  COMPLETE_TICKETS = 'complete_tickets', // 完成工單
+  VERIFY_TICKETS = 'verify_tickets', // 驗收工單
 }
 
 // 舊的角色工單權限映射 (保留以保持兼容性)
 export const RolePermissions: Record<UserRole, TicketPermission[]> = {
   [UserRole.USER]: [],
   [UserRole.ADMIN]: [
-    TicketPermission.VIEW_ORDERS,
-    TicketPermission.CREATE_WORK_ORDERS,
-    TicketPermission.CLAIM_WORK_ORDERS,
-    TicketPermission.COMPLETE_OR_FAIL_WORK_ORDERS,
-    TicketPermission.VERIFY_ORDERS,
+    TicketPermission.VIEW_TICKETS,
+    TicketPermission.CREATE_TICKETS,
+    TicketPermission.CLAIM_TICKETS,
+    TicketPermission.COMPLETE_TICKETS,
+    TicketPermission.VERIFY_TICKETS,
   ],
   [UserRole.MANAGER]: [
-    TicketPermission.VIEW_ORDERS,
-    TicketPermission.CREATE_WORK_ORDERS,
-    TicketPermission.VERIFY_ORDERS,
+    TicketPermission.VIEW_TICKETS,
+    TicketPermission.CREATE_TICKETS,
+    TicketPermission.VERIFY_TICKETS,
   ],
   [UserRole.STAFF]: [
-    TicketPermission.CLAIM_WORK_ORDERS,
-    TicketPermission.COMPLETE_OR_FAIL_WORK_ORDERS,
+    TicketPermission.CLAIM_TICKETS,
+    TicketPermission.COMPLETE_TICKETS,
   ],
   [UserRole.REPORT_PROCESSOR]: [
-    TicketPermission.VIEW_ORDERS,
-    TicketPermission.CREATE_WORK_ORDERS,
-    TicketPermission.VERIFY_ORDERS,
+    TicketPermission.VIEW_TICKETS,
+    TicketPermission.CREATE_TICKETS,
+    TicketPermission.VERIFY_TICKETS,
   ],
-  [UserRole.REPORT_REVIEWER]: [TicketPermission.VIEW_ORDERS],
-  [UserRole.CUSTOMER_SERVICE]: [TicketPermission.CREATE_WORK_ORDERS],
+  [UserRole.REPORT_REVIEWER]: [TicketPermission.VIEW_TICKETS],
+  [UserRole.CUSTOMER_SERVICE]: [TicketPermission.CREATE_TICKETS],
   [UserRole.MAINTENANCE_WORKER]: [
-    TicketPermission.CLAIM_WORK_ORDERS,
-    TicketPermission.COMPLETE_OR_FAIL_WORK_ORDERS,
+    TicketPermission.CLAIM_TICKETS,
+    TicketPermission.COMPLETE_TICKETS,
   ],
 };
 

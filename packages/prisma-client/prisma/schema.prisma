@@ -52,10 +52,12 @@ model Ticket {
   updatedAt     DateTime       @updatedAt
   creatorId     String
   assigneeId    String?
+  roleId        String?
   comments      Comment[]
   notifications Notification[]
   assignee      User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
   creator       User           @relation("CreatedTickets", fields: [creatorId], references: [id])
+  role          Role?          @relation("RoleTickets", fields: [roleId], references: [id])
   reports       ReportTicket[]
 }
 
@@ -101,6 +103,7 @@ model Role {
   updatedAt       DateTime         @updatedAt
   userRoles       UserRole[]
   rolePermissions RolePermission[]
+  tickets         Ticket[]         @relation("RoleTickets")
 }
 
 model UserRole {

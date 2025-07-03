@@ -24,7 +24,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   await applyCors(req, res);
   const { role } = req.query;
   if (!role || typeof role !== 'string') {
-    return res.status(400).json({ message: '無效的角色' });
+    return res.status(400).json({ message: 'roles無效的角色' });
   }
 
   switch (req.method) {

@@ -3,6 +3,7 @@ import { UserRole } from 'shared-types';
 import { Permission } from '../../../utils/permissions';
 import { withPermission, AuthenticatedRequest } from '../../../middleware/auth';
 import { applyCors } from '../../../utils/cors';
+import { prisma } from '@/lib/prisma';
 
 // 模擬數據存儲
 let customRolePermissions: Record<string, Permission[]> = {};
@@ -28,28 +29,21 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
  */
 async function getRolePermissions(req: AuthenticatedRequest, res: NextApiResponse) {
   try {
-    // 在實際應用中，這裡應該從數據庫獲取角色權限數據
-    const rolePermissions: Record<string, Permission[]> = {};
-    
-    // 合併默認權限和自定義權限
-    Object.values(UserRole).forEach(role => {
-      rolePermissions[role] = customRolePermissions[role] || [];
+    // 查詢資料庫
+    const roles = await prisma.role.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
     });
-    
-    // 構建角色列表，包含角色名稱和權限
-    const roles = Object.values(UserRole).map(role => ({
-      id: role,
-      name: role,
-      permissions: rolePermissions[role] || []
-    }));
-    
-    return res.status(200).json({ 
-      roles,
-      rolePermissions 
-    });
+    return res.status(200).json({ roles });
   } catch (error) {
-    console.error('Error fetching role permissions:', error);
-    return res.status(500).json({ message: '獲取角色權限失敗' });
+    console.error('Error fetching roles:', error);
+    return res.status(500).json({ message: '獲取角色失敗' });
   }
 }
 

@@ -15,7 +15,7 @@ interface TicketFormData {
   title: string;
   description: string;
   priority: TicketPriority;
-  assigneeId?: string;
+  roleId?: string;
   attachments?: FileInfo[];
   reportIds?: string[];
 }
@@ -37,6 +37,7 @@ export default function NewTicket() {
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
 
   const {
     register,
@@ -51,17 +52,18 @@ export default function NewTicket() {
     });
 
     // 獲取所有通報，將 pageSize 設置為足夠大的數字以避免分頁問題
-
     reportService.getAllReports(1, 1000).then((reportsData) => {
       setReports(reportsData.items);
-
-      // 如果 URL 中有 reportId 參數，則預設選中該通報
-
       if (query.reportId && typeof query.reportId === 'string') {
         setValue('reportIds', [query.reportId]);
       }
     });
-  }, [query.reportId, setValue]); // 將 query.reportId 和 setValue 加入依賴項
+
+    // 取得所有角色（直接呼叫 backend）
+    fetch('http://localhost:3001/api/roles/list')
+      .then(res => res.json())
+      .then(data => setRoles(data.roles || []));
+  }, [query.reportId, setValue]);
 
   // 處理檔案變更
   const handleFilesChange = (files: FileInfo[]) => {
@@ -109,9 +111,9 @@ export default function NewTicket() {
         title: data.title,
         description: data.description,
         priority: data.priority,
-        assigneeId: data.assigneeId || undefined,
+        roleId: data.roleId || undefined,
         attachments: uploadedFiles,
-        reportIds: data.reportIds, // Add reportIds here
+        reportIds: data.reportIds,
       };
 
       // 調用 ticketService 將數據發送到後端 API
@@ -259,26 +261,24 @@ export default function NewTicket() {
                 )}
               </div>
 
-              {/* 指派人員 */}
+              {/* 指派角色 */}
               <div>
-                <label
-                  htmlFor="assigneeId"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  指派人員
+                <label htmlFor="roleId" className="block text-sm font-medium text-gray-700 mb-1">
+                  指派角色 <span className="text-red-500">*</span>
                 </label>
                 <select
-                  id="assigneeId"
-                  {...register('assigneeId')}
+                  id="roleId"
+                  {...register('roleId', { required: '請選擇指派角色' })}
                   className="form-input"
                 >
-                  <option value="">未指派</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name}
-                    </option>
+                  <option value="">請選擇角色</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>{role.name}</option>
                   ))}
                 </select>
+                {errors.roleId && (
+                  <p className="mt-1 text-sm text-red-600">{errors.roleId.message}</p>
+                )}
               </div>
 
               {/* 關聯通報 */}
