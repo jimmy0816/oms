@@ -274,13 +274,13 @@ export default function TicketDetail() {
 
           {/* 顯示上傳的圖片和影片（支援 attachments，含 Lightbox） */}
           {ticket.attachments && ticket.attachments.length > 0 && (
-            <div className="mt-6 border-t border-gray-100 pt-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">
+            <div className="pt-4 p-6 border-b border-gray-100">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
                 上傳的檔案
               </h3>
-              <div className="flex flex-wrap gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {ticket.attachments.map((file: any) => (
-                  <div key={file.id} className="w-40">
+                  <div key={file.id} className="w-full">
                     {file.fileType.startsWith('image') ? (
                       <>
                         <img
