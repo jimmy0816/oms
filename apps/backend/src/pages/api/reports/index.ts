@@ -48,7 +48,7 @@ interface CreateReportRequest {
   ticketIds?: string[];
 }
 
-export default withApiHandler(async function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Report | PaginatedResponse<Report>>>
 ) {
@@ -73,7 +73,7 @@ export default withApiHandler(async function handler(
       error: error.message || 'Internal Server Error',
     });
   }
-});
+}
 
 async function getReports(
   req: NextApiRequest,
