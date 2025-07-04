@@ -60,9 +60,10 @@ export default function NewTicket() {
     });
 
     // 取得所有角色（直接呼叫 backend）
-    fetch('http://localhost:3001/api/roles/list')
-      .then(res => res.json())
-      .then(data => setRoles(data.roles || []));
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    fetch(`${API_URL}/api/roles/list`)
+      .then((res) => res.json())
+      .then((data) => setRoles(data.roles || []));
   }, [query.reportId, setValue]);
 
   // 處理檔案變更
@@ -257,7 +258,10 @@ export default function NewTicket() {
 
               {/* 指派角色 */}
               <div>
-                <label htmlFor="roleId" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="roleId"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   指派角色 <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -267,11 +271,15 @@ export default function NewTicket() {
                 >
                   <option value="">請選擇角色</option>
                   {roles.map((role) => (
-                    <option key={role.id} value={role.id}>{role.name}</option>
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
                   ))}
                 </select>
                 {errors.roleId && (
-                  <p className="mt-1 text-sm text-red-600">{errors.roleId.message}</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.roleId.message}
+                  </p>
                 )}
               </div>
 

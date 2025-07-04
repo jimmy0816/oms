@@ -15,12 +15,12 @@ export default function TicketDetail() {
   const [newCommentContent, setNewCommentContent] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { user } = useAuth();
-  
+
   // 從 API 獲取工單詳情
   useEffect(() => {
     const fetchTicket = async () => {
       if (!id) return;
-      
+
       setLoading(true);
       try {
         const ticketData = await ticketService.getTicketById(id as string);
@@ -32,7 +32,7 @@ export default function TicketDetail() {
         setLoading(false);
       }
     };
-    
+
     fetchTicket();
   }, [id]);
 
@@ -43,7 +43,8 @@ export default function TicketDetail() {
     try {
       await ticketService.addCommentToTicket(
         ticket.id,
-        newCommentContent
+        newCommentContent,
+        user?.id.toString()
       );
       setNewCommentContent('');
       // 重新獲取更新後的工單資料
@@ -76,12 +77,18 @@ export default function TicketDetail() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
-  
+
   // 取得狀態文字說明
   const getStatusText = (status: string) => {
-    switch(status) {
+    switch (status) {
       case TicketStatus.PENDING:
         return '待接單';
       case TicketStatus.IN_PROGRESS:
@@ -104,15 +111,18 @@ export default function TicketDetail() {
     if (!ticket?.id) return;
     try {
       const token = localStorage.getItem('auth_token');
-      const res = await fetch(`http://localhost:3001/api/tickets/${ticket.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ action: 'claim' }),
-        credentials: 'include',
-      });
+      const res = await fetch(
+        `http://localhost:3001/api/tickets/${ticket.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ action: 'claim' }),
+          credentials: 'include',
+        }
+      );
       const data = await res.json();
       if (data.success) {
         setTicket(data.data);
@@ -152,23 +162,32 @@ export default function TicketDetail() {
       <Head>
         <title>{ticket.title} | 工單詳情 | OMS 原型</title>
       </Head>
-      
+
       <div className="space-y-6">
         {/* 頁面標題與返回按鈕 */}
         <div className="flex items-center">
-          <Link href="/tickets" className="mr-4 p-2 rounded-full hover:bg-gray-100">
+          <Link
+            href="/tickets"
+            className="mr-4 p-2 rounded-full hover:bg-gray-100"
+          >
             <ArrowLeftIcon className="h-5 w-5 text-gray-500" />
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900 truncate">{ticket.title}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 truncate">
+            {ticket.title}
+          </h1>
         </div>
-        
+
         {/* 工單詳情卡片 */}
         <div className="bg-white shadow-sm rounded-lg overflow-hidden">
           {/* 工單頭部資訊 */}
           <div className="p-6 border-b border-gray-100">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(ticket.status)}`}>
+                <span
+                  className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(
+                    ticket.status
+                  )}`}
+                >
                   {getStatusText(ticket.status)}
                 </span>
                 <span className="text-sm text-gray-500">
@@ -176,7 +195,7 @@ export default function TicketDetail() {
                 </span>
               </div>
             </div>
-            
+
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-medium text-gray-500">報告人</h3>
@@ -198,13 +217,21 @@ export default function TicketDetail() {
                 <h3 className="text-sm font-medium text-gray-500">指派角色</h3>
                 <p className="mt-1">{ticket.role?.name || '未指定'}</p>
                 {/* 認領工單按鈕顯示條件：未認領、狀態為待接單、用戶有權限且屬於該角色 */}
-                {ticket.assigneeId == null && ticket.status === 'PENDING' && user && user.permissions?.includes('claim_tickets') && (user.role === ticket.role?.name || (user.additionalRoles && user.additionalRoles.includes(ticket.role?.name))) && (
-                  <button className="btn-primary mt-2" onClick={handleClaim}>認領工單</button>
-                )}
+                {ticket.assigneeId == null &&
+                  ticket.status === 'PENDING' &&
+                  user &&
+                  user.permissions?.includes('claim_tickets') &&
+                  (user.role === ticket.role?.name ||
+                    (user.additionalRoles &&
+                      user.additionalRoles.includes(ticket.role?.name))) && (
+                    <button className="btn-primary mt-2" onClick={handleClaim}>
+                      認領工單
+                    </button>
+                  )}
               </div>
             </div>
           </div>
-          
+
           {/* 工單內容 */}
           <div className="p-6 border-b border-gray-100">
             <h3 className="text-lg font-medium text-gray-900 mb-4">工單內容</h3>
@@ -219,20 +246,32 @@ export default function TicketDetail() {
             {ticket.reports && ticket.reports.length > 0 ? (
               <ul className="divide-y divide-gray-100 mb-4">
                 {ticket.reports.map((ticketReport) => (
-                  <li key={ticketReport.report.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <li
+                    key={ticketReport.report.id}
+                    className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between"
+                  >
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-blue-700 text-sm break-words">{ticketReport.report.title}</p>
-                      <p className="text-gray-500 text-xs mt-0.5 break-all">通報 #{ticketReport.report.id}</p>
+                      <p className="font-medium text-blue-700 text-sm break-words">
+                        {ticketReport.report.title}
+                      </p>
+                      <p className="text-gray-500 text-xs mt-0.5 break-all">
+                        通報 #{ticketReport.report.id}
+                      </p>
                     </div>
-                    <Link href={`/reports/${ticketReport.report.id}`} className="text-blue-600 hover:underline text-sm mt-2 sm:mt-0 sm:ml-4 flex-shrink-0">查看</Link>
+                    <Link
+                      href={`/reports/${ticketReport.report.id}`}
+                      className="text-blue-600 hover:underline text-sm mt-2 sm:mt-0 sm:ml-4 flex-shrink-0"
+                    >
+                      查看
+                    </Link>
                   </li>
                 ))}
               </ul>
             ) : (
               <div className="text-gray-500 mb-4">目前尚無相關通報</div>
             )}
-            </div>
-          
+          </div>
+
           {/* 顯示上傳的圖片和影片（支援 attachments，含 Lightbox） */}
           {ticket.attachments && ticket.attachments.length > 0 && (
             <div className="mt-6 border-t border-gray-100 pt-4">
@@ -250,7 +289,9 @@ export default function TicketDetail() {
                           className="rounded shadow border w-full h-32 object-cover cursor-pointer transition-transform hover:scale-105"
                           onClick={() => setPreviewImage(file.url)}
                         />
-                        <div className="text-xs text-gray-500 mt-1 truncate">{file.filename}</div>
+                        <div className="text-xs text-gray-500 mt-1 truncate">
+                          {file.filename}
+                        </div>
                       </>
                     ) : file.fileType.startsWith('video') ? (
                       <>
@@ -259,10 +300,17 @@ export default function TicketDetail() {
                           controls
                           className="rounded shadow border w-full h-32 object-cover"
                         />
-                        <div className="text-xs text-gray-500 mt-1 truncate">{file.filename}</div>
+                        <div className="text-xs text-gray-500 mt-1 truncate">
+                          {file.filename}
+                        </div>
                       </>
                     ) : (
-                      <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                      <a
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline"
+                      >
                         {file.filename}
                       </a>
                     )}
@@ -279,7 +327,7 @@ export default function TicketDetail() {
                     src={previewImage}
                     alt="預覽"
                     className="max-h-[80vh] max-w-[90vw] rounded shadow-lg border-4 border-white"
-                    onClick={e => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                   />
                   <button
                     className="absolute top-8 right-8 text-white text-3xl font-bold"
@@ -291,19 +339,25 @@ export default function TicketDetail() {
               )}
             </div>
           )}
-          
+
           {/* 留言區塊 */}
           <div className="p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">留言 ({ticket.comments ? ticket.comments.length : 0})</h3>
-            
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              留言 ({ticket.comments ? ticket.comments.length : 0})
+            </h3>
+
             {/* 留言列表 */}
             <div className="space-y-4 mb-6">
               {ticket.comments && ticket.comments.length > 0 ? (
                 ticket.comments.map((comment: any) => (
                   <div key={comment.id} className="bg-gray-50 rounded-lg p-4">
                     <div className="flex justify-between items-start">
-                      <p className="text-sm font-medium text-gray-900">{comment.user?.name || '未知用戶'}</p>
-                      <p className="text-xs text-gray-500">{formatDate(comment.createdAt)}</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {comment.user?.name || '未知用戶'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatDate(comment.createdAt)}
+                      </p>
                     </div>
                     <div className="mt-2 text-sm text-gray-700 whitespace-pre-line">
                       {comment.content}
@@ -316,7 +370,10 @@ export default function TicketDetail() {
             </div>
 
             {/* 新增留言輸入框 */}
-            <form onSubmit={handleAddComment} className="flex items-end space-x-2">
+            <form
+              onSubmit={handleAddComment}
+              className="flex items-end space-x-2"
+            >
               <textarea
                 className="flex-1 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={2}
