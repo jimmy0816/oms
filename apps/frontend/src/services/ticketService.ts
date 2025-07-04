@@ -216,7 +216,7 @@ export const ticketService = {
     userId: string
   ): Promise<any> {
     try {
-      const response = await fetch(`${API_URL}/api/tickets/${ticketId}/comments`, {
+      const response = await fetch(`${API_URL}/api/tickets/comments`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ ticketId, content, userId }),
