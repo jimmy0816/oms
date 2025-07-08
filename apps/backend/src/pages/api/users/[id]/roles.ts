@@ -9,8 +9,7 @@ import { applyCors } from '../../../../utils/cors';
  * 用於獲取和更新特定用戶的角色
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // 應用 CORS 中間件
-  await applyCors(req, res);
+  
   
   const { id } = req.query;
   

@@ -9,10 +9,9 @@ import {
   TicketPriority,
   FileInfo,
 } from 'shared-types';
-import { withApiHandler } from '@/lib/api-handler';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 
-export default withApiHandler(async function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Ticket | PaginatedResponse<Ticket>>>
 ) {
@@ -36,7 +35,7 @@ export default withApiHandler(async function handler(
       error: error.message || 'Internal Server Error',
     });
   }
-});
+}
 
 async function getTickets(
   req: AuthenticatedRequest,

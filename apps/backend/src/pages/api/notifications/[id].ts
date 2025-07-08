@@ -1,9 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse, Notification } from 'shared-types';
-import { withApiHandler } from '@/lib/api-handler';
 
-export default withApiHandler(async function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Notification>>
 ) {
@@ -36,7 +35,7 @@ export default withApiHandler(async function handler(
       error: error.message || 'Internal Server Error',
     });
   }
-});
+}
 
 async function getNotification(
   id: string,

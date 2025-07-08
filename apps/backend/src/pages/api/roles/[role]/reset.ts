@@ -2,9 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { UserRole } from 'shared-types';
 import { Permission } from '@/utils/permissions';
 import { withPermission, AuthenticatedRequest } from '@/middleware/auth';
-import { withApiHandler } from '@/lib/api-handler';
 import { permissionService } from '@/services/permissionService';
-import { applyCors } from '@/utils/cors';
 
 /**
  * 重置角色權限 API
@@ -54,6 +52,5 @@ async function resetRolePermission(
 // todo: 這邊因為 withApiHandler 會包裝 req, res，所以會導致 withPermission 不能正常工作
 // export default withApiHandler(withPermission(Permission.MANAGE_ROLES)(handler));
 async function wrappedHandler(req: NextApiRequest, res: NextApiResponse) {
-  await applyCors(req, res);
   return withPermission(Permission.MANAGE_ROLES)(handler)(req, res);
 }

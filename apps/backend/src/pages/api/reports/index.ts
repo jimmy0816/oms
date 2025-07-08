@@ -1,10 +1,8 @@
-import { withApiHandler } from '@/lib/api-handler';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ApiResponse, PaginatedResponse } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
 import { FileInfo } from 'shared-types'; // Import FileInfo
-import { applyCors } from '@/utils/cors';
 
 // Define Report type based on Prisma schema (updated to include attachments)
 interface Report {
@@ -53,7 +51,7 @@ export default async function handler(
   res: NextApiResponse<ApiResponse<Report | PaginatedResponse<Report>>>
 ) {
   console.log('API /api/reports handler called', req.method, req.url);
-  await applyCors(req, res);
+
   try {
     switch (req.method) {
       case 'GET':

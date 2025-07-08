@@ -1,15 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse, Notification, PaginatedResponse } from 'shared-types';
-import { withApiHandler } from '@/lib/api-handler';
 
-export default withApiHandler(async function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<PaginatedResponse<Notification>>>
 ) {
-  // Run the CORS middleware
-  await runMiddleware(req, res, corsMiddleware);
-
   try {
     switch (req.method) {
       case 'GET':
@@ -22,14 +18,12 @@ export default withApiHandler(async function handler(
     }
   } catch (error: any) {
     console.error('Error in notifications API:', error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        error: error.message || 'Internal Server Error',
-      });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal Server Error',
+    });
   }
-});
+}
 
 async function getNotifications(
   req: NextApiRequest,

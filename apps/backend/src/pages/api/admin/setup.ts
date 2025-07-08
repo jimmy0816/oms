@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { hashPassword } from '@/lib/auth';
-import { withApiHandler } from '@/lib/api-handler';
 
 /**
  * 初始化管理員帳號
@@ -17,28 +16,28 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // 檢查是否已存在管理員用戶
     const existingAdmin = await prisma.user.findUnique({
-      where: { email: 'admin@example.com' }
+      where: { email: 'admin@example.com' },
     });
 
     if (existingAdmin) {
       console.log('管理員用戶已存在，更新密碼...');
-      
+
       // 更新現有管理員密碼
       const hashedPassword = await hashPassword('admin123');
       const updatedAdmin = await prisma.user.update({
         where: { email: 'admin@example.com' },
-        data: { password: hashedPassword }
+        data: { password: hashedPassword },
       });
-      
+
       const { password: _, ...adminWithoutPassword } = updatedAdmin;
       return res.status(200).json({
         success: true,
         message: '管理員密碼已更新',
-        user: adminWithoutPassword
+        user: adminWithoutPassword,
       });
     } else {
       console.log('創建新管理員用戶...');
-      
+
       // 創建新管理員用戶
       const hashedPassword = await hashPassword('admin123');
       const admin = await prisma.user.create({
@@ -46,24 +45,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           email: 'admin@example.com',
           name: '系統管理員',
           password: hashedPassword,
-          role: 'ADMIN'
-        }
+          role: 'ADMIN',
+        },
       });
-      
+
       const { password: _, ...adminWithoutPassword } = admin;
       return res.status(200).json({
         success: true,
         message: '管理員用戶已創建',
-        user: adminWithoutPassword
+        user: adminWithoutPassword,
       });
     }
   } catch (error) {
     console.error('創建管理員用戶時出錯:', error);
     return res.status(500).json({
       success: false,
-      error: '創建管理員用戶時出錯'
+      error: '創建管理員用戶時出錯',
     });
   }
 }
 
-export default withApiHandler(handler);
+export default handler;

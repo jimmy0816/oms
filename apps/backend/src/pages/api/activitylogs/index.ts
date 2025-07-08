@@ -1,10 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ApiResponse, ActivityLog, CreateActivityLogRequest } from 'shared-types';
-import { withApiHandler } from '@/lib/api-handler';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { ActivityLogService } from '@/services/activityLogService';
 
-export default withApiHandler(async function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<ActivityLog | ActivityLog[]>>
 ) {

@@ -1,10 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import { ApiResponse, Ticket, UpdateTicketRequest, TicketStatus, TicketPriority } from 'shared-types';
-import { withApiHandler } from '@/lib/api-handler';
+import {
+  ApiResponse,
+  Ticket,
+  UpdateTicketRequest,
+  TicketStatus,
+  TicketPriority,
+} from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 
-export default withApiHandler(async function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Ticket>>
 ) {
@@ -37,7 +42,7 @@ export default withApiHandler(async function handler(
       error: error.message || 'Internal Server Error',
     });
   }
-});
+}
 
 async function getTicket(
   id: string,
@@ -279,7 +284,9 @@ async function claimTicket(
     return res.status(400).json({ success: false, error: '不支援的操作' });
   }
   // 查詢工單
-  const ticket = await prisma.ticket.findUnique({ where: { id: id as string } });
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: id as string },
+  });
   if (!ticket) {
     return res.status(404).json({ success: false, error: '工單不存在' });
   }

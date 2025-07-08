@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, generateToken } from '@/lib/auth';
-import { withApiHandler } from '@/lib/api-handler';
 
 // 預設管理員帳號資訊
 const DEFAULT_ADMIN = {
@@ -38,18 +37,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // 檢查是否為預設管理員帳號
-    const isDefaultAdmin = email === DEFAULT_ADMIN.email && password === DEFAULT_ADMIN.password;
-    
+    const isDefaultAdmin =
+      email === DEFAULT_ADMIN.email && password === DEFAULT_ADMIN.password;
+
     // 輸出調試信息
     console.log('Registration attempt:', { email, role, isDefaultAdmin });
     console.log('DEFAULT_ADMIN:', DEFAULT_ADMIN);
-    
+
     // 如果是預設管理員帳號，自動設置為 ADMIN 角色
     if (isDefaultAdmin) {
       console.log('Default admin detected, setting role to ADMIN');
       role = 'ADMIN';
     }
-    
+
     // 如果嘗試註冊為管理員角色或是預設管理員帳號
     if (role === 'ADMIN' || isDefaultAdmin) {
       // 檢查是否已有管理員帳號
@@ -61,13 +61,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               userRoles: {
                 some: {
                   role: {
-                    name: 'ADMIN'
-                  }
-                }
-              }
-            }
-          ]
-        }
+                    name: 'ADMIN',
+                  },
+                },
+              },
+            },
+          ],
+        },
       });
 
       // 如果已有管理員帳號，且不是預設管理員帳號，則拒絕註冊
@@ -77,7 +77,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           error: '已有管理員帳號存在，無法創建新的管理員帳號',
         });
       }
-      
+
       // 如果有管理員帳號，且是預設管理員帳號，也拒絕註冊
       if (adminCount > 0 && isDefaultAdmin) {
         return res.status(403).json({
@@ -112,8 +112,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         role,
       },
     });
-    
-    console.log('User created successfully:', { id: newUser.id, email: newUser.email, role: newUser.role });
+
+    console.log('User created successfully:', {
+      id: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+    });
 
     // 生成 JWT Token
     const { password: _, ...userWithoutPassword } = newUser;
@@ -134,9 +138,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({
       success: false,
       error: '註冊過程中發生錯誤',
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error.message : String(error),
     });
   }
 }
 
-export default withApiHandler(handler);
+export default handler;

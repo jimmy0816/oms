@@ -1,8 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword, generateToken, hashPassword } from '@/lib/auth';
-import { withApiHandler } from '@/lib/api-handler';
-import { getUserPermissions, Permission } from '@/utils/permissions';
 
 // 輸出環境變數以便調試
 console.log('Login API - DATABASE_URL:', process.env.DATABASE_URL);
@@ -30,7 +28,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     const { email, password } = req.body;
-    
+
     // 輸出調試信息
     console.log('Login attempt:', { email });
 
@@ -53,23 +51,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // 用戶不存在
     if (!user) {
       console.log('User not found with email:', email);
-      
+
       // 檢查是否為預設管理員帳號
-      const isDefaultAdmin = email === DEFAULT_ADMIN.email && password === DEFAULT_ADMIN.password;
-      
+      const isDefaultAdmin =
+        email === DEFAULT_ADMIN.email && password === DEFAULT_ADMIN.password;
+
       if (isDefaultAdmin) {
         console.log('Default admin login attempt detected');
-        
+
         // 檢查資料庫中是否有任何用戶
         const userCount = await prisma.user.count();
-        
+
         // 如果資料庫中沒有任何用戶，則自動註冊預設管理員帳號
         if (userCount === 0) {
           console.log('No users in database, auto-registering default admin');
-          
+
           // 加密密碼
           const hashedPassword = await hashPassword(password);
-          
+
           // 創建預設管理員帳號
           const newAdmin = await prisma.user.create({
             data: {
@@ -79,13 +78,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               role: 'ADMIN',
             },
           });
-          
-          console.log('Default admin created:', { id: newAdmin.id, email: newAdmin.email, role: newAdmin.role });
-          
+
+          console.log('Default admin created:', {
+            id: newAdmin.id,
+            email: newAdmin.email,
+            role: newAdmin.role,
+          });
+
           // 生成 JWT Token
           const { password: _, ...adminWithoutPassword } = newAdmin;
           const token = generateToken(adminWithoutPassword);
-          
+
           // 返回用戶資訊和 Token
           res.status(200).json({
             success: true,
@@ -100,15 +103,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           return;
         }
       }
-      
+
       res.status(401).json({
         success: false,
         error: '電子郵件或密碼不正確',
       });
       return;
     }
-    
-    console.log('User found:', { id: user.id, email: user.email, role: user.role });
+
+    console.log('User found:', {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
 
     // 驗證密碼
     console.log('Verifying password for user:', user.email);
@@ -121,7 +128,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       });
       return;
     }
-    
+
     console.log('Password verification successful for user:', user.email);
 
     // 查詢用戶的額外角色
@@ -130,35 +137,44 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       include: { role: true },
     });
 
-    const additionalRoles = userRoles.map(ur => ur.role.name);
+    const additionalRoles = userRoles.map((ur) => ur.role.name);
 
     // 查詢主角色與 additionalRoles 的所有權限（查資料庫）
     let permissionsSet = new Set<string>();
     // 主角色
-    const mainRole = await prisma.role.findUnique({ where: { name: user.role }, select: { id: true } });
+    const mainRole = await prisma.role.findUnique({
+      where: { name: user.role },
+      select: { id: true },
+    });
     if (mainRole) {
       const mainRolePerms = await prisma.rolePermission.findMany({
         where: { roleId: mainRole.id },
-        include: { permission: { select: { name: true } } }
+        include: { permission: { select: { name: true } } },
       });
-      mainRolePerms.forEach(rp => permissionsSet.add(rp.permission.name));
+      mainRolePerms.forEach((rp) => permissionsSet.add(rp.permission.name));
     }
     // additionalRoles
     for (const roleName of additionalRoles) {
-      const role = await prisma.role.findUnique({ where: { name: roleName }, select: { id: true } });
+      const role = await prisma.role.findUnique({
+        where: { name: roleName },
+        select: { id: true },
+      });
       if (role) {
         const rolePerms = await prisma.rolePermission.findMany({
           where: { roleId: role.id },
-          include: { permission: { select: { name: true } } }
+          include: { permission: { select: { name: true } } },
         });
-        rolePerms.forEach(rp => permissionsSet.add(rp.permission.name));
+        rolePerms.forEach((rp) => permissionsSet.add(rp.permission.name));
       }
     }
     const permissionsArr = Array.from(permissionsSet);
 
     // 生成 JWT Token，包含權限
     const { password: _, ...userWithoutPassword } = user;
-    const token = generateToken({ ...userWithoutPassword, permissions: permissionsArr });
+    const token = generateToken({
+      ...userWithoutPassword,
+      permissions: permissionsArr,
+    });
 
     // 返回用戶資訊和 Token
     res.status(200).json({
@@ -179,9 +195,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     res.status(500).json({
       success: false,
       error: '登入過程中發生錯誤',
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error.message : String(error),
     });
   }
 }
 
-export default withApiHandler(handler);
+export default handler;

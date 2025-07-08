@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from 'prisma-client';
 import { ApiResponse } from 'shared-types';
-import { withApiHandler } from '@/lib/api-handler';
 
 // Define Comment type
 interface Comment {
@@ -25,7 +24,7 @@ interface CreateCommentRequest {
   userId: string;
 }
 
-export default withApiHandler(async function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Comment>>
 ) {
@@ -46,7 +45,7 @@ export default withApiHandler(async function handler(
       error: error.message || 'Internal Server Error',
     });
   }
-});
+}
 
 async function addCommentToReport(
   req: NextApiRequest,

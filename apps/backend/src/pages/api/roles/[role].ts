@@ -2,8 +2,6 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { Permission, ROLE_PERMISSIONS } from '@/utils/permissions';
 import { withPermission } from '@/middleware/auth';
-import { withApiHandler } from '@/lib/api-handler';
-import { applyCors } from '@/utils/cors';
 
 // 取得角色所有權限
 async function getRolePermissions(role: string) {
@@ -20,7 +18,6 @@ async function getRolePermissions(role: string) {
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  await applyCors(req, res);
   const { role } = req.query;
   if (!role || typeof role !== 'string') {
     return res.status(400).json({ message: 'roles無效的角色' });
@@ -92,13 +89,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
       }
       const resetPermissions = await getRolePermissions(role);
-      return res
-        .status(200)
-        .json({
-          message: '角色權限已重置為預設值',
-          role,
-          permissions: resetPermissions,
-        });
+      return res.status(200).json({
+        message: '角色權限已重置為預設值',
+        role,
+        permissions: resetPermissions,
+      });
     }
     default:
       return res.status(405).json({ message: '方法不允許' });
@@ -107,7 +102,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
 // 權限驗證：只有 manage_roles 權限可操作
 async function wrappedHandler(req: NextApiRequest, res: NextApiResponse) {
-  await applyCors(req, res);
   return withPermission(Permission.MANAGE_ROLES)(handler)(req, res);
 }
 
