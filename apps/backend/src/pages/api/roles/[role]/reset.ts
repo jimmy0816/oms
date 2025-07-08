@@ -8,7 +8,10 @@ import { permissionService } from '@/services/permissionService';
  * 重置角色權限 API
  * POST: 重置特定角色的權限為默認值
  */
-async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
+export default async function handler(
+  req: AuthenticatedRequest,
+  res: NextApiResponse
+) {
   const { role } = req.query;
 
   if (!role || !Object.values(UserRole).includes(role as UserRole)) {
