@@ -1,13 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import { withApiHandler } from '@/lib/api-handler';
 import { getUserPermissions, Permission } from '@/utils/permissions';
 
 /**
  * 單個用戶 API 處理程序
  * 處理 GET、PUT 和 DELETE 請求
  */
-export default withApiHandler(async function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
@@ -30,7 +29,7 @@ export default withApiHandler(async function handler(
         .status(405)
         .json({ error: `Method ${req.method} Not Allowed` });
   }
-});
+}
 
 /**
  * 獲取單個用戶
@@ -50,14 +49,14 @@ async function getUser(req: NextApiRequest, res: NextApiResponse, id: string) {
       where: { userId: user.id },
       include: { role: true },
     });
-    const additionalRoles = userRoles.map(ur => ur.role.name);
+    const additionalRoles = userRoles.map((ur) => ur.role.name);
 
     // 合併主角色與額外角色的權限
     let permissions = new Set(getUserPermissions(user.role));
     for (const roleName of additionalRoles) {
-      getUserPermissions(roleName as any).forEach(p => permissions.add(p));
+      getUserPermissions(roleName as any).forEach((p) => permissions.add(p));
     }
-    const permissionsArr = Array.from(permissions).map(p =>
+    const permissionsArr = Array.from(permissions).map((p) =>
       typeof p === 'string' ? p : (p as Permission)
     );
 

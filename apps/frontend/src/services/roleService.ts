@@ -12,6 +12,28 @@ const getAuthToken = () =>
  * 使用後端 API 管理角色權限
  */
 export const roleService = {
+  async getAllRoles(): Promise<UserRole[]> {
+    try {
+      // 從後端 API 獲取角色數據
+      const response = await fetch(`${API_URL}/api/roles/list`, {
+        credentials: 'include',
+        headers: {
+          Authorization: getAuthToken() ? `Bearer ${getAuthToken()}` : '',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API 錯誤: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.roles || [];
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      // 如果出錯，返回空數組
+      return [];
+    }
+  },
   /**
    * 獲取所有角色及其權限
    * @returns 角色權限映射

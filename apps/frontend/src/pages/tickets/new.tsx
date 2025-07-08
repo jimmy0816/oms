@@ -7,6 +7,7 @@ import { TicketPriority, UserRole } from 'shared-types';
 import FileUploader from '@/components/FileUploader';
 import { ticketService } from '@/services/ticketService';
 import userService from '@/services/userService';
+import { roleService } from '@/services/roleService';
 import { uploadService } from '@/services/uploadService';
 import reportService from '@/services/reportService';
 
@@ -59,12 +60,10 @@ export default function NewTicket() {
       }
     });
 
-    // 取得所有角色（直接呼叫 backend）
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    fetch(`${API_URL}/api/roles/list`)
-      .then((res) => res.json())
-      .then((data) => setRoles(data.roles || []));
-  }, [query.reportId, setValue]);
+    roleService.getAllRoles().then((roles) => {
+      setRoles(roles);
+    });
+  }, []);
 
   // 處理檔案變更
   const handleFilesChange = (files: FileInfo[]) => {
