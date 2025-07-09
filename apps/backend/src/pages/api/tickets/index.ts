@@ -10,6 +10,7 @@ import {
   FileInfo,
 } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
+import { ActivityLogService } from '@/services/activityLogService';
 
 export default async function handler(
   req: NextApiRequest,
@@ -144,6 +145,14 @@ async function createTicket(
       },
     },
   });
+
+  // 建立歷程紀錄
+  await ActivityLogService.createActivityLog(
+    `建立工單`,
+    creatorId,
+    ticket.id,
+    'TICKET'
+  );
 
   // 建立附件
   if (attachments.length > 0) {

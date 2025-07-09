@@ -1,5 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { ApiResponse, ActivityLog, CreateActivityLogRequest } from 'shared-types';
+import {
+  ApiResponse,
+  ActivityLog,
+  CreateActivityLogRequest,
+} from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { ActivityLogService } from '@/services/activityLogService';
 
@@ -26,7 +30,7 @@ export default async function handler(
       error: error.message || 'Internal Server Error',
     });
   }
-});
+}
 
 async function getActivityLogs(
   req: NextApiRequest,
@@ -34,7 +38,12 @@ async function getActivityLogs(
 ) {
   const { parentId, parentType } = req.query;
 
-  if (!parentId || Array.isArray(parentId) || !parentType || Array.isArray(parentType)) {
+  if (
+    !parentId ||
+    Array.isArray(parentId) ||
+    !parentType ||
+    Array.isArray(parentType)
+  ) {
     return res.status(400).json({
       success: false,
       error: 'Parent ID and Parent Type are required',
@@ -63,7 +72,8 @@ async function createActivityLog(
   req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<ActivityLog>>
 ) {
-  const { content, parentId, parentType } = req.body as CreateActivityLogRequest;
+  const { content, parentId, parentType } =
+    req.body as CreateActivityLogRequest;
   const userId = req.user.id;
 
   if (!content || !parentId || !parentType) {

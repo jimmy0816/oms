@@ -1,5 +1,5 @@
-import { prisma } from 'prisma-client';
-import { ActivityLog, CreateActivityLogRequest } from 'shared-types';
+import { prisma } from '@/lib/prisma';
+import { ActivityLog } from 'shared-types';
 
 export class ActivityLogService {
   static async createActivityLog(
@@ -25,7 +25,7 @@ export class ActivityLogService {
         },
       },
     });
-    return activityLog;
+    return activityLog as ActivityLog;
   }
 
   static async getActivityLogs(
@@ -48,6 +48,6 @@ export class ActivityLogService {
         },
       },
     });
-    return activityLogs;
+    return activityLogs as ActivityLog[];
   }
 }

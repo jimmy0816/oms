@@ -106,6 +106,14 @@ export const ticketService = {
           }));
         }
 
+        if (ticket.activityLogs) {
+          ticket.activityLogs = ticket.activityLogs.map((activityLog: any) => ({
+            ...activityLog,
+            createdAt: new Date(activityLog.createdAt),
+            updatedAt: new Date(activityLog.updatedAt),
+          }));
+        }
+
         return ticket;
       }
 

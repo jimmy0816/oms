@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { 
-  FunnelIcon, 
+import {
+  FunnelIcon,
   MagnifyingGlassIcon,
-  PlusIcon
+  PlusIcon,
 } from '@heroicons/react/24/outline';
-import { TicketPriority, TicketStatus, TicketPermission, UserRole, Ticket, TicketWithDetails } from 'shared-types';
+import {
+  TicketPriority,
+  TicketStatus,
+  TicketPermission,
+  UserRole,
+  Ticket,
+  TicketWithDetails,
+} from 'shared-types';
 import ticketService from '../../services/ticketService';
 
 export default function TicketsPage() {
@@ -35,34 +42,40 @@ export default function TicketsPage() {
         const apiFilters: Record<string, string> = {};
         if (filters.status) apiFilters.status = filters.status;
         if (filters.priority) apiFilters.priority = filters.priority;
-        
+
         // 調用 API 獲取工單
-        const ticketsData = await ticketService.getAllTickets(currentPage, pageSize, apiFilters);
-        
+        const ticketsData = await ticketService.getAllTickets(
+          currentPage,
+          pageSize,
+          apiFilters
+        );
+
         // 將 Ticket[] 轉換為 TicketWithDetails[]
         // 在實際应用中，這裡應該由後端返回正確的 TicketWithDetails 数据
         // 但現在我們只是臨時轉換以修復類型錯誤
-        const ticketsWithDetails = ticketsData.items.map(ticket => ({
+        const ticketsWithDetails = ticketsData.items.map((ticket) => ({
           ...ticket,
-          creator: { 
-            id: ticket.creatorId, 
-            name: `用戶 ${ticket.creatorId}`,
+          creator: {
+            id: ticket.creatorId,
+            name: `用戶 ${ticket.creator.name}`,
             email: `user${ticket.creatorId}@example.com`,
             role: 'ADMIN' as UserRole,
             createdAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
           },
-          assignee: ticket.assigneeId ? { 
-            id: ticket.assigneeId, 
-            name: `用戶 ${ticket.assigneeId}`,
-            email: `user${ticket.assigneeId}@example.com`,
-            role: 'STAFF' as UserRole,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          } : undefined,
-          comments: []
+          assignee: ticket.assigneeId
+            ? {
+                id: ticket.assigneeId,
+                name: `用戶 ${ticket.assigneeId}`,
+                email: `user${ticket.assigneeId}@example.com`,
+                role: 'STAFF' as UserRole,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              }
+            : undefined,
+          comments: [],
         }));
-        
+
         setTickets(ticketsWithDetails);
         setTotalTickets(ticketsData.total);
       } catch (error) {
@@ -83,13 +96,13 @@ export default function TicketsPage() {
     return dateObj.toLocaleDateString('zh-TW', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 
   // 取得狀態文字說明
   const getStatusText = (status: TicketStatus) => {
-    switch(status) {
+    switch (status) {
       case TicketStatus.PENDING:
         return '待接單';
       case TicketStatus.IN_PROGRESS:
@@ -109,7 +122,7 @@ export default function TicketsPage() {
 
   // 取得優先級文字說明
   const getPriorityText = (priority: TicketPriority) => {
-    switch(priority) {
+    switch (priority) {
       case TicketPriority.LOW:
         return '低';
       case TicketPriority.MEDIUM:
@@ -159,17 +172,21 @@ export default function TicketsPage() {
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+    setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters(prev => ({ ...prev, search: e.target.value }));
+    setFilters((prev) => ({ ...prev, search: e.target.value }));
   };
 
-  const filteredTickets = tickets.filter(ticket => {
+  const filteredTickets = tickets.filter((ticket) => {
     if (filters.status && ticket.status !== filters.status) return false;
     if (filters.priority && ticket.priority !== filters.priority) return false;
-    if (filters.search && !ticket.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    if (
+      filters.search &&
+      !ticket.title.toLowerCase().includes(filters.search.toLowerCase())
+    )
+      return false;
     return true;
   });
 
@@ -177,13 +194,19 @@ export default function TicketsPage() {
     <>
       <Head>
         <title>Tickets | OMS Prototype</title>
-        <meta name="description" content="Manage tickets in the OMS Prototype" />
+        <meta
+          name="description"
+          content="Manage tickets in the OMS Prototype"
+        />
       </Head>
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">工單管理</h1>
-          <Link href="/tickets/new" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+          <Link
+            href="/tickets/new"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          >
             <PlusIcon className="h-5 w-5 mr-2" />
             新增工單
           </Link>
@@ -209,7 +232,9 @@ export default function TicketsPage() {
             </div>
             <div className="flex space-x-4">
               <div>
-                <label htmlFor="status" className="sr-only">Status</label>
+                <label htmlFor="status" className="sr-only">
+                  Status
+                </label>
                 <select
                   id="status"
                   name="status"
@@ -218,13 +243,17 @@ export default function TicketsPage() {
                   className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                 >
                   <option value="">所有狀態</option>
-                  {Object.values(TicketStatus).map(status => (
-                    <option key={status} value={status}>{getStatusText(status)}</option>
+                  {Object.values(TicketStatus).map((status) => (
+                    <option key={status} value={status}>
+                      {getStatusText(status)}
+                    </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label htmlFor="priority" className="sr-only">Priority</label>
+                <label htmlFor="priority" className="sr-only">
+                  Priority
+                </label>
                 <select
                   id="priority"
                   name="priority"
@@ -233,8 +262,10 @@ export default function TicketsPage() {
                   className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                 >
                   <option value="">所有優先級</option>
-                  {Object.values(TicketPriority).map(priority => (
-                    <option key={priority} value={priority}>{getPriorityText(priority)}</option>
+                  {Object.values(TicketPriority).map((priority) => (
+                    <option key={priority} value={priority}>
+                      {getPriorityText(priority)}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -249,50 +280,69 @@ export default function TicketsPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
           ) : (
-          <ul className="divide-y divide-gray-200">
-            {filteredTickets.length > 0 ? (
-              filteredTickets.map((ticket) => (
-                <li key={ticket.id}>
-                  <Link href={`/tickets/${ticket.id}`} className="block hover:bg-gray-50">
-                    <div className="px-4 py-4 sm:px-6">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-blue-600 truncate">{ticket.title}</p>
-                        <div className="ml-2 flex-shrink-0 flex">
-                          <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
-                            {getStatusText(ticket.status)}
+            <ul className="divide-y divide-gray-200">
+              {filteredTickets.length > 0 ? (
+                filteredTickets.map((ticket) => (
+                  <li key={ticket.id}>
+                    <Link
+                      href={`/tickets/${ticket.id}`}
+                      className="block hover:bg-gray-50"
+                    >
+                      <div className="px-4 py-4 sm:px-6">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-blue-600 truncate">
+                            {ticket.title}
                           </p>
+                          <div className="ml-2 flex-shrink-0 flex">
+                            <p
+                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
+                                ticket.status
+                              )}`}
+                            >
+                              {getStatusText(ticket.status)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-2 sm:flex sm:justify-between">
+                          <div className="sm:flex">
+                            <p className="flex items-center text-sm text-gray-500">
+                              <span className="truncate">
+                                建立者: {ticket.creator.name}
+                              </span>
+                            </p>
+                            <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
+                              <span className="truncate">
+                                {ticket.assignee
+                                  ? `負責人: ${ticket.assignee.name}`
+                                  : '尚未指派'}
+                              </span>
+                            </p>
+                          </div>
+                          <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                            <p
+                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColor(
+                                ticket.priority
+                              )} mr-3`}
+                            >
+                              {getPriorityText(ticket.priority)}
+                            </p>
+                            <p>
+                              <time dateTime={ticket.createdAt.toString()}>
+                                {formatDate(ticket.createdAt)}
+                              </time>
+                            </p>
+                          </div>
                         </div>
                       </div>
-                      <div className="mt-2 sm:flex sm:justify-between">
-                        <div className="sm:flex">
-                          <p className="flex items-center text-sm text-gray-500">
-                            <span className="truncate">建立者: {ticket.creator.name}</span>
-                          </p>
-                          <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                            <span className="truncate">
-                              {ticket.assignee ? `負責人: ${ticket.assignee.name}` : '尚未指派'}
-                            </span>
-                          </p>
-                        </div>
-                        <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                          <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColor(ticket.priority)} mr-3`}>
-                            {getPriorityText(ticket.priority)}
-                          </p>
-                          <p>
-                            <time dateTime={ticket.createdAt.toString()}>{formatDate(ticket.createdAt)}</time>
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li className="px-4 py-6 text-center text-gray-500">
+                  沒有符合篩選條件的工單。
                 </li>
-              ))
-            ) : (
-              <li className="px-4 py-6 text-center text-gray-500">
-                沒有符合篩選條件的工單。
-              </li>
-            )}
-          </ul>
+              )}
+            </ul>
           )}
         </div>
       </div>

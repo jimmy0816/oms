@@ -3,6 +3,7 @@ import { ApiResponse, PaginatedResponse } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
 import { FileInfo } from 'shared-types'; // Import FileInfo
+import { ActivityLogService } from '@/services/activityLogService';
 
 // Define Report type based on Prisma schema (updated to include attachments)
 interface Report {
@@ -190,16 +191,13 @@ async function createReport(
     },
   });
 
-  // 2. 建立多對多關聯
-  if (ticketIds.length > 0) {
-    await prisma.reportTicket.createMany({
-      data: ticketIds.filter(Boolean).map((ticketId) => ({
-        reportId: report.id,
-        ticketId,
-      })),
-      skipDuplicates: true,
-    });
-  }
+  // 2. 建立歷程紀錄
+  await ActivityLogService.createActivityLog(
+    `建立通報`,
+    creatorId,
+    report.id,
+    'REPORT'
+  );
 
   // 3. 建立附件資料
   if (attachments.length > 0) {

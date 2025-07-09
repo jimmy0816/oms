@@ -340,6 +340,32 @@ export default function TicketDetail() {
             </div>
           )}
 
+          {/* 歷程區塊 */}
+          <div className="p-6 border-b border-gray-100">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">處理歷程</h3>
+            {ticket.activityLogs && ticket.activityLogs.length > 0 ? (
+              <ul className="divide-y divide-gray-100">
+                {ticket.activityLogs.map((log: any) => (
+                  <li key={log.id} className="py-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-800 break-words">
+                        <span className="font-medium">
+                          {log.user?.name || '系統'}
+                        </span>{' '}
+                        {log.content}
+                      </p>
+                      <p className="text-gray-500 text-xs mt-1">
+                        {formatDate(log.createdAt)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-gray-500">沒有歷程記錄</div>
+            )}
+          </div>
+
           {/* 留言區塊 */}
           <div className="p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
