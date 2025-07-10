@@ -79,7 +79,7 @@ model Report {
   title         String
   description   String
   location      String?
-  status        String         @default("PENDING")
+  status        String         @default("UNCONFIRMED")
   priority      String         @default("MEDIUM")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -173,14 +173,14 @@ model ReportTicket {
 }
 
 model ActivityLog {
-  id          String   @id @default(uuid())
-  content     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  parentId    String
-  parentType  String
+  id         String   @id @default(uuid())
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  parentId   String
+  parentType String
 
   @@index([parentId, parentType])
 }

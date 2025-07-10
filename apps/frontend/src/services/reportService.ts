@@ -1,5 +1,17 @@
-import { PaginatedResponse } from 'shared-types';
-import { Ticket } from 'shared-types';
+import {
+  PaginatedResponse,
+  ReportStatus,
+  ReportPriority,
+  Ticket,
+} from 'shared-types';
+import {
+  ExclamationCircleIcon,
+  ClockIcon,
+  XCircleIcon,
+  CheckCircleIcon,
+  ArrowUturnLeftIcon,
+  QuestionMarkCircleIcon,
+} from '@heroicons/react/24/outline';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -95,22 +107,80 @@ export interface CreateReportRequest {
   assigneeId?: string;
 }
 
-// 通報狀態枚舉
-export enum ReportStatus {
-  PENDING = 'PENDING',
-  PROCESSING = 'PROCESSING',
-  REJECTED = 'REJECTED',
-  PENDING_REVIEW = 'PENDING_REVIEW', // 待審核
-  REVIEWED = 'REVIEWED', // 已歸檔
-}
+// 取得狀態名稱
+export const getStatusName = (status: string) => {
+  switch (status) {
+    case ReportStatus.UNCONFIRMED:
+      return '未確認';
+    case ReportStatus.PROCESSING:
+      return '處理中';
+    case ReportStatus.REJECTED:
+      return '不處理';
+    case ReportStatus.PENDING_REVIEW:
+      return '待審核';
+    case ReportStatus.REVIEWED:
+      return '已歸檔';
+    case ReportStatus.RETURNED:
+      return '已退回';
+    default:
+      return '未知狀態';
+  }
+};
 
-// 通報優先級枚舉
-export enum ReportPriority {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  URGENT = 'URGENT',
-}
+// 取得狀態顏色
+export const getStatusColor = (status: string) => {
+  switch (status) {
+    case ReportStatus.UNCONFIRMED:
+      return 'bg-yellow-100 text-yellow-800';
+    case ReportStatus.PROCESSING:
+      return 'bg-blue-100 text-blue-800';
+    case ReportStatus.REJECTED:
+      return 'bg-gray-100 text-gray-700';
+    case ReportStatus.PENDING_REVIEW:
+      return 'bg-purple-100 text-purple-800';
+    case ReportStatus.REVIEWED:
+      return 'bg-green-100 text-green-800';
+    case ReportStatus.RETURNED:
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+// 取得狀態圖標
+export const getStatusIcon = (status: string) => {
+  switch (status) {
+    case ReportStatus.UNCONFIRMED:
+      return ExclamationCircleIcon;
+    case ReportStatus.PROCESSING:
+      return ClockIcon;
+    case ReportStatus.REJECTED:
+      return XCircleIcon;
+    case ReportStatus.PENDING_REVIEW:
+      return ExclamationCircleIcon;
+    case ReportStatus.REVIEWED:
+      return CheckCircleIcon;
+    case ReportStatus.RETURNED:
+      return ArrowUturnLeftIcon;
+    default:
+      return QuestionMarkCircleIcon;
+  }
+};
+
+export const getPriorityColor = (priority: string) => {
+  switch (priority) {
+    case ReportPriority.LOW:
+      return 'bg-gray-100 text-gray-800';
+    case ReportPriority.MEDIUM:
+      return 'bg-yellow-100 text-yellow-800';
+    case ReportPriority.HIGH:
+      return 'bg-orange-100 text-orange-800';
+    case ReportPriority.URGENT:
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
 
 /**
  * 通報服務 - 處理與通報相關的 API 請求
@@ -402,5 +472,3 @@ export const reportService = {
     return this.updateReport(id, { assigneeId });
   },
 };
-
-export default reportService;

@@ -9,7 +9,8 @@ import {
 } from '@heroicons/react/24/outline';
 import CategorySelector from '@/components/CategorySelector';
 import FileUploader from '@/components/FileUploader';
-import reportService, { ReportPriority } from '@/services/reportService';
+import { reportService } from '@/services/reportService';
+import { ReportPriority } from 'shared-types';
 import { getLocations, Location } from '@/services/locationService';
 import { uploadService } from '@/services/uploadService';
 import { ticketService } from '@/services/ticketService';

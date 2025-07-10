@@ -9,12 +9,15 @@ import {
   MapPinIcon,
   ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
-import FileUploader, { UploadedFile } from '@/components/FileUploader';
-import reportService, {
+import {
+  reportService,
   Report,
-  ReportStatus,
-  ReportPriority,
+  getStatusName,
+  getStatusColor,
+  getStatusIcon,
+  getPriorityColor,
 } from '@/services/reportService';
+import { ReportStatus, ReportPriority } from 'shared-types';
 import { useAuth } from '@/contexts/AuthContext';
 
 const ReportCategory = {
@@ -143,36 +146,13 @@ export default function ReportDetail() {
     });
   };
 
-  // 取得狀態顏色
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case ReportStatus.PENDING:
-        return 'bg-gray-100 text-gray-800';
-      case ReportStatus.PROCESSING:
-        return 'bg-blue-100 text-blue-800';
-      case ReportStatus.RESOLVED:
-        return 'bg-green-100 text-green-800';
-      case ReportStatus.REJECTED:
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // 取得優先級顏色
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case ReportPriority.LOW:
-        return 'bg-green-100 text-green-800';
-      case ReportPriority.MEDIUM:
-        return 'bg-blue-100 text-blue-800';
-      case ReportPriority.HIGH:
-        return 'bg-orange-100 text-orange-800';
-      case ReportPriority.URGENT:
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  // 取得狀態顏色和圖標
+  const getStatusInfo = (status: string) => {
+    const IconComponent = getStatusIcon(status);
+    return {
+      color: getStatusColor(status),
+      icon: <IconComponent className="h-3 w-3 mr-1" />,
+    };
   };
 
   // 取得類別名稱
@@ -190,22 +170,6 @@ export default function ReportDetail() {
         return '其他';
       default:
         return '未分類';
-    }
-  };
-
-  // 取得狀態名稱
-  const getStatusName = (status: string) => {
-    switch (status) {
-      case ReportStatus.PENDING:
-        return '待處理';
-      case ReportStatus.PROCESSING:
-        return '處理中';
-      case ReportStatus.RESOLVED:
-        return '已解決';
-      case ReportStatus.REJECTED:
-        return '已拒絕';
-      default:
-        return status;
     }
   };
 
@@ -293,10 +257,31 @@ export default function ReportDetail() {
             <div className="flex-1 space-y-6">
               {/* 頁面標題 */}
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 truncate">
-                  {report.title}
-                </h1>
-                <span className="text-sm text-gray-500">通報 #{report.id}</span>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <h1 className="text-2xl font-bold text-gray-900 truncate">
+                    {report.title}
+                  </h1>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 ${
+                        getStatusInfo(report.status).color
+                      }`}
+                    >
+                      {getStatusInfo(report.status).icon}
+                      {getStatusName(report.status)}
+                    </span>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 ${getPriorityColor(
+                        report.priority
+                      )}`}
+                    >
+                      {report.priority}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-sm text-gray-500 mt-1 inline-block">
+                  通報 #{report.id}
+                </span>
               </div>
 
               {/* 狀態處理按鈕區塊 - debug 訊息 */}
@@ -314,40 +299,41 @@ export default function ReportDetail() {
                 <div>DEBUG: report.status = {report.status}</div>
               </div>
               */}
-              <div className="flex gap-2">
-                {/* PENDING 狀態：處理者可操作 */}
-                {userPermissions.canProcess &&
-                  report.status === ReportStatus.PENDING && (
-                    <>
-                      <button
-                        className="btn-primary"
-                        onClick={() =>
-                          updateReportStatus(
-                            ReportStatus.PROCESSING,
-                            '開始處理通報'
-                          )
-                        }
-                        disabled={processing}
-                      >
-                        {processing ? '處理中...' : '開始處理'}
-                      </button>
-                      <button
-                        className="btn-secondary"
-                        onClick={() =>
-                          updateReportStatus(
-                            ReportStatus.REJECTED,
-                            '此通報不處理'
-                          )
-                        }
-                        disabled={processing}
-                      >
-                        不處理
-                      </button>
-                    </>
-                  )}
-                {/* PROCESSING 狀態：處理者可結案，直接進入待審核 */}
-                {userPermissions.canClose &&
-                  report.status === ReportStatus.PROCESSING && (
+              {/* PENDING 狀態：處理者可操作 */}
+              {userPermissions.canProcess &&
+                report.status === ReportStatus.UNCONFIRMED && (
+                  <div className="flex gap-2">
+                    <button
+                      className="btn-primary"
+                      onClick={() =>
+                        updateReportStatus(
+                          ReportStatus.PROCESSING,
+                          '開始處理通報'
+                        )
+                      }
+                      disabled={processing}
+                    >
+                      {processing ? '處理中...' : '開始處理'}
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() =>
+                        updateReportStatus(
+                          ReportStatus.REJECTED,
+                          '此通報不處理'
+                        )
+                      }
+                      disabled={processing}
+                    >
+                      不處理
+                    </button>
+                  </div>
+                )}
+              {/* PROCESSING 狀態：處理者可結案，直接進入待審核 */}
+              {userPermissions.canClose &&
+                (report.status === ReportStatus.PROCESSING ||
+                  report.status === ReportStatus.RETURNED) && (
+                  <div className="flex gap-2">
                     <button
                       className="btn-primary"
                       onClick={() =>
@@ -358,37 +344,34 @@ export default function ReportDetail() {
                       }
                       disabled={processing}
                     >
-                      {processing ? '處理中...' : '結案'}
+                      {processing ? '處理中...' : '處理完成'}
                     </button>
-                  )}
-                {/* PENDING_REVIEW 狀態：審核者可通過/退回 */}
-                {userPermissions.canReview &&
-                  report.status === ReportStatus.PENDING_REVIEW && (
-                    <>
-                      <button
-                        className="btn-primary"
-                        onClick={() =>
-                          updateReportStatus(ReportStatus.REVIEWED, '審核通過')
-                        }
-                        disabled={processing}
-                      >
-                        {processing ? '處理中...' : '通過'}
-                      </button>
-                      <button
-                        className="btn-secondary"
-                        onClick={() =>
-                          updateReportStatus(
-                            ReportStatus.PROCESSING,
-                            '退回處理'
-                          )
-                        }
-                        disabled={processing}
-                      >
-                        退回
-                      </button>
-                    </>
-                  )}
-              </div>
+                  </div>
+                )}
+              {/* PENDING_REVIEW 狀態：審核者可通過/退回 */}
+              {userPermissions.canReview &&
+                report.status === ReportStatus.PENDING_REVIEW && (
+                  <div className="flex gap-2">
+                    <button
+                      className="btn-primary"
+                      onClick={() =>
+                        updateReportStatus(ReportStatus.REVIEWED, '審核通過')
+                      }
+                      disabled={processing}
+                    >
+                      {processing ? '處理中...' : '通過'}
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() =>
+                        updateReportStatus(ReportStatus.RETURNED, '退回處理')
+                      }
+                      disabled={processing}
+                    >
+                      退回
+                    </button>
+                  </div>
+                )}
 
               {/* 通報詳細資訊 */}
               <div className="mt-6 space-y-4">
@@ -469,7 +452,9 @@ export default function ReportDetail() {
                                 className="rounded shadow border w-full h-32 object-cover cursor-pointer transition-transform hover:scale-105"
                                 onClick={() => setPreviewImage(file.url)}
                               />
-                              <div className="text-xs text-gray-500 mt-1 truncate">{file.filename}</div>
+                              <div className="text-xs text-gray-500 mt-1 truncate">
+                                {file.filename}
+                              </div>
                             </>
                           ) : file.fileType.startsWith('video') ? (
                             <>
@@ -478,10 +463,17 @@ export default function ReportDetail() {
                                 controls
                                 className="rounded shadow border w-full h-32 object-cover"
                               />
-                              <div className="text-xs text-gray-500 mt-1 truncate">{file.filename}</div>
+                              <div className="text-xs text-gray-500 mt-1 truncate">
+                                {file.filename}
+                              </div>
                             </>
                           ) : (
-                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                            <a
+                              href={file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 underline"
+                            >
                               {file.filename}
                             </a>
                           )}
@@ -498,7 +490,7 @@ export default function ReportDetail() {
                           src={previewImage}
                           alt="預覽"
                           className="max-h-[80vh] max-w-[90vw] rounded shadow-lg border-4 border-white"
-                          onClick={e => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
                         />
                         <button
                           className="absolute top-8 right-8 text-white text-3xl font-bold"
@@ -514,8 +506,7 @@ export default function ReportDetail() {
 
               {/* 通報歷程（明顯區隔卡片） */}
               <div className="p-6 mt-6 bg-white rounded-lg shadow-lg border border-gray-200">
-                <h3 className="text-lg font-bold text-blue-800 mb-4 flex items-center">
-                  <ClockIcon className="h-5 w-5 mr-2 text-blue-400" />
+                <h3 className="text-lg font-medium text-gray-900 mb-4 items-center">
                   處理歷程
                 </h3>
                 <div className="flow-root">

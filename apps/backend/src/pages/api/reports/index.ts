@@ -1,8 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { ApiResponse, PaginatedResponse } from 'shared-types';
+import {
+  ApiResponse,
+  PaginatedResponse,
+  FileInfo,
+  ReportStatus,
+} from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
-import { FileInfo } from 'shared-types'; // Import FileInfo
 import { ActivityLogService } from '@/services/activityLogService';
 
 // Define Report type based on Prisma schema (updated to include attachments)
@@ -178,7 +182,7 @@ async function createReport(
       description,
       location,
       priority: priority || 'MEDIUM',
-      status: 'PENDING',
+      status: ReportStatus.UNCONFIRMED,
       creatorId,
       assigneeId,
       category,
