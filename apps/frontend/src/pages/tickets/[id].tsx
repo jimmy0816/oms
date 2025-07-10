@@ -3,8 +3,15 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import { TicketStatus, TicketPriority } from 'shared-types';
-import ticketService from '../../services/ticketService';
+import {
+  ticketService,
+  getStatusText,
+  getPriorityText,
+  getStatusColor,
+  getPriorityColor,
+} from '@/services/ticketService';
+import { TicketStatus, Permission } from 'shared-types';
+import { getRoleName } from '@/services/roleService';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function TicketDetail() {
@@ -56,25 +63,6 @@ export default function TicketDetail() {
     }
   };
 
-  const getStatusColor = (status: TicketStatus) => {
-    switch (status) {
-      case TicketStatus.PENDING:
-        return 'bg-yellow-100 text-yellow-800';
-      case TicketStatus.IN_PROGRESS:
-        return 'bg-blue-100 text-blue-800';
-      case TicketStatus.COMPLETED:
-        return 'bg-green-100 text-green-800';
-      case TicketStatus.FAILED:
-        return 'bg-red-100 text-red-800';
-      case TicketStatus.VERIFIED:
-        return 'bg-emerald-100 text-emerald-800';
-      case TicketStatus.VERIFICATION_FAILED:
-        return 'bg-orange-100 text-orange-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('zh-TW', {
@@ -86,52 +74,43 @@ export default function TicketDetail() {
     });
   };
 
-  // 取得狀態文字說明
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case TicketStatus.PENDING:
-        return '待接單';
-      case TicketStatus.IN_PROGRESS:
-        return '處理中';
-      case TicketStatus.COMPLETED:
-        return '已完成';
-      case TicketStatus.FAILED:
-        return '無法完成';
-      case TicketStatus.VERIFIED:
-        return '驗收通過';
-      case TicketStatus.VERIFICATION_FAILED:
-        return '驗收不通過';
-      default:
-        return status;
-    }
-  };
-
   // 認領工單
   const handleClaim = async () => {
     if (!ticket?.id) return;
+
     try {
-      const token = localStorage.getItem('auth_token');
-      const res = await fetch(
-        `http://localhost:3001/api/tickets/${ticket.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ action: 'claim' }),
-          credentials: 'include',
-        }
+      await ticketService.claimTicket(ticket.id, user?.id.toString());
+
+      const updatedTicket = await ticketService.getTicketById(ticket.id);
+
+      setTicket(updatedTicket);
+      alert('認領成功！');
+    } catch (error) {
+      console.error('Error claiming ticket:', error);
+      alert('認領失敗，請稍後再試');
+    }
+  };
+
+  const updateTicketStatus = async (newStatus: string, log: string) => {
+    if (!ticket?.id) return;
+
+    try {
+      await ticketService.updateTicketStatus(
+        ticket.id,
+        newStatus as TicketStatus
       );
-      const data = await res.json();
-      if (data.success) {
-        setTicket(data.data);
-        alert('認領成功！');
-      } else {
-        alert(data.error || '認領失敗');
+
+      if (log) {
+        await ticketService.addActivityLog(ticket.id, log, user?.id.toString());
       }
-    } catch (err) {
-      alert('認領失敗');
+
+      const updatedTicket = await ticketService.getTicketById(ticket.id);
+      setTicket(updatedTicket);
+
+      alert(`工單狀態已更新為 ${getStatusText(newStatus as TicketStatus)}`);
+    } catch (error) {
+      console.error('Error updating ticket status:', error);
+      alert('更新工單狀態失敗，請稍後再試');
     }
   };
 
@@ -190,6 +169,13 @@ export default function TicketDetail() {
                 >
                   {getStatusText(ticket.status)}
                 </span>
+                <span
+                  className={`px-3 py-1 text-sm font-medium rounded-full ${getPriorityColor(
+                    ticket.priority
+                  )}`}
+                >
+                  {getPriorityText(ticket.priority)}
+                </span>
                 <span className="text-sm text-gray-500">
                   #{ticket.id.substring(0, 8)}
                 </span>
@@ -198,12 +184,8 @@ export default function TicketDetail() {
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h3 className="text-sm font-medium text-gray-500">報告人</h3>
-                <p className="mt-1">{ticket.reporter?.name || '未指定'}</p>
-              </div>
-              <div>
                 <h3 className="text-sm font-medium text-gray-500">處理人</h3>
-                <p className="mt-1">{ticket.assignee?.name || '未指定'}</p>
+                <p className="mt-1">{ticket.assignee?.name || '尚未指派'}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-500">創建時間</h3>
@@ -215,20 +197,81 @@ export default function TicketDetail() {
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-500">指派角色</h3>
-                <p className="mt-1">{ticket.role?.name || '未指定'}</p>
-                {/* 認領工單按鈕顯示條件：未認領、狀態為待接單、用戶有權限且屬於該角色 */}
-                {ticket.assigneeId == null &&
-                  ticket.status === 'PENDING' &&
-                  user &&
-                  user.permissions?.includes('claim_tickets') &&
-                  (user.role === ticket.role?.name ||
-                    (user.additionalRoles &&
-                      user.additionalRoles.includes(ticket.role?.name))) && (
-                    <button className="btn-primary mt-2" onClick={handleClaim}>
+                <p className="mt-1">
+                  {getRoleName(ticket.role?.name) || '未指定'}
+                </p>
+              </div>
+              {/* 認領工單按鈕顯示條件：未認領、狀態為待接單、用戶有權限且屬於該角色 */}
+              {ticket.assigneeId == null &&
+                ticket.status === TicketStatus.PENDING &&
+                user &&
+                user.permissions?.includes(Permission.CLAIM_TICKETS) &&
+                (user.role === ticket.role?.name ||
+                  (user.additionalRoles &&
+                    user.additionalRoles.includes(ticket.role?.name))) && (
+                  <div className="flex gap-2">
+                    <button className="btn-primary" onClick={handleClaim}>
                       認領工單
                     </button>
-                  )}
-              </div>
+                  </div>
+                )}
+              {/* 更新工單狀態按鈕顯示條件：狀態為進行中或是驗收失敗、用戶有權限 */}
+              {(ticket.status === TicketStatus.IN_PROGRESS ||
+                ticket.status === TicketStatus.VERIFICATION_FAILED) &&
+                user &&
+                user.permissions?.includes(Permission.EDIT_TICKETS) &&
+                user.id === ticket.assigneeId && (
+                  <div className="flex gap-2">
+                    <button
+                      className="btn-primary"
+                      onClick={() =>
+                        updateTicketStatus(
+                          TicketStatus.COMPLETED,
+                          '工單處理完成，送審核'
+                        )
+                      }
+                    >
+                      處理完成
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() =>
+                        updateTicketStatus(TicketStatus.FAILED, '無法完成工單')
+                      }
+                    >
+                      無法完成
+                    </button>
+                  </div>
+                )}
+              {/* 更新工單狀態按鈕顯示條件：狀態為已完工、用戶有權限 */}
+              {ticket.status === TicketStatus.COMPLETED &&
+                user &&
+                user.permissions?.includes(Permission.VERIFY_TICKETS) && (
+                  <div className="flex gap-2">
+                    <button
+                      className="btn-primary"
+                      onClick={() =>
+                        updateTicketStatus(
+                          TicketStatus.VERIFIED,
+                          '工單驗收通過'
+                        )
+                      }
+                    >
+                      驗收通過
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() =>
+                        updateTicketStatus(
+                          TicketStatus.VERIFICATION_FAILED,
+                          '工單驗收失敗'
+                        )
+                      }
+                    >
+                      驗收失敗
+                    </button>
+                  </div>
+                )}
             </div>
           </div>
 

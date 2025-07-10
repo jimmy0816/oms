@@ -2,12 +2,10 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import {
   ApiResponse,
-  CreateTicketRequest,
   PaginatedResponse,
   Ticket,
   TicketStatus,
   TicketPriority,
-  FileInfo,
 } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { ActivityLogService } from '@/services/activityLogService';
@@ -106,7 +104,7 @@ async function getTickets(
 }
 
 async function createTicket(
-  req: AuthenticatedRequest, // <-- 這裡必須是 AuthenticatedRequest
+  req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<Ticket>>
 ) {
   const {
@@ -116,7 +114,7 @@ async function createTicket(
     roleId, // 改為 roleId
     attachments = [],
     reportIds = [],
-  } = req.body as any; // 型別同步調整
+  } = req.body as any;
 
   const creatorId = req.user.id;
 

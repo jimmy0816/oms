@@ -23,17 +23,17 @@ const getAuthHeaders = (): HeadersInit => {
 export const getStatusText = (status: TicketStatus) => {
   switch (status) {
     case TicketStatus.PENDING:
-      return '待接單';
+      return '待處理';
     case TicketStatus.IN_PROGRESS:
-      return '處理中';
+      return '進行中';
     case TicketStatus.COMPLETED:
-      return '已完成';
-    case TicketStatus.FAILED:
-      return '無法完成';
+      return '已完工';
     case TicketStatus.VERIFIED:
-      return '驗收通過';
+      return '已驗收';
+    case TicketStatus.FAILED:
+      return '無法完工';
     case TicketStatus.VERIFICATION_FAILED:
-      return '驗收不通過';
+      return '驗收失敗';
     default:
       return status;
   }
@@ -58,17 +58,17 @@ export const getPriorityText = (priority: TicketPriority) => {
 export const getStatusColor = (status: TicketStatus) => {
   switch (status) {
     case TicketStatus.PENDING:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800'; // 待處理
     case TicketStatus.IN_PROGRESS:
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-blue-100 text-blue-800'; // 進行中
     case TicketStatus.COMPLETED:
-      return 'bg-green-100 text-green-800';
-    case TicketStatus.FAILED:
-      return 'bg-red-100 text-red-800';
+      return 'bg-purple-100 text-purple-800'; // 已完工
     case TicketStatus.VERIFIED:
-      return 'bg-emerald-100 text-emerald-800';
+      return 'bg-green-100 text-green-800'; // 已驗收
+    case TicketStatus.FAILED:
+      return 'bg-red-100 text-red-800'; // 無法完工
     case TicketStatus.VERIFICATION_FAILED:
-      return 'bg-orange-100 text-orange-800';
+      return 'bg-orange-100 text-orange-800'; // 驗收失敗
     default:
       return 'bg-gray-100 text-gray-800';
   }
@@ -331,9 +331,81 @@ export const ticketService = {
   },
 
   /**
-   * 分配工單給用戶
+   * 添加活動日誌
    */
-  async assignTicket(id: string, assigneeId: string): Promise<Ticket> {
-    return this.updateTicket(id, { assigneeId });
+  async addActivityLog(
+    ticketId: string,
+    content: string,
+    userId: string
+  ): Promise<any> {
+    try {
+      const response = await fetch(`${API_URL}/api/activitylogs`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          content,
+          userId,
+          parentId: ticketId,
+          parentType: 'TICKET',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '添加活動日誌失敗');
+      }
+
+      const result = await response.json();
+
+      // 處理日期格式
+      if (result.success && result.data) {
+        return {
+          ...result.data,
+          createdAt: new Date(result.data.createdAt),
+          updatedAt: new Date(result.data.updatedAt),
+        };
+      }
+
+      throw new Error('添加活動日誌失敗');
+    } catch (error) {
+      console.error('添加活動日誌失敗:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 認領工單
+   */
+  async claimTicket(ticketId: string, userId: string): Promise<Ticket> {
+    try {
+      const response = await fetch(`${API_URL}/api/tickets/${ticketId}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ action: 'claim' }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '認領工單失敗');
+      }
+
+      const result = await response.json();
+
+      // 處理日期格式
+      if (result.success && result.data) {
+        await this.addActivityLog(ticketId, '認領工單', userId);
+
+        return {
+          ...result.data,
+          createdAt: new Date(result.data.createdAt),
+          updatedAt: new Date(result.data.updatedAt),
+        };
+      }
+
+      throw new Error('認領工單失敗');
+    } catch (error) {
+      console.error('認領工單失敗:', error);
+      throw error;
+    }
   },
 };
