@@ -42,6 +42,11 @@ export interface Ticket {
   createdAt: Date;
   updatedAt: Date;
   creatorId: string;
+  creator?: {
+    id: string;
+    name: string;
+    email: string;
+  };
   assigneeId?: string;
   attachments?: FileInfo[]; // New attachments field
   activityLogs?: ActivityLog[];

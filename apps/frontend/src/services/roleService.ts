@@ -7,6 +7,22 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const getAuthToken = () =>
   typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
 
+// 獲取角色顯示名稱
+export const getRoleName = (role: UserRole): string => {
+  const roleNames: Partial<Record<UserRole, string>> = {
+    [UserRole.ADMIN]: '系統管理員',
+    [UserRole.MANAGER]: '部門經理',
+    [UserRole.REPORT_PROCESSOR]: '通報處理者',
+    [UserRole.REPORT_REVIEWER]: '通報審核者',
+    [UserRole.CUSTOMER_SERVICE]: '客服人員',
+    [UserRole.MAINTENANCE_WORKER]: '維修工務',
+    [UserRole.STAFF]: '員工',
+    [UserRole.USER]: '一般用戶',
+  };
+
+  return roleNames[role] || role;
+};
+
 /**
  * 角色權限管理服務
  * 使用後端 API 管理角色權限

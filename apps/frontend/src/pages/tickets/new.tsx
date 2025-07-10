@@ -7,9 +7,9 @@ import { TicketPriority, UserRole } from 'shared-types';
 import FileUploader from '@/components/FileUploader';
 import { ticketService } from '@/services/ticketService';
 import userService from '@/services/userService';
-import { roleService } from '@/services/roleService';
+import { roleService, getRoleName } from '@/services/roleService';
 import { uploadService } from '@/services/uploadService';
-import reportService from '@/services/reportService';
+import { reportService } from '@/services/reportService';
 
 // 定義表單資料型別
 interface TicketFormData {
@@ -271,7 +271,7 @@ export default function NewTicket() {
                   <option value="">請選擇角色</option>
                   {roles.map((role) => (
                     <option key={role.id} value={role.id}>
-                      {role.name}
+                      {getRoleName(role.name)}
                     </option>
                   ))}
                 </select>

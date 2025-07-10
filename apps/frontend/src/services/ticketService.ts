@@ -19,6 +19,76 @@ const getAuthHeaders = (): HeadersInit => {
   return headeres;
 };
 
+// 取得狀態文字說明
+export const getStatusText = (status: TicketStatus) => {
+  switch (status) {
+    case TicketStatus.PENDING:
+      return '待接單';
+    case TicketStatus.IN_PROGRESS:
+      return '處理中';
+    case TicketStatus.COMPLETED:
+      return '已完成';
+    case TicketStatus.FAILED:
+      return '無法完成';
+    case TicketStatus.VERIFIED:
+      return '驗收通過';
+    case TicketStatus.VERIFICATION_FAILED:
+      return '驗收不通過';
+    default:
+      return status;
+  }
+};
+
+// 取得優先級文字說明
+export const getPriorityText = (priority: TicketPriority) => {
+  switch (priority) {
+    case TicketPriority.LOW:
+      return '低';
+    case TicketPriority.MEDIUM:
+      return '中';
+    case TicketPriority.HIGH:
+      return '高';
+    case TicketPriority.URGENT:
+      return '緊急';
+    default:
+      return priority;
+  }
+};
+
+export const getStatusColor = (status: TicketStatus) => {
+  switch (status) {
+    case TicketStatus.PENDING:
+      return 'bg-gray-100 text-gray-800';
+    case TicketStatus.IN_PROGRESS:
+      return 'bg-blue-100 text-blue-800';
+    case TicketStatus.COMPLETED:
+      return 'bg-green-100 text-green-800';
+    case TicketStatus.FAILED:
+      return 'bg-red-100 text-red-800';
+    case TicketStatus.VERIFIED:
+      return 'bg-emerald-100 text-emerald-800';
+    case TicketStatus.VERIFICATION_FAILED:
+      return 'bg-orange-100 text-orange-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+export const getPriorityColor = (priority: TicketPriority) => {
+  switch (priority) {
+    case TicketPriority.LOW:
+      return 'bg-green-100 text-green-800';
+    case TicketPriority.MEDIUM:
+      return 'bg-blue-100 text-blue-800';
+    case TicketPriority.HIGH:
+      return 'bg-orange-100 text-orange-800';
+    case TicketPriority.URGENT:
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
 /**
  * 工單服務 - 處理與工單相關的 API 請求
  */
@@ -267,5 +337,3 @@ export const ticketService = {
     return this.updateTicket(id, { assigneeId });
   },
 };
-
-export default ticketService;
