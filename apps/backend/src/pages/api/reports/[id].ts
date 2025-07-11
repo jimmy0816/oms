@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { ApiResponse, Ticket } from 'shared-types';
+import { notificationService } from '@/services/notificationService';
 
 // Define Report type based on Prisma schema
 interface Report {
@@ -297,26 +298,24 @@ async function updateReport(
 
   // Create notification if assignee was changed
   if (assigneeId && assigneeId !== existingReport.assigneeId) {
-    await prisma.notification.create({
-      data: {
-        title: 'Report Assigned to You',
-        message: `You have been assigned to report: ${updatedReport.title}`,
-        userId: assigneeId,
-        relatedReportId: id,
-      },
+    await notificationService.create({
+      title: '通報已指派給您',
+      message: `您已被指派到通報：「${updatedReport.title}」`,
+      userId: assigneeId,
+      relatedId: id,
+      relatedType: 'REPORT',
     });
   }
 
   // Create notification if status was changed
   if (status && status !== existingReport.status) {
     // Notify creator
-    await prisma.notification.create({
-      data: {
-        title: 'Report Status Updated',
-        message: `Your report "${updatedReport.title}" status has been updated to ${status}`,
-        userId: existingReport.creatorId,
-        relatedReportId: id,
-      },
+    await notificationService.create({
+      title: '通報狀態更新',
+      message: `您的通報「${updatedReport.title}」狀態已更新為 ${status}`,
+      userId: existingReport.creatorId,
+      relatedId: id,
+      relatedType: 'REPORT',
     });
   }
 
@@ -350,7 +349,7 @@ async function deleteReport(
 
   // Delete related notifications
   await prisma.notification.deleteMany({
-    where: { relatedReportId: id },
+    where: { relatedId: id, relatedType: 'REPORT' },
   });
 
   // Delete the report

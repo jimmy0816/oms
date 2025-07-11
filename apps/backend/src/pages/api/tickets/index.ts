@@ -9,6 +9,7 @@ import {
 } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { ActivityLogService } from '@/services/activityLogService';
+import { notificationService } from '@/services/notificationService';
 
 export default async function handler(
   req: NextApiRequest,
@@ -17,7 +18,6 @@ export default async function handler(
   try {
     switch (req.method) {
       case 'GET':
-        // GET 請求也應該經過認證，以獲取 req.user
         return await withAuth(getTickets)(req, res);
       case 'POST':
         return await withAuth(createTicket)(req, res);
@@ -49,42 +49,26 @@ async function getTickets(
 
   const skip = (page - 1) * pageSize;
 
-  // Build filter conditions
   const where: any = {};
   if (status) where.status = status;
   if (priority) where.priority = priority;
   if (assigneeId) where.assigneeId = assigneeId;
   if (creatorId) where.creatorId = creatorId;
 
-  // Get tickets with pagination
   const [tickets, total] = await Promise.all([
-    // 直接使用導入的 prisma 實例
     prisma.ticket.findMany({
       where,
       skip,
       take: pageSize,
       orderBy: { createdAt: 'desc' },
       include: {
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        assignee: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        creator: { select: { id: true, name: true, email: true } },
+        assignee: { select: { id: true, name: true, email: true } },
       },
     }),
     prisma.ticket.count({ where }),
   ]);
 
-  // 確保每個 ticket 的 status 和 priority 屬性都是正確的枚舉類型
   const ticketsWithCorrectTypes = tickets.map((ticket) => ({
     ...ticket,
     status: ticket.status as unknown as TicketStatus,
@@ -111,7 +95,7 @@ async function createTicket(
     title,
     description,
     priority,
-    roleId, // 改為 roleId
+    roleId,
     attachments = [],
     reportIds = [],
   } = req.body as any;
@@ -132,19 +116,15 @@ async function createTicket(
       priority,
       status: TicketStatus.PENDING,
       creatorId,
-      roleId, // 存 roleId
-      // assigneeId 預設為空
+      roleId,
       reports: {
-        create: reportIds.map((reportId) => ({
-          report: {
-            connect: { id: reportId },
-          },
+        create: reportIds.map((reportId: string) => ({
+          report: { connect: { id: reportId } },
         })),
       },
     },
   });
 
-  // 建立歷程紀錄
   await ActivityLogService.createActivityLog(
     `建立工單`,
     creatorId,
@@ -152,9 +132,8 @@ async function createTicket(
     'TICKET'
   );
 
-  // 建立附件
   if (attachments.length > 0) {
-    const attachmentData = attachments.map((att) => ({
+    const attachmentData = attachments.map((att: any) => ({
       filename: att.name,
       url: att.url,
       fileType: att.type,
@@ -163,10 +142,29 @@ async function createTicket(
       parentId: ticket.id,
       parentType: 'TICKET',
     }));
-    await prisma.attachment.createMany({
-      data: attachmentData,
-    });
+    await prisma.attachment.createMany({ data: attachmentData });
   }
+
+  // --- Add Notification Logic ---
+  if (roleId) {
+    const usersInRole = await prisma.userRole.findMany({
+      where: { roleId },
+      select: { userId: true },
+    });
+
+    const notificationPromises = usersInRole.map((userRole) =>
+      notificationService.create({
+        userId: userRole.userId,
+        title: '新工單指派給您的角色',
+        message: `新工單「${ticket.title}」已指派給您的角色。`,
+        relatedId: ticket.id,
+        relatedType: 'TICKET',
+      })
+    );
+
+    await Promise.all(notificationPromises);
+  }
+  // --- End Notification Logic ---
 
   const ticketWithCorrectTypes: Ticket = {
     ...ticket,

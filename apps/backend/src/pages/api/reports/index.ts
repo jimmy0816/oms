@@ -8,6 +8,7 @@ import {
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogService } from '@/services/activityLogService';
+import { notificationService } from '@/services/notificationService';
 
 // Define Report type based on Prisma schema (updated to include attachments)
 interface Report {
@@ -205,7 +206,7 @@ async function createReport(
 
   // 3. 建立附件資料
   if (attachments.length > 0) {
-    const attachmentData = attachments.map((att) => ({
+    const attachmentData = attachments.map((att: any) => ({
       filename: att.name,
       url: att.url,
       fileType: att.type,
@@ -219,7 +220,18 @@ async function createReport(
     });
   }
 
-  // 4. 回傳結果
+  // 4. Add notification for assignee if report is assigned on creation
+  if (assigneeId) {
+    await notificationService.create({
+      title: '新通報已指派給您',
+      message: `新通報「${report.title}」已指派給您。`,
+      userId: assigneeId,
+      relatedId: report.id,
+      relatedType: 'REPORT',
+    });
+  }
+
+  // 5. 回傳結果
   return res.status(201).json({
     success: true,
     data: report,

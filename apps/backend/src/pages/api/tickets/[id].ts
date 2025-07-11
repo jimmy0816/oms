@@ -7,7 +7,8 @@ import {
   TicketStatus,
   TicketPriority,
 } from 'shared-types';
-import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
+import { withAuth } from '@/middleware/auth';
+import { notificationService } from '@/services/notificationService';
 
 export default async function handler(
   req: NextApiRequest,
@@ -200,25 +201,23 @@ async function updateTicket(
 
   // Create notification for status change
   if (status && status !== existingTicket.status) {
-    await prisma.notification.create({
-      data: {
-        title: 'Ticket Status Updated',
-        message: `Ticket "${updatedTicket.title}" status changed to ${status}`,
-        userId: existingTicket.creatorId,
-        relatedTicketId: id,
-      },
+    await notificationService.create({
+      title: '工單狀態更新',
+      message: `工單「${updatedTicket.title}」的狀態已變更為 ${status}`,
+      userId: existingTicket.creatorId,
+      relatedId: id,
+      relatedType: 'TICKET',
     });
   }
 
   // Create notification for assignee change
   if (assigneeId && assigneeId !== existingTicket.assigneeId) {
-    await prisma.notification.create({
-      data: {
-        title: 'Ticket Assigned',
-        message: `You have been assigned to ticket "${updatedTicket.title}"`,
-        userId: assigneeId,
-        relatedTicketId: id,
-      },
+    await notificationService.create({
+      title: '工單已指派',
+      message: `您已被指派到工單「${updatedTicket.title}」`,
+      userId: assigneeId,
+      relatedId: id,
+      relatedType: 'TICKET',
     });
   }
 
@@ -244,7 +243,7 @@ async function deleteTicket(
 
   // Delete related notifications
   await prisma.notification.deleteMany({
-    where: { relatedTicketId: id },
+    where: { relatedId: id, relatedType: 'TICKET' },
   });
 
   // Delete related comments
@@ -309,5 +308,15 @@ async function claimTicket(
       status: 'IN_PROGRESS',
     },
   });
+
+  // Create notification for claiming the ticket
+  await notificationService.create({
+    title: '工單已認領',
+    message: `您已認領並被指派到工單「${updated.title}」`,
+    userId: user.id,
+    relatedId: updated.id,
+    relatedType: 'TICKET',
+  });
+
   return res.status(200).json({ success: true, data: updated });
 }

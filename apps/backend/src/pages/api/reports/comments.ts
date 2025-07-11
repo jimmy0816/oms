@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from 'prisma-client';
+import { prisma } from '@/lib/prisma';
 import { ApiResponse } from 'shared-types';
+import { notificationService } from '@/services/notificationService';
 
 // Define Comment type
 interface Comment {
@@ -102,29 +103,46 @@ async function addCommentToReport(
     },
   });
 
-  // Create notification for report creator if commenter is not the creator
-  if (userId !== report.creatorId) {
-    await prisma.notification.create({
-      data: {
-        title: 'New Comment on Your Report',
-        message: `${user.name} commented on your report: "${report.title}"`,
-        userId: report.creatorId,
-        relatedReportId: reportId,
-      },
-    });
+  // --- Start Notification Logic ---
+  const commenterName = user.name || '有人';
+  const notificationMessage = `${commenterName} 在通報「${report.title}」留言`;
+
+  const recipients = new Set<string>();
+
+  // Notify report creator if the commenter is not the creator
+  if (report.creatorId !== userId) {
+    recipients.add(report.creatorId);
+  }
+  // Notify report assignee if exists and commenter is not the assignee
+  if (report.assigneeId && report.assigneeId !== userId) {
+    recipients.add(report.assigneeId);
   }
 
-  // Create notification for assignee if exists and commenter is not the assignee
-  if (report.assigneeId && userId !== report.assigneeId) {
-    await prisma.notification.create({
-      data: {
-        title: 'New Comment on Assigned Report',
-        message: `${user.name} commented on report: "${report.title}"`,
-        userId: report.assigneeId,
-        relatedReportId: reportId,
-      },
-    });
-  }
+  // Notify all previous commenters on this report
+  const previousCommenters = await prisma.comment.findMany({
+    where: { reportId: report.id },
+    select: { userId: true },
+    distinct: ['userId'], // Get unique user IDs
+  });
+
+  previousCommenters.forEach(c => {
+    if (c.userId !== userId) { // Don't notify the current commenter again
+      recipients.add(c.userId);
+    }
+  });
+
+  const notificationPromises = Array.from(recipients).map((recipientId) =>
+    notificationService.create({
+      title: '通報新留言',
+      message: notificationMessage,
+      userId: recipientId,
+      relatedId: reportId,
+      relatedType: 'REPORT',
+    })
+  );
+
+  await Promise.all(notificationPromises);
+  // --- End Notification Logic ---
 
   return res.status(201).json({
     success: true,

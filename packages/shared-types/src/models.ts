@@ -29,7 +29,8 @@ export interface Notification {
   isRead: boolean;
   createdAt: Date;
   userId: string;
-  relatedTicketId?: string;
+  relatedId?: string;
+  relatedType?: string;
 }
 
 // Ticket related types

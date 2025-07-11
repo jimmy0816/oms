@@ -29,17 +29,20 @@ model User {
 }
 
 model Notification {
-  id              String   @id @default(uuid())
-  title           String
-  message         String
-  isRead          Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  userId          String
-  relatedTicketId String?
-  relatedReportId String?
-  relatedReport   Report?  @relation(fields: [relatedReportId], references: [id])
-  relatedTicket   Ticket?  @relation(fields: [relatedTicketId], references: [id])
-  user            User     @relation(fields: [userId], references: [id])
+  id          String   @id @default(uuid())
+  title       String
+  message     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Polymorphic relation
+  relatedId   String?
+  relatedType String? // e.g., "TICKET", "REPORT", "COMMENT"
+
+  @@index([userId])
+  @@index([relatedId, relatedType])
 }
 
 model Ticket {
@@ -54,7 +57,7 @@ model Ticket {
   assigneeId    String?
   roleId        String?
   comments      Comment[]
-  notifications Notification[]
+  // notifications Notification[] // This relation is now implicit via polymorphic fields
   assignee      User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
   creator       User           @relation("CreatedTickets", fields: [creatorId], references: [id])
   role          Role?          @relation("RoleTickets", fields: [roleId], references: [id])
@@ -89,7 +92,7 @@ model Report {
   contactPhone  String?
   contactEmail  String?
   comments      Comment[]
-  notifications Notification[]
+  // notifications Notification[] // This relation is now implicit via polymorphic fields
   assignee      User?          @relation("AssignedReports", fields: [assigneeId], references: [id])
   creator       User           @relation("CreatedReports", fields: [creatorId], references: [id])
   tickets       ReportTicket[]
