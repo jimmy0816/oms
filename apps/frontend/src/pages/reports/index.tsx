@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import {
@@ -8,24 +8,17 @@ import {
   ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 import {
-  Report,
   reportService,
+  Report,
   getStatusName,
   getStatusColor,
   getStatusIcon,
   getPriorityColor,
 } from '@/services/reportService';
-import { ReportStatus, ReportPriority } from 'shared-types';
+import { ReportStatus, ReportPriority, Category } from 'shared-types';
 import { useAuth } from '@/contexts/AuthContext';
+import { categoryService, getCategoryPath } from '@/services/categoryService';
 
-// 定義報告類別常量
-const ReportCategory = {
-  FACILITY: 'FACILITY',
-  SECURITY: 'SECURITY',
-  ENVIRONMENT: 'ENVIRONMENT',
-  SERVICE: 'SERVICE',
-  OTHER: 'OTHER',
-};
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,9 +31,27 @@ export default function Reports() {
   const [pageSize] = useState(10);
   const [totalReports, setTotalReports] = useState(0);
   const { user } = useAuth();
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        const fetchedCategories = await categoryService.getAllCategories();
+        setCategories(fetchedCategories);
+        console.log('Fetched categories:', fetchedCategories); // Debug: Log fetched categories
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   // 從 API 加載報告數據
-  const loadReports = async () => {
+  const loadReports = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -67,7 +78,14 @@ export default function Reports() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    page,
+    pageSize,
+    statusFilter,
+    categoryFilter,
+    priorityFilter,
+    searchTerm,
+  ]);
 
   // 處理搜索和過濾
   const handleSearch = () => {
@@ -93,7 +111,7 @@ export default function Reports() {
   // 初始化時加載數據
   useEffect(() => {
     loadReports();
-  }, [page, statusFilter, categoryFilter, priorityFilter]);
+  }, [loadReports]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -120,24 +138,6 @@ export default function Reports() {
       color: getStatusColor(status),
       icon: <IconComponent className="h-3 w-3 mr-1" />,
     };
-  };
-
-  // 取得類別名稱
-  const getCategoryName = (category: string) => {
-    switch (category) {
-      case ReportCategory.FACILITY:
-        return '設施故障';
-      case ReportCategory.SECURITY:
-        return '安全問題';
-      case ReportCategory.ENVIRONMENT:
-        return '環境問題';
-      case ReportCategory.SERVICE:
-        return '服務問題';
-      case ReportCategory.OTHER:
-        return '其他';
-      default:
-        return '未分類';
-    }
   };
 
   return (
@@ -230,11 +230,13 @@ export default function Reports() {
                   onChange={(e) => setCategoryFilter(e.target.value)}
                 >
                   <option value="">全部類別</option>
-                  <option value={ReportCategory.FACILITY}>設施故障</option>
-                  <option value={ReportCategory.SECURITY}>安全問題</option>
-                  <option value={ReportCategory.ENVIRONMENT}>環境問題</option>
-                  <option value={ReportCategory.SERVICE}>服務問題</option>
-                  <option value={ReportCategory.OTHER}>其他</option>
+                  {categories
+                    .filter((cat) => cat.level === 1)
+                    .map((cat1) => (
+                      <option key={cat1.id} value={cat1.id}>
+                        {cat1.name}
+                      </option>
+                    ))}
                 </select>
               </div>
             </div>
@@ -344,8 +346,8 @@ export default function Reports() {
                           (window.location.href = `/reports/${report.id}`)
                         }
                       >
-                        <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
-                          #{report.id}
+                        <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 truncate overflow-hidden" title={report.id}>
+                          #{report.id.substring(0, 8)}...
                         </td>
                         <td className="px-2 py-3 whitespace-normal">
                           <div className="text-sm font-medium text-gray-900 truncate">
@@ -365,8 +367,8 @@ export default function Reports() {
                             {getStatusName(report.status)}
                           </span>
                         </td>
-                        <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
-                          {getCategoryName(report.category)}
+                        <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                          {getCategoryPath(report.categoryId, categories)}
                         </td>
                         <td className="px-2 py-3 whitespace-nowrap">
                           <span

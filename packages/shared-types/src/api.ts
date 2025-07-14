@@ -6,7 +6,9 @@ import {
   TicketStatus,
   TicketPriority,
   FileInfo,
+  ActivityLog,
 } from './models';
+import { Report } from './reports';
 
 // API Request types
 export interface CreateTicketRequest {
@@ -29,6 +31,7 @@ export interface UpdateTicketRequest {
 
 export interface CreateCommentRequest {
   content: string;
+  userId: string;
   ticketId?: string;
   reportId?: string;
 }
@@ -63,9 +66,11 @@ export interface TicketWithDetails extends Ticket {
   assignee?: User;
   comments: Comment[];
   attachments?: FileInfo[]; // New attachments field
+  activityLogs?: ActivityLog[];
 }
 
 export interface NotificationWithDetails extends Notification {
   user: User;
   relatedTicket?: Ticket;
+  relatedReport?: Report;
 }

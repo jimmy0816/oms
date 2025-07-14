@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import { ApiResponse, Ticket } from 'shared-types';
+import { ApiResponse, Ticket, Report } from 'shared-types';
 import { notificationService } from '@/services/notificationService';
 
 // Define Report type based on Prisma schema

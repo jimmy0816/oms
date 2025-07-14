@@ -4,11 +4,13 @@ import {
   PaginatedResponse,
   FileInfo,
   ReportStatus,
+  Category,
 } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogService } from '@/services/activityLogService';
 import { notificationService } from '@/services/notificationService';
+import { categoryService } from '@/services/categoryService'; // Import categoryService
 
 // Define Report type based on Prisma schema (updated to include attachments)
 interface Report {
@@ -23,7 +25,7 @@ interface Report {
   creatorId: string;
   assigneeId?: string | null;
   attachments?: FileInfo[]; // New attachments field
-  category?: string | null;
+  category?: string | null; // This will now store categoryId
   contactPhone?: string | null;
   contactEmail?: string | null;
   creator?: {
@@ -44,7 +46,7 @@ interface CreateReportRequest {
   description: string;
   location?: string;
   priority?: string;
-  category?: string;
+  categoryId?: string; // This will now be categoryId
   contactPhone?: string;
   contactEmail?: string;
   attachments?: FileInfo[]; // New attachments field
@@ -87,7 +89,7 @@ async function getReports(
   const pageSize = Number(req.query.pageSize) || 10;
   const status = req.query.status as string | undefined;
   const priority = req.query.priority as string | undefined;
-  const category = req.query.category as string | undefined;
+  const categoryFilterId = req.query.category as string | undefined; // Rename to avoid conflict
   const assigneeId = req.query.assigneeId as string | undefined;
   const creatorId = req.query.creatorId as string | undefined;
   const search = req.query.search as string | undefined;
@@ -98,9 +100,33 @@ async function getReports(
   const where: any = {};
   if (status) where.status = status;
   if (priority) where.priority = priority;
-  if (category) where.category = category;
   if (assigneeId) where.assigneeId = assigneeId;
   if (creatorId) where.creatorId = creatorId;
+
+  // Handle category filtering by top-level category
+  if (categoryFilterId) {
+    const allCategories = await categoryService.getAllCategories();
+    const targetCategory = allCategories.find(
+      (cat) => cat.id === categoryFilterId
+    );
+
+    if (targetCategory) {
+      const thirdLevelCategoryIds: string[] = [];
+      const collectThirdLevelIds = (category: Category) => {
+        if (category.level === 3) {
+          thirdLevelCategoryIds.push(category.id);
+        }
+        if (category.children) {
+          category.children.forEach(collectThirdLevelIds);
+        }
+      };
+      collectThirdLevelIds(targetCategory);
+      where.categoryId = { in: thirdLevelCategoryIds };
+    } else {
+      // If the category ID is not found, return no reports or handle as an error
+      where.categoryId = { in: [] }; // Effectively returns no reports
+    }
+  }
 
   // 處理搜尋關鍵字
   if (search) {
@@ -159,7 +185,7 @@ async function createReport(
     description,
     location,
     priority,
-    category,
+    categoryId,
     contactPhone,
     contactEmail,
     attachments = [],
@@ -186,7 +212,7 @@ async function createReport(
       status: ReportStatus.UNCONFIRMED,
       creatorId,
       assigneeId,
-      category,
+      categoryId,
       contactPhone,
       contactEmail,
     },

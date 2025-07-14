@@ -31,8 +31,8 @@ export interface Report {
   description: string;
   status: ReportStatus;
   priority: ReportPriority;
-  category: ReportCategory;
-  location: string;
+  category?: ReportCategory; // Make optional as it's not always required
+  location?: string; // Make optional
   createdAt: Date;
   updatedAt: Date;
   creatorId: string;
@@ -63,12 +63,25 @@ export interface ReportWithDetails extends Report {
 export interface CreateReportRequest {
   title: string;
   description: string;
-  priority: ReportPriority;
-  category: ReportCategory;
-  location: string;
+  priority?: ReportPriority; // Make optional
+  category?: ReportCategory; // Make optional
+  location?: string; // Make optional
   images?: string[];
   attachments?: FileInfo[];
+  assigneeId?: string;
   ticketIds?: string[];
+}
+
+export interface UpdateReportRequest {
+  title?: string;
+  description?: string;
+  status?: ReportStatus;
+  priority?: ReportPriority;
+  category?: ReportCategory;
+  location?: string;
+  assigneeId?: string;
+  reviewerId?: string;
+  images?: string[];
 }
 
 export interface ProcessReportRequest {

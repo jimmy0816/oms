@@ -1,29 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import { ApiResponse } from 'shared-types';
+import { ApiResponse, Comment, CreateCommentRequest } from 'shared-types';
 import { notificationService } from '@/services/notificationService';
 
-// Define Comment type
-interface Comment {
-  id: string;
-  content: string;
-  createdAt: Date;
-  updatedAt: Date;
-  reportId: string;
-  userId: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-  };
-}
 
-// Define CreateCommentRequest type
-interface CreateCommentRequest {
-  content: string;
-  reportId: string;
-  userId: string;
-}
 
 export default async function handler(
   req: NextApiRequest,

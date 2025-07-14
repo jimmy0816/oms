@@ -133,7 +133,7 @@ export default function NewReport() {
         title: data.title,
         description: data.description,
         priority: data.priority,
-        category: selectedCategoryPath.split('/')[0] || 'OTHER', // 使用第一級分類作為主分類
+        categoryId: selectedCategoryId,
         location: data.location,
         attachments: uploadedFiles,
         ticketIds: data.ticketIds,

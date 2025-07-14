@@ -246,3 +246,12 @@ export interface ActivityLog {
   parentId: string;
   parentType: 'TICKET' | 'REPORT';
 }
+
+// Category related types
+export interface Category {
+  id: string;
+  name: string;
+  level: number;
+  parentId?: string | null;
+  children?: Category[];
+}

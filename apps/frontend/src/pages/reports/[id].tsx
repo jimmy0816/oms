@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -17,16 +17,9 @@ import {
   getStatusIcon,
   getPriorityColor,
 } from '@/services/reportService';
-import { ReportStatus, ReportPriority } from 'shared-types';
+import { ReportStatus, ReportPriority, Category } from 'shared-types';
 import { useAuth } from '@/contexts/AuthContext';
-
-const ReportCategory = {
-  FACILITY: 'FACILITY',
-  SECURITY: 'SECURITY',
-  ENVIRONMENT: 'ENVIRONMENT',
-  SERVICE: 'SERVICE',
-  OTHER: 'OTHER',
-};
+import { categoryService, getCategoryPath } from '@/services/categoryService';
 
 export default function ReportDetail() {
   const router = useRouter();
@@ -38,6 +31,7 @@ export default function ReportDetail() {
   const { user } = useAuth();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [newCommentContent, setNewCommentContent] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
 
   // 根據用戶角色設置權限
   const [userPermissions, setUserPermissions] = useState({
@@ -57,25 +51,37 @@ export default function ReportDetail() {
   }, [user]);
 
   // 從API獲取通報資料
-  useEffect(() => {
-    if (id) {
-      setLoading(true);
-      setError(null);
-
-      reportService
-        .getReportById(id as string)
-        .then((data) => {
-          setReport(data);
-        })
-        .catch((err) => {
-          console.error('Error loading report:', err);
-          setError('無法載入通報資料，請稍後再試');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+  const fetchReport = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await reportService.getReportById(id as string);
+      setReport(data);
+    } catch (err) {
+      console.error('Error loading report:', err);
+      setError('無法載入通報資料，請稍後再試');
+    } finally {
+      setLoading(false);
     }
   }, [id]);
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const fetchedCategories = await categoryService.getAllCategories();
+        setCategories(fetchedCategories);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    fetchReport();
+  }, [fetchReport]);
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,9 +95,7 @@ export default function ReportDetail() {
         user?.id.toString()
       );
       setNewCommentContent('');
-      // 重新獲取更新後的通報資料
-      const updatedReport = await reportService.getReportById(report.id);
-      setReport(updatedReport);
+      fetchReport(); // Re-fetch report to update comments
     } catch (error) {
       console.error('Error adding comment:', error);
       alert('新增留言失敗，請稍後再試');
@@ -107,7 +111,6 @@ export default function ReportDetail() {
     setProcessing(true);
 
     try {
-      // 使用reportService更新通報狀態
       await reportService.updateReportStatus(
         id.toString(),
         newStatus as ReportStatus
@@ -121,11 +124,8 @@ export default function ReportDetail() {
         );
       }
 
-      // 重新獲取更新後的通報資料
-      const updatedReport = await reportService.getReportById(id.toString());
-      setReport(updatedReport);
+      fetchReport(); // Re-fetch report to update status and logs
 
-      // 顯示成功訊息
       alert(`通報狀態已更新為${getStatusName(newStatus)}`);
     } catch (error) {
       console.error('Error updating report status:', error);
@@ -153,24 +153,6 @@ export default function ReportDetail() {
       color: getStatusColor(status),
       icon: <IconComponent className="h-3 w-3 mr-1" />,
     };
-  };
-
-  // 取得類別名稱
-  const getCategoryName = (category: string) => {
-    switch (category) {
-      case ReportCategory.FACILITY:
-        return '設施設備';
-      case ReportCategory.SECURITY:
-        return '安全保全';
-      case ReportCategory.ENVIRONMENT:
-        return '環境清潔';
-      case ReportCategory.SERVICE:
-        return '服務品質';
-      case ReportCategory.OTHER:
-        return '其他';
-      default:
-        return '未分類';
-    }
   };
 
   if (loading) {
@@ -271,7 +253,7 @@ export default function ReportDetail() {
                       {getStatusName(report.status)}
                     </span>
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 ${getPriorityColor(
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
                         report.priority
                       )}`}
                     >
@@ -284,22 +266,7 @@ export default function ReportDetail() {
                 </span>
               </div>
 
-              {/* 狀態處理按鈕區塊 - debug 訊息 */}
-              {/*
-              <div
-                className="mb-2 text-xs text-gray-400"
-                style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}
-              >
-                <div>
-                  DEBUG: userPermissions = {JSON.stringify(userPermissions)}
-                </div>
-                <div>
-                  DEBUG: user.permissions = {JSON.stringify(user?.permissions)}
-                </div>
-                <div>DEBUG: report.status = {report.status}</div>
-              </div>
-              */}
-              {/* PENDING 狀態：處理者可操作 */}
+              {/* 狀態處理按鈕區塊 */}
               {userPermissions.canProcess &&
                 report.status === ReportStatus.UNCONFIRMED && (
                   <div className="flex gap-2">
@@ -329,7 +296,6 @@ export default function ReportDetail() {
                     </button>
                   </div>
                 )}
-              {/* PROCESSING 狀態：處理者可結案，直接進入待審核 */}
               {userPermissions.canClose &&
                 (report.status === ReportStatus.PROCESSING ||
                   report.status === ReportStatus.RETURNED) && (
@@ -348,7 +314,6 @@ export default function ReportDetail() {
                     </button>
                   </div>
                 )}
-              {/* PENDING_REVIEW 狀態：審核者可通過/退回 */}
               {userPermissions.canReview &&
                 report.status === ReportStatus.PENDING_REVIEW && (
                   <div className="flex gap-2">
@@ -385,9 +350,11 @@ export default function ReportDetail() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">類別</h3>
-                    <p className="mt-1 text-gray-900">
-                      {getCategoryName(report.category)}
-                    </p>
+                    <div className="flex items-center mt-1">
+                      <p className="text-gray-900">
+                        {getCategoryPath(report.categoryId, categories)}
+                      </p>
+                    </div>
                   </div>
 
                   <div>

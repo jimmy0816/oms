@@ -29,13 +29,13 @@ model User {
 }
 
 model Notification {
-  id          String   @id @default(uuid())
-  title       String
-  message     String
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Polymorphic relation
   relatedId   String?
@@ -46,22 +46,21 @@ model Notification {
 }
 
 model Ticket {
-  id            String         @id @default(uuid())
-  title         String
-  description   String
-  status        String         @default("OPEN")
-  priority      String         @default("MEDIUM")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  creatorId     String
-  assigneeId    String?
-  roleId        String?
-  comments      Comment[]
-  // notifications Notification[] // This relation is now implicit via polymorphic fields
-  assignee      User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
-  creator       User           @relation("CreatedTickets", fields: [creatorId], references: [id])
-  role          Role?          @relation("RoleTickets", fields: [roleId], references: [id])
-  reports       ReportTicket[]
+  id          String         @id @default(uuid())
+  title       String
+  description String
+  status      String         @default("OPEN")
+  priority    String         @default("MEDIUM")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  creatorId   String
+  assigneeId  String?
+  roleId      String?
+  comments    Comment[]
+  assignee    User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  creator     User           @relation("CreatedTickets", fields: [creatorId], references: [id])
+  role        Role?          @relation("RoleTickets", fields: [roleId], references: [id])
+  reports     ReportTicket[]
 }
 
 model Comment {
@@ -69,33 +68,45 @@ model Comment {
   content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  ticketId  String?
   userId    String
-  reportId  String?
-  report    Report?  @relation(fields: [reportId], references: [id])
-  ticket    Ticket?  @relation(fields: [ticketId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Polymorphic relation
+  parentId   String?
+  parentType String? // e.g., "TICKET", "REPORT"
+  Ticket     Ticket? @relation(fields: [ticketId], references: [id])
+  ticketId   String?
+  Report     Report? @relation(fields: [reportId], references: [id])
+  reportId   String?
+
+  @@index([userId])
+  @@index([parentId, parentType])
 }
 
 model Report {
-  id            String         @id @default(uuid())
-  title         String
-  description   String
-  location      String?
-  status        String         @default("UNCONFIRMED")
-  priority      String         @default("MEDIUM")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  creatorId     String
-  assigneeId    String?
-  category      String?
-  contactPhone  String?
-  contactEmail  String?
-  comments      Comment[]
-  // notifications Notification[] // This relation is now implicit via polymorphic fields
-  assignee      User?          @relation("AssignedReports", fields: [assigneeId], references: [id])
-  creator       User           @relation("CreatedReports", fields: [creatorId], references: [id])
-  tickets       ReportTicket[]
+  id           String         @id @default(uuid())
+  title        String
+  description  String
+  location     String?
+  status       String         @default("UNCONFIRMED")
+  priority     String         @default("MEDIUM")
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  creatorId    String
+  assigneeId   String?
+  // category      String?
+  contactPhone String?
+  contactEmail String?
+  comments     Comment[]
+  assignee     User?          @relation("AssignedReports", fields: [assigneeId], references: [id])
+  creator      User           @relation("CreatedReports", fields: [creatorId], references: [id])
+  tickets      ReportTicket[]
+
+  // New category field
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId])
 }
 
 model Role {
@@ -186,4 +197,20 @@ model ActivityLog {
   parentType String
 
   @@index([parentId, parentType])
+}
+
+// New Category model for hierarchical categories
+model Category {
+  id       String     @id @default(uuid())
+  name     String
+  level    Int // 1, 2, 3... indicates the hierarchy level
+  parentId String? // Self-referencing: ID of the parent category
+  parent   Category?  @relation("SubCategories", fields: [parentId], references: [id])
+  children Category[] @relation("SubCategories")
+
+  // Reports associated with this category (only for level 3 categories)
+  reports Report[]
+
+  @@unique([name, parentId]) // Ensures uniqueness of category names within the same level
+  @@index([parentId])
 }

@@ -39,7 +39,7 @@ export interface Report {
   creatorId: string;
   assigneeId?: string | null;
   images: string[];
-  category?: string | null;
+  categoryId?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
   creator?: {
