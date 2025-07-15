@@ -1,22 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import {
-  PencilIcon,
   TrashIcon,
   UserPlusIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
-  CheckIcon,
-  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { User as BaseUser, UserRole, Permission } from 'shared-types';
 import { getRoleName } from '@/services/roleService';
-
-// 擴展 User 類型，添加 additionalRoles 屬性
-// 这是一个臨時解決方案，直到共享類型包被正確導入
-// 在實際項目中，應該在 shared-types 包中更新 User 類型
-// 然後重新構建項目
-
 interface User extends BaseUser {
   additionalRoles?: string[];
 }
@@ -146,7 +137,7 @@ function UsersPage() {
       name: '',
       email: '',
       password: '', // 新用戶需要密碼欄位
-      role: 'USER',
+      role: UserRole.USER,
     });
     setSelectedRoles([]);
     setIsModalOpen(true);
@@ -231,9 +222,9 @@ function UsersPage() {
           selectedRoles.forEach((role) => {
             if (
               role.value !== formData.role &&
-              !allRoleIds.includes(role.value)
+              !allRoleIds.includes(role.value as UserRole)
             ) {
-              allRoleIds.push(role.value);
+              allRoleIds.push(role.value as UserRole);
             }
           });
         }
@@ -697,7 +688,7 @@ function UsersPage() {
 // 使用 ProtectedRoute 包裝 UsersPage 組件，確保只有管理員和經理可以訪問
 export default function AdminUsersPage() {
   return (
-    <ProtectedRoute requiredRole="ADMIN">
+    <ProtectedRoute requiredRole={[UserRole.MANAGER, UserRole.ADMIN]}>
       <UsersPage />
     </ProtectedRoute>
   );

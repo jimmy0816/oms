@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
+import { UserRole } from 'shared-types';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: string;
+  requiredRole?: UserRole[];
 }
 
 /**
@@ -12,9 +13,9 @@ interface ProtectedRouteProps {
  * 用於限制未登入用戶訪問特定頁面
  * 可選擇性地要求特定角色
  */
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  requiredRole 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  requiredRole,
 }) => {
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -29,14 +30,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       }
 
       // 如果需要特定角色但用戶沒有該角色，重定向到首頁
-      if (requiredRole && user.role !== requiredRole) {
+      if (requiredRole && !requiredRole.includes(user.role as UserRole)) {
         router.push('/');
       }
     }
   }, [loading, user, requiredRole, router]);
 
   // 在加載狀態或未通過驗證時顯示加載中
-  if (loading || !user || (requiredRole && user?.role !== requiredRole)) {
+  if (
+    loading ||
+    !user ||
+    (requiredRole && !requiredRole.includes(user.role as UserRole))
+  ) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

@@ -12,6 +12,8 @@ const toast = {
   },
 };
 
+import { useAuth } from '@/contexts/AuthContext';
+
 /**
  * 角色權限管理頁面
  */
@@ -19,9 +21,7 @@ const RolesManagementPage: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [rolePermissions, setRolePermissions] = useState<Permission[]>([]);
   const [allPermissions] = useState<Permission[]>(Object.values(Permission));
-  const [currentUser, setCurrentUser] = useState<{ role: UserRole }>({
-    role: UserRole.ADMIN,
-  }); // 模擬當前用戶
+  const { user } = useAuth(); // 獲取當前用戶
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isResetting, setIsResetting] = useState<boolean>(false);
@@ -153,7 +153,7 @@ const RolesManagementPage: React.FC = () => {
   return (
     <PermissionGuard
       permission={Permission.MANAGE_ROLES}
-      userRole={currentUser.role}
+      userRole={user?.role}
       fallback={<div className="p-4 text-red-500">您沒有權限訪問此頁面</div>}
     >
       <div className="container mx-auto px-4 py-8">
