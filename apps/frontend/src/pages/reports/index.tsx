@@ -14,6 +14,7 @@ import {
   getStatusColor,
   getStatusIcon,
   getPriorityColor,
+  getPriorityText,
 } from '@/services/reportService';
 import { ReportStatus, ReportPriority, Category } from 'shared-types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -346,7 +347,10 @@ export default function Reports() {
                           (window.location.href = `/reports/${report.id}`)
                         }
                       >
-                        <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 truncate overflow-hidden" title={report.id}>
+                        <td
+                          className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 truncate overflow-hidden"
+                          title={report.id}
+                        >
                           #{report.id.substring(0, 8)}...
                         </td>
                         <td className="px-2 py-3 whitespace-normal">
@@ -376,7 +380,7 @@ export default function Reports() {
                               report.priority
                             )}`}
                           >
-                            {report.priority}
+                            {getPriorityText(report.priority as ReportPriority)}
                           </span>
                         </td>
                         <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">

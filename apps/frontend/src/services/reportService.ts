@@ -110,6 +110,21 @@ export interface CreateReportRequest {
   assigneeId?: string;
 }
 
+export const getPriorityText = (priority: ReportPriority) => {
+  switch (priority) {
+    case ReportPriority.LOW:
+      return '低';
+    case ReportPriority.MEDIUM:
+      return '中';
+    case ReportPriority.HIGH:
+      return '高';
+    case ReportPriority.URGENT:
+      return '緊急';
+    default:
+      return priority;
+  }
+};
+
 // 取得狀態名稱
 export const getStatusName = (status: string) => {
   switch (status) {

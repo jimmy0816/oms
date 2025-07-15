@@ -14,10 +14,10 @@ export default function NotificationsPage() {
 
   const formatDate = (dateString: string | Date) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
+    return date.toLocaleDateString('zh-TW', {
       year: 'numeric',
+      month: 'long',
+      day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -41,20 +41,20 @@ export default function NotificationsPage() {
   return (
     <>
       <Head>
-        <title>Notifications | OMS Prototype</title>
+        <title>通知 | OMS 原型</title>
         <meta
           name="description"
-          content="View notifications in the OMS Prototype"
+          content="查看 OMS 原型中的通知"
         />
       </Head>
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">
-            Notifications
+            通知
             {unreadCount > 0 && (
               <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                {unreadCount} unread
+                {unreadCount} 則未讀
               </span>
             )}
           </h1>
@@ -64,7 +64,7 @@ export default function NotificationsPage() {
               className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
             >
               <CheckCircleIcon className="h-5 w-5 mr-2 text-gray-500" />
-              Mark all as read
+              全部標記為已讀
             </button>
           )}
         </div>
@@ -80,7 +80,7 @@ export default function NotificationsPage() {
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
-              All
+              全部
             </button>
             <button
               onClick={() => setFilter('unread')}
@@ -90,7 +90,7 @@ export default function NotificationsPage() {
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
-              Unread
+              未讀
             </button>
             <button
               onClick={() => setFilter('read')}
@@ -100,7 +100,7 @@ export default function NotificationsPage() {
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
-              Read
+              已讀
             </button>
           </div>
         </div>
@@ -138,7 +138,7 @@ export default function NotificationsPage() {
                             }
                             className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50"
                           >
-                            Mark as read
+                            標記為已讀
                           </button>
                         )}
                       </div>
@@ -163,7 +163,7 @@ export default function NotificationsPage() {
                             href={`/tickets/${notification.relatedId}`}
                             className="text-sm font-medium text-blue-600 hover:text-blue-500"
                           >
-                            View ticket
+                            查看工單
                           </Link>
                         )}
                       {notification.relatedId &&
@@ -172,7 +172,7 @@ export default function NotificationsPage() {
                             href={`/reports/${notification.relatedId}`}
                             className="text-sm font-medium text-blue-600 hover:text-blue-500"
                           >
-                            View report
+                            查看通報
                           </Link>
                         )}
                     </div>
@@ -181,7 +181,7 @@ export default function NotificationsPage() {
               ))
             ) : (
               <li className="px-4 py-6 text-center text-gray-500">
-                No notifications found for the selected filter.
+                沒有符合篩選條件的通知。
               </li>
             )}
           </ul>

@@ -37,26 +37,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>(
     {}
   );
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    setIsAuthenticated(!!user);
-  }, [user]);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const getNavigation = (): NavigationItem[] => {
-    const baseNavigation: NavigationItem[] = [
-      { name: '儀表板', href: '/', icon: HomeIcon },
-    ];
+    const baseNavigation: NavigationItem[] = [];
 
-    if (isAuthenticated && user) {
+    if (user) {
+      baseNavigation.push({ name: '儀表板', href: '/', icon: HomeIcon });
+
       baseNavigation.push(
         { name: '工單管理', href: '/tickets', icon: ClipboardDocumentListIcon },
         { name: '通報管理', href: '/reports', icon: DocumentTextIcon }
       );
 
-      if (user.role === 'ADMIN' || user.role === 'MANAGER') {
+      if (user.role === UserRole.ADMIN || user.role === UserRole.MANAGER) {
         baseNavigation.push({
           name: '系統管理',
           href: '#',
@@ -135,7 +130,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <aside
         className={`${
           sidebarOpen ? 'flex' : 'hidden'
-        } md:flex h-auto md:h-screen w-full md:w-60 bg-white border-b md:border-b-0 md:border-r border-gray-100 flex-col py-4 md:py-6 px-2 md:px-3 fixed top-14 left-0 right-0 bottom-0 md:top-0 md:left-0 md:right-auto md:bottom-0 z-20 overflow-y-auto`}
+        } md:flex h-auto md:h-screen w-full md:w-60 bg-white border-b md:border-b-0 md:border-r border-gray-100 flex-col py-4 md:py-6 px-2 md:px-3 fixed top-14 left-0 right-0 bottom-0 md:top-0 md:left-0 md:right-auto md:bottom-0 z-20 overflow-y-auto ${
+          !user ? 'hidden' : ''
+        }`}
       >
         <div className="mb-8 hidden md:flex items-center gap-2 px-2">
           <div className="w-8 h-8 bg-gradient-to-tr from-indigo-500 to-blue-400 rounded-lg flex items-center justify-center text-white font-bold text-xl">
@@ -213,7 +210,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           })}
         </nav>
         <div className="mt-auto pt-4 border-t border-gray-100 hidden md:block">
-          {isAuthenticated && user ? (
+          {user ? (
             <div className="flex flex-col">
               <div className="flex items-center gap-3 px-3 py-2">
                 <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
@@ -283,7 +280,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             {navigation.find((item) => isActive(item.href))?.name || '儀表板'}
           </h1>
           <div className="flex items-center gap-4">
-            {isAuthenticated && (
+            {user && (
               <Link
                 href="/notifications"
                 className="relative rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
@@ -294,7 +291,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 )}
               </Link>
             )}
-            {isAuthenticated && user ? (
+            {user ? (
               <button
                 onClick={logout}
                 className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center md:hidden"

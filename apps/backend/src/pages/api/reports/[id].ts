@@ -251,7 +251,7 @@ async function updateReport(
   const updateData: any = {};
   if (title !== undefined) updateData.title = title;
   if (description !== undefined) updateData.description = description;
-  if (location !== undefined) updateData.location = location;
+  if (locationId !== undefined) updateData.locationId = locationId;
   if (status !== undefined) updateData.status = status;
   if (priority !== undefined) updateData.priority = priority;
   if (assigneeId !== undefined) updateData.assigneeId = assigneeId;
