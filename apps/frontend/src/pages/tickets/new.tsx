@@ -9,7 +9,12 @@ import { ticketService } from '@/services/ticketService';
 import userService from '@/services/userService';
 import { roleService, getRoleName } from '@/services/roleService';
 import { uploadService } from '@/services/uploadService';
-import { reportService } from '@/services/reportService';
+import dynamic from 'next/dynamic';
+
+const ReportMultiSelector = dynamic(
+  () => import('@/components/ReportMultiSelector'),
+  { ssr: false }
+);
 
 // 定義表單資料型別
 interface TicketFormData {
@@ -18,7 +23,7 @@ interface TicketFormData {
   priority: TicketPriority;
   roleId?: string;
   attachments?: FileInfo[];
-  reportIds?: string[];
+  reportIds?: string[]; // 確保 reportIds 是 string[] 類型，且是可選的
 }
 
 // 定義檔案資訊介面
@@ -37,8 +42,8 @@ export default function NewTicket() {
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [reports, setReports] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
+  const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
 
   const {
     register,
@@ -52,17 +57,13 @@ export default function NewTicket() {
       setUsers(users);
     });
 
-    // 獲取所有通報，將 pageSize 設置為足夠大的數字以避免分頁問題
-    reportService.getAllReports(1, 1000).then((reportsData) => {
-      setReports(reportsData.items);
-      if (query.reportId && typeof query.reportId === 'string') {
-        setValue('reportIds', [query.reportId]);
-      }
-    });
-
     roleService.getAllRoles().then((roles) => {
       setRoles(roles);
     });
+
+    if (query.reportId && typeof query.reportId === 'string') {
+      setSelectedReportIds([query.reportId]);
+    }
   }, []);
 
   // 處理檔案變更
@@ -110,7 +111,7 @@ export default function NewTicket() {
         priority: data.priority,
         roleId: data.roleId || undefined,
         attachments: uploadedFiles,
-        reportIds: data.reportIds,
+        reportIds: selectedReportIds,
       };
 
       // 調用 ticketService 將數據發送到後端 API
@@ -290,18 +291,10 @@ export default function NewTicket() {
                 >
                   關聯通報
                 </label>
-                <select
-                  id="reportIds"
-                  multiple
-                  {...register('reportIds')}
-                  className="form-input h-40" // Adjust height for multiple selection
-                >
-                  {reports.map((report) => (
-                    <option key={report.id} value={report.id}>
-                      {report.title}
-                    </option>
-                  ))}
-                </select>
+                <ReportMultiSelector
+                  value={selectedReportIds}
+                  onChange={setSelectedReportIds}
+                />
               </div>
 
               {/* 附件 */}

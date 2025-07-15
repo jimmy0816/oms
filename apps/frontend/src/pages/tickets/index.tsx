@@ -56,15 +56,12 @@ export default function TicketsPage() {
           apiFilters
         );
 
-        // 將 Ticket[] 轉換為 TicketWithDetails[]
-        // 在實際应用中，這裡應該由後端返回正確的 TicketWithDetails 数据
-        // 但現在我們只是臨時轉換以修復類型錯誤
         const ticketsWithDetails = ticketsData.items.map((ticket) => ({
           ...ticket,
           creator: {
             id: ticket.creatorId,
-            name: `用戶 ${ticket.creator.name}`,
-            email: `user${ticket.creatorId}@example.com`,
+            name: `${ticket.creator.name}`,
+            email: `${ticket.creator.email}`,
             role: 'ADMIN' as UserRole,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -72,8 +69,8 @@ export default function TicketsPage() {
           assignee: ticket.assigneeId
             ? {
                 id: ticket.assigneeId,
-                name: `用戶 ${ticket.assigneeId}`,
-                email: `user${ticket.assigneeId}@example.com`,
+                name: `${ticket.assignee.name}`,
+                email: `${ticket.assignee.email}`,
                 role: 'STAFF' as UserRole,
                 createdAt: new Date(),
                 updatedAt: new Date(),

@@ -49,6 +49,11 @@ export interface Ticket {
     email: string;
   };
   assigneeId?: string;
+  assignee?: {
+    id: string;
+    name: string;
+    email: string;
+  };
   attachments?: FileInfo[]; // New attachments field
   activityLogs?: ActivityLog[];
 }
