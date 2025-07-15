@@ -1,10 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { UserRole } from 'shared-types';
-import { Permission } from '../utils/permissions';
-import { hasPermission } from '../utils/permissions';
+import { Permission } from '@/utils/permissions';
 import jwt from 'jsonwebtoken';
 import { als } from '@/lib/als';
-import { withApiHandler } from '@/lib/api-handler';
 
 // 定義擴展的請求類型，包含用戶信息
 export interface AuthenticatedRequest extends NextApiRequest {
