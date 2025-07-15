@@ -6,6 +6,8 @@ import {
   Ticket,
   TicketStatus,
   TicketPriority,
+  Permission,
+  UserRole,
 } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { ActivityLogService } from '@/services/activityLogService';
@@ -54,6 +56,32 @@ async function getTickets(
   if (priority) where.priority = priority;
   if (assigneeId) where.assigneeId = assigneeId;
   if (creatorId) where.creatorId = creatorId;
+
+  const userId = req.user.id;
+  const userPermissions = req.user.permissions || [];
+
+  // 檢查用戶是否擁有 VIEW_ALL_TICKETS 權限
+  const canViewAllTickets = userPermissions.includes(
+    Permission.VIEW_ALL_TICKETS
+  );
+
+  if (!canViewAllTickets) {
+    // 如果沒有 VIEW_ALL_TICKETS 權限，則應用過濾規則
+    const userRoles = await prisma.userRole.findMany({
+      where: { userId: userId },
+      select: { roleId: true },
+    });
+    const userRoleIds = userRoles.map((ur) => ur.roleId);
+
+    where.OR = [
+      { assigneeId: userId }, // 自己認領的工單
+      {
+        // 被分配到該角色，且未接單待處理的工單
+        roleId: { in: userRoleIds },
+        status: TicketStatus.PENDING, // 假設 'PENDING' 表示未接單待處理
+      },
+    ];
+  }
 
   const [tickets, total] = await Promise.all([
     prisma.ticket.findMany({
