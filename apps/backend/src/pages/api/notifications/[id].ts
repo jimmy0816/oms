@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from 'prisma-client';
+import { prisma } from '@/lib/prisma';
 import { ApiResponse, Notification } from 'shared-types';
 
 export default async function handler(
