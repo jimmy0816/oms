@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { UserRole } from 'shared-types';
-import { Permission } from '@/utils/permissions';
+import { UserRole, Permission } from 'shared-types';
 import { withPermission, AuthenticatedRequest } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
 

@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import { getUserPermissions, Permission } from '@/utils/permissions';
+import { permissionService } from '@/services/permissionService';
+import { Permission } from 'shared-types';
+// import { getUserPermissions, Permission } from '@/utils/permissions';
 
 /**
  * 單個用戶 API 處理程序
@@ -52,9 +54,13 @@ async function getUser(req: NextApiRequest, res: NextApiResponse, id: string) {
     const additionalRoles = userRoles.map((ur) => ur.role.name);
 
     // 合併主角色與額外角色的權限
-    let permissions = new Set(getUserPermissions(user.role));
+    let permissions = new Set(
+      await permissionService.getRolePermissions(user.role)
+    );
     for (const roleName of additionalRoles) {
-      getUserPermissions(roleName as any).forEach((p) => permissions.add(p));
+      (await permissionService.getRolePermissions(roleName)).forEach((p) =>
+        permissions.add(p)
+      );
     }
     const permissionsArr = Array.from(permissions).map((p) =>
       typeof p === 'string' ? p : (p as Permission)

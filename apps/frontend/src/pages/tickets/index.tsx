@@ -9,9 +9,7 @@ import {
 import {
   TicketPriority,
   TicketStatus,
-  TicketPermission,
   UserRole,
-  Ticket,
   TicketWithDetails,
 } from 'shared-types';
 import {

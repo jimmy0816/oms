@@ -15,10 +15,10 @@ async function main() {
   // const users = await seedUsers();
 
   // Seed categories
-  await seedCategories(prisma);
+  // await seedCategories(prisma);
 
   // Seed locations
-  await seedLocations(prisma);
+  // await seedLocations(prisma);
 
   // Seed tickets, depending on users
   // await seedTickets(users);

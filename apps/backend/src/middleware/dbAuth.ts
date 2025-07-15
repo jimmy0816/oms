@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { UserRole } from 'shared-types';
-import { Permission } from '../utils/permissions';
+import { UserRole, Permission } from 'shared-types';
 import jwt from 'jsonwebtoken';
 import { als } from '@/lib/als';
 import { permissionService } from '@/services/permissionService';
@@ -88,7 +87,10 @@ export const withDbPermission = (permission: Permission | Permission[]) => {
       try {
         // 檢查用戶是否擁有所需權限
         for (const perm of permissions) {
-          const hasPermission = await permissionService.hasPermission(user.id, perm);
+          const hasPermission = await permissionService.hasPermission(
+            user.id,
+            perm
+          );
           if (hasPermission) {
             hasAccess = true;
             break;

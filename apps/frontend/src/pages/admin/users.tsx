@@ -210,9 +210,9 @@ function UsersPage() {
           selectedRoles.forEach((role) => {
             if (
               role.value !== formData.role &&
-              !allRoleIds.includes(role.value)
+              !allRoleIds.includes(role.value as UserRole)
             ) {
-              allRoleIds.push(role.value);
+              allRoleIds.push(role.value as UserRole);
             }
           });
         }
@@ -623,8 +623,8 @@ function UsersPage() {
                           htmlFor={`role-${role.value}`}
                           className="ml-2 text-sm text-gray-700"
                         >
-                          {role.label.split(' ')[0]}{' '}
-                          {/* 只顯示角色名稱，不顯示計數 */}
+                          {getRoleName(role.value as UserRole)}
+                          {/* {role.label.split(' ')[0]}{' '} */}
                         </label>
                       </div>
                     ))}

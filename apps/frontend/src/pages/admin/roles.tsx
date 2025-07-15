@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { UserRole, Permission } from 'shared-types';
-import { getUserPermissions } from '@/utils/permissions';
-import { Layout } from '@/components/Layout';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { roleService, getRoleName } from '@/services/roleService';
 // 暫時使用自定義的提示功能代替 react-hot-toast
@@ -122,6 +120,7 @@ const RolesManagementPage: React.FC = () => {
   const permissionGroups = {
     tickets: allPermissions.filter(
       (p) =>
+        p.startsWith('view_all_tickets') ||
         p.startsWith('view_tickets') ||
         p.startsWith('create_tickets') ||
         p.startsWith('edit_tickets') ||
@@ -133,6 +132,7 @@ const RolesManagementPage: React.FC = () => {
     ),
     reports: allPermissions.filter(
       (p) =>
+        p.startsWith('view_all_reports') ||
         p.startsWith('view_reports') ||
         p.startsWith('create_reports') ||
         p.startsWith('process_reports') ||

@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import { Permission, ROLE_PERMISSIONS } from '@/utils/permissions';
+import { Permission, ROLE_PERMISSIONS } from 'shared-types';
 import { withPermission } from '@/middleware/auth';
 
 // 取得角色所有權限

@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '@/lib/prisma';
-import { hashPassword } from '@/lib/auth';
+import { seedPermissions } from '@/scripts/init-permissions';
+import { seedCategories } from '@/scripts/init-category';
+import { seedLocations } from '@/scripts/init-location';
+import { seedAdmin } from '@/scripts/iniit-admin';
 
 /**
  * 初始化管理員帳號
@@ -14,54 +16,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    // 檢查是否已存在管理員用戶
-    const existingAdmin = await prisma.user.findUnique({
-      where: { email: 'admin@example.com' },
-    });
-
-    if (existingAdmin) {
-      console.log('管理員用戶已存在，更新密碼...');
-
-      // 更新現有管理員密碼
-      const hashedPassword = await hashPassword('admin123');
-      const updatedAdmin = await prisma.user.update({
-        where: { email: 'admin@example.com' },
-        data: { password: hashedPassword },
-      });
-
-      const { password: _, ...adminWithoutPassword } = updatedAdmin;
-      return res.status(200).json({
-        success: true,
-        message: '管理員密碼已更新',
-        user: adminWithoutPassword,
-      });
-    } else {
-      console.log('創建新管理員用戶...');
-
-      // 創建新管理員用戶
-      const hashedPassword = await hashPassword('admin123');
-      const admin = await prisma.user.create({
-        data: {
-          email: 'admin@example.com',
-          name: '系統管理員',
-          password: hashedPassword,
-          role: 'ADMIN',
-        },
-      });
-
-      const { password: _, ...adminWithoutPassword } = admin;
-      return res.status(200).json({
-        success: true,
-        message: '管理員用戶已創建',
-        user: adminWithoutPassword,
-      });
-    }
+    await seedPermissions();
+    await seedCategories();
+    await seedLocations();
+    await seedAdmin();
+    return res.status(200).json({ success: true, message: '初始化成功' });
   } catch (error) {
-    console.error('創建管理員用戶時出錯:', error);
-    return res.status(500).json({
-      success: false,
-      error: '創建管理員用戶時出錯',
-    });
+    console.error('初始化過程中發生錯誤:', error);
+    return res.status(500).json({ success: false, error: '初始化失敗' });
   }
 }
 

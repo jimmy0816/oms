@@ -2,43 +2,6 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { UserRole, Permission } from 'shared-types';
 
-// Define ROLE_PERMISSIONS using the correct Permission enum values
-const ROLE_PERMISSIONS: Record<string, Permission[]> = {
-  [UserRole.ADMIN]: [
-    Permission.VIEW_TICKETS,
-    Permission.CREATE_TICKETS,
-    Permission.EDIT_TICKETS,
-    Permission.DELETE_TICKETS,
-    Permission.ASSIGN_TICKETS,
-    Permission.MANAGE_ROLES,
-    Permission.ASSIGN_PERMISSIONS,
-  ],
-  [UserRole.USER]: [Permission.VIEW_REPORTS, Permission.CREATE_REPORTS],
-  [UserRole.MANAGER]: [
-    Permission.VIEW_USERS,
-    Permission.EDIT_USERS,
-    Permission.VIEW_REPORTS,
-    Permission.ASSIGN_TICKETS,
-  ],
-  [UserRole.REPORT_PROCESSOR]: [
-    Permission.VIEW_REPORTS,
-    Permission.PROCESS_REPORTS,
-  ],
-  [UserRole.REPORT_REVIEWER]: [
-    Permission.VIEW_REPORTS,
-    Permission.REVIEW_REPORTS,
-  ],
-  [UserRole.CUSTOMER_SERVICE]: [
-    Permission.VIEW_REPORTS,
-    Permission.VIEW_TICKETS,
-  ],
-  [UserRole.MAINTENANCE_WORKER]: [
-    Permission.VIEW_REPORTS,
-    Permission.CLAIM_TICKETS,
-    Permission.COMPLETE_TICKETS,
-  ],
-};
-
 // 角色描述
 const ROLE_DESCRIPTIONS: Record<string, string> = {
   [UserRole.ADMIN]: '系統管理員，擁有所有權限',

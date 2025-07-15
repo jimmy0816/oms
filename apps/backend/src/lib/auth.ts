@@ -1,6 +1,5 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { prisma } from './prisma';
 
 type User = {
   id: string;
@@ -43,7 +42,9 @@ export const verifyPassword = async (
  * @param user 用戶資訊
  * @returns JWT Token
  */
-export const generateToken = (user: Omit<User, 'password'> & { permissions?: string[] }): string => {
+export const generateToken = (
+  user: Omit<User, 'password'> & { permissions?: string[] }
+): string => {
   const payload = {
     id: user.id,
     email: user.email,

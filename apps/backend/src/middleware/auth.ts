@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { UserRole } from 'shared-types';
-import { Permission } from '@/utils/permissions';
+import { UserRole, Permission } from 'shared-types';
 import jwt from 'jsonwebtoken';
 import { als } from '@/lib/als';
 
