@@ -255,3 +255,8 @@ export interface Category {
   parentId?: string | null;
   children?: Category[];
 }
+
+export interface Location {
+  id: number;
+  name: string;
+}

@@ -361,7 +361,7 @@ export default function ReportDetail() {
                     <h3 className="text-sm font-medium text-gray-500">地點</h3>
                     <div className="mt-1 flex items-center">
                       <MapPinIcon className="h-5 w-5 text-gray-400 mr-1" />
-                      <p className="text-gray-900">{report.location}</p>
+                      <p className="text-gray-900">{report.location?.name}</p>
                     </div>
                   </div>
 

@@ -44,7 +44,7 @@ interface Report {
 interface CreateReportRequest {
   title: string;
   description: string;
-  location?: string;
+  locationId?: number;
   priority?: string;
   categoryId?: string; // This will now be categoryId
   contactPhone?: string;
@@ -145,6 +145,7 @@ async function getReports(
       take: pageSize,
       orderBy: { createdAt: 'desc' },
       include: {
+        location: true, // Include location data
         creator: {
           select: {
             id: true,
@@ -183,7 +184,7 @@ async function createReport(
   const {
     title,
     description,
-    location,
+    locationId,
     priority,
     categoryId,
     contactPhone,
@@ -207,7 +208,7 @@ async function createReport(
     data: {
       title,
       description,
-      location,
+      locationId,
       priority: priority || 'MEDIUM',
       status: ReportStatus.UNCONFIRMED,
       creatorId,

@@ -189,25 +189,36 @@ export async function seedCategories(prisma: PrismaClient) {
   console.log('Seeding categories...');
 
   for (const level1 of defaultCategories) {
-    const createdLevel1 = await prisma.category.upsert({
-      where: { name_parentId: { name: level1.name, parentId: '' } },
-      update: {},
-      create: {
+    const existingCategoriesWithName = await prisma.category.findMany({
+      where: {
         name: level1.name,
-        level: 1,
       },
     });
+
+    let currentLevel1 = existingCategoriesWithName.find(
+      (cat) => cat.parentId === null || cat.parentId === ''
+    );
+
+    if (!currentLevel1) {
+      currentLevel1 = await prisma.category.create({
+        data: {
+          name: level1.name,
+          level: 1,
+          parentId: null,
+        },
+      });
+    }
 
     for (const level2 of level1.children) {
       const createdLevel2 = await prisma.category.upsert({
         where: {
-          name_parentId: { name: level2.name, parentId: createdLevel1.id },
+          name_parentId: { name: level2.name, parentId: currentLevel1.id },
         },
         update: {},
         create: {
           name: level2.name,
           level: 2,
-          parentId: createdLevel1.id,
+          parentId: currentLevel1.id,
         },
       });
 

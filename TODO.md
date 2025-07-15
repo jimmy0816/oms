@@ -1,7 +1,7 @@
 # OMS TODO
 
 - [x] 通知系統
-- [ ] 空間使用 Thehapp 真實資料，對應 space id
+- [x] 空間使用 Thehapp 真實資料，對應 space id
 - [ ] 資料庫 id 改為流水號，或是改變列表顯示方式
 - [x] 通報類別系統
 - [ ] 工單顯示畫面調整

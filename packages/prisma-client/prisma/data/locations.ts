@@ -1,4 +1,9 @@
-export const locations = [
+interface Location {
+  id: number;
+  name: string;
+}
+
+export const locations: Location[] = [
   {
     id: 6,
     name: '土杉',

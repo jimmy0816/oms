@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import { ApiResponse, Ticket, Report } from 'shared-types';
+import { ApiResponse, Ticket, ReportStatus } from 'shared-types';
 import { notificationService } from '@/services/notificationService';
 
 // Define Report type based on Prisma schema
@@ -74,8 +74,8 @@ interface Report {
 interface UpdateReportRequest {
   title?: string;
   description?: string;
-  location?: string;
-  status?: string;
+  locationId?: number;
+  status?: ReportStatus;
   priority?: string;
   assigneeId?: string | null;
   category?: string;
@@ -129,6 +129,7 @@ async function getReportById(
   const report = await prisma.report.findUnique({
     where: { id },
     include: {
+      location: true, // Include location data
       creator: {
         select: {
           id: true,
@@ -223,7 +224,7 @@ async function updateReport(
   const {
     title,
     description,
-    location,
+    locationId,
     status,
     priority,
     assigneeId,
@@ -273,6 +274,7 @@ async function updateReport(
     where: { id },
     data: updateData,
     include: {
+      location: true, // Include location data
       creator: {
         select: {
           id: true,

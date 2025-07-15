@@ -31,7 +31,10 @@ export interface Report {
   id: string;
   title: string;
   description: string;
-  location?: string | null;
+  location?: {
+    id: number;
+    name: string;
+  } | null;
   status: string;
   priority: string;
   createdAt: Date;
@@ -98,7 +101,7 @@ export interface Report {
 export interface CreateReportRequest {
   title: string;
   description: string;
-  location?: string;
+  locationId?: number;
   priority?: string;
   category?: string;
   contactPhone?: string;

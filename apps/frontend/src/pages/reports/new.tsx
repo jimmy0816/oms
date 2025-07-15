@@ -13,6 +13,12 @@ import { reportService } from '@/services/reportService';
 import { ReportPriority } from 'shared-types';
 import { getLocations, Location } from '@/services/locationService';
 import { uploadService } from '@/services/uploadService';
+import dynamic from 'next/dynamic';
+
+const LocationSelector = dynamic(
+  () => import('@/components/LocationSelector'),
+  { ssr: false }
+);
 import { ticketService } from '@/services/ticketService';
 
 // 定義檔案資訊介面
@@ -31,7 +37,7 @@ interface CreateReportRequest {
   priority: string;
   categoryId: string;
   categoryPath: string;
-  location: string;
+  locationId?: number;
   attachments?: FileInfo[];
   ticketIds?: string[];
 }
@@ -43,6 +49,9 @@ export default function NewReport() {
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [selectedCategoryPath, setSelectedCategoryPath] = useState<string>('');
+  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
+    null
+  );
   const [locations, setLocations] = useState<Location[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
 
@@ -134,7 +143,7 @@ export default function NewReport() {
         description: data.description,
         priority: data.priority,
         categoryId: selectedCategoryId,
-        location: data.location,
+        locationId: selectedLocationId,
         attachments: uploadedFiles,
         ticketIds: data.ticketIds,
       };
@@ -327,33 +336,18 @@ export default function NewReport() {
               {/* 地點 */}
               <div>
                 <label
-                  htmlFor="location"
+                  htmlFor="locationId"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
                   問題地點 <span className="text-red-500">*</span>
                 </label>
-                <input
-                  id="location"
-                  type="text"
-                  list="locations-list"
-                  {...register('location', {
-                    required: '請輸入問題地點',
-                    maxLength: {
-                      value: 100,
-                      message: '地點不能超過 100 個字元',
-                    },
-                  })}
-                  className="form-input"
-                  placeholder="例如：總部大樓 3F 會議室"
+                <LocationSelector
+                  value={selectedLocationId}
+                  onChange={setSelectedLocationId}
                 />
-                <datalist id="locations-list">
-                  {locations.map((location) => (
-                    <option key={location.id} value={location.name} />
-                  ))}
-                </datalist>
-                {errors.location && (
+                {errors.locationId && (
                   <p className="mt-1 text-sm text-red-600">
-                    {errors.location.message}
+                    {errors.locationId.message}
                   </p>
                 )}
               </div>

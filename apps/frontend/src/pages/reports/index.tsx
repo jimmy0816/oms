@@ -380,7 +380,7 @@ export default function Reports() {
                           </span>
                         </td>
                         <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
-                          {report.location}
+                          {report.location?.name}
                         </td>
                         <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
                           {formatDate(report.createdAt)}

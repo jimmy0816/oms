@@ -1,8 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { seedCategories } from './seedCategories';
 import { seedUsers } from './seedUsers';
-import { seedTickets } from './seedTickets';
-import { seedPermissions } from './seedPermissions';
+import { seedLocations } from './seedLocations';
 
 const prisma = new PrismaClient();
 
@@ -17,6 +16,9 @@ async function main() {
 
   // Seed categories
   await seedCategories(prisma);
+
+  // Seed locations
+  await seedLocations(prisma);
 
   // Seed tickets, depending on users
   // await seedTickets(users);

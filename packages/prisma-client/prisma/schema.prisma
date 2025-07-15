@@ -87,14 +87,13 @@ model Report {
   id           String         @id @default(uuid())
   title        String
   description  String
-  location     String?
+  locationId   Int?
   status       String         @default("UNCONFIRMED")
   priority     String         @default("MEDIUM")
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   creatorId    String
   assigneeId   String?
-  // category      String?
   contactPhone String?
   contactEmail String?
   comments     Comment[]
@@ -106,7 +105,11 @@ model Report {
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
 
+  // Relation to Location model
+  location Location? @relation(fields: [locationId], references: [id])
+
   @@index([categoryId])
+  @@index([locationId])
 }
 
 model Role {
@@ -213,4 +216,11 @@ model Category {
 
   @@unique([name, parentId]) // Ensures uniqueness of category names within the same level
   @@index([parentId])
+}
+
+// New Location model
+model Location {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  reports Report[]
 }

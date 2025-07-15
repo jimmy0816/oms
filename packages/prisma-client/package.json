@@ -5,7 +5,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "prisma": {
-    "seed": "node dist/prisma/seed.js"
+    "seed": "node ./dist/prisma/seed.js"
   },
   "scripts": {
     "build": "prisma generate --schema=./prisma/schema.prisma && tsc && copyfiles -u 1 prisma/schema.prisma dist/",
