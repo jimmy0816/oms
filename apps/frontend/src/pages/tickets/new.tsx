@@ -306,26 +306,6 @@ export default function NewTicket() {
                   onFilesChange={handleFilesChange}
                   uploadFunction={ticketUploadFunction} // <-- 新增這個 prop，傳入您已定義的上傳函式
                 />
-                {/* 顯示已上傳的檔案列表 (可選) */}
-                {uploadedFiles.length > 0 && (
-                  <div className="mt-2 text-sm text-gray-600">
-                    <p>已上傳檔案:</p>
-                    <ul className="list-disc list-inside">
-                      {uploadedFiles.map((file) => (
-                        <li key={file.id}>
-                          <a
-                            href={file.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline"
-                          >
-                            {file.name}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
 
               {/* 提交按鈕 */}

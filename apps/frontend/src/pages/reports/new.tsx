@@ -361,25 +361,6 @@ export default function NewReport() {
                   onFilesChange={handleFilesChange}
                   uploadFunction={reportUploadFunction}
                 />
-                {uploadedFiles.length > 0 && (
-                  <div className="mt-4">
-                    <p className="font-medium">已上傳的檔案：</p>
-                    <ul className="list-disc list-inside">
-                      {uploadedFiles.map((file, index) => (
-                        <li key={index}>
-                          <a
-                            href={file.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline"
-                          >
-                            {file.name}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
 
               {/* 提交按鈕 */}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 // Define FileInfo interface
 interface FileInfo {
@@ -7,6 +7,10 @@ interface FileInfo {
   url: string;
   type: 'image' | 'video';
   size?: number;
+}
+
+interface PreviewFile extends FileInfo {
+  objectURL: string; // Temporary URL for preview
 }
 
 interface FileUploaderProps {
@@ -24,7 +28,21 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 }) => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<PreviewFile[]>([]);
+
+  const handleRemoveFile = useCallback((fileId: string) => {
+    setUploadedFiles(prevFiles => {
+      const fileToRemove = prevFiles.find(file => file.id === fileId);
+      if (fileToRemove) {
+        URL.revokeObjectURL(fileToRemove.objectURL);
+      }
+      const updatedFiles = prevFiles.filter(file => file.id !== fileId);
+      setTimeout(() => {
+        onFilesChange(updatedFiles);
+      }, 0);
+      return updatedFiles;
+    });
+  }, [onFilesChange]);
 
   const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -34,11 +52,28 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     setError(null);
     onUploadStart?.();
 
+    const fileType = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : undefined;
+    if (!fileType) {
+      setError('不支援的檔案類型');
+      setUploading(false);
+      onUploadEnd?.();
+      return;
+    }
+
+    const objectURL = URL.createObjectURL(file);
+
     try {
       const newFile = await uploadFunction(file);
-      const updatedFiles = [...uploadedFiles, newFile];
+      const previewFile: PreviewFile = {
+        ...newFile,
+        objectURL,
+        type: fileType,
+      };
+      const updatedFiles = [...uploadedFiles, previewFile];
       setUploadedFiles(updatedFiles);
-      onFilesChange(updatedFiles);
+      setTimeout(() => {
+        onFilesChange(updatedFiles);
+      }, 0);
       
     } catch (err: any) {
       console.error(err);
@@ -48,6 +83,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       onUploadEnd?.();
     }
   }, [onFilesChange, onUploadStart, onUploadEnd, uploadedFiles, uploadFunction]);
+
+  useEffect(() => {
+    // Clean up object URLs when component unmounts or uploadedFiles change
+    return () => {
+      uploadedFiles.forEach(file => URL.revokeObjectURL(file.objectURL));
+    };
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center w-full">
@@ -89,6 +131,25 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       </label>
       {uploading && <p className="mt-2 text-sm text-blue-600">上傳中...</p>}
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+
+      <div className="mt-4 w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {uploadedFiles.map((file) => (
+          <div key={file.id} className="relative w-full h-32 border rounded-lg overflow-hidden group">
+            {file.type === 'image' ? (
+              <img src={file.objectURL} alt={file.name} className="w-full h-full object-cover" />
+            ) : (
+              <video src={file.objectURL} controls className="w-full h-full object-cover" />
+            )}
+            <button
+              onClick={() => handleRemoveFile(file.id)}
+              className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-100"
+              aria-label="移除檔案"
+            >
+              X
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
