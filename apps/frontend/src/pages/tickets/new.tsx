@@ -218,7 +218,6 @@ export default function NewTicket() {
                   rows={5}
                   {...register('description', {
                     required: '請輸入工單描述',
-                    minLength: { value: 10, message: '描述至少需要 10 個字元' },
                   })}
                   className="form-input"
                   placeholder="請詳細描述問題，包括發生時間、影響範圍、重現步驟等"
