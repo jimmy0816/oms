@@ -8,6 +8,7 @@ import {
   UserCircleIcon,
   MapPinIcon,
   ExclamationCircleIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import {
   reportService,
@@ -38,6 +39,7 @@ export default function ReportDetail() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [newCommentContent, setNewCommentContent] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
+  const [openTicketId, setOpenTicketId] = useState<string | null>(null);
 
   // 根據用戶角色設置權限
   const [userPermissions, setUserPermissions] = useState({
@@ -485,17 +487,34 @@ export default function ReportDetail() {
                   相關工單
                 </h3>
                 {report.tickets && report.tickets.length > 0 ? (
-                  <ul className="divide-y divide-gray-100 mb-4">
+                  <ul className="space-y-3">
                     {report.tickets.map((reportTicket) => (
-                      <li key={reportTicket.ticket.id} className="py-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <Link
-                            href={`/tickets/${reportTicket.ticket.id}`}
-                            className="text-blue-600 hover:underline font-semibold text-lg"
-                          >
-                            {reportTicket.ticket.title}
-                          </Link>
-                          <div className="flex items-center space-x-2">
+                      <li
+                        key={reportTicket.ticket.id}
+                        className="bg-white border rounded-lg shadow-sm"
+                      >
+                        <div
+                          className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 p-4 cursor-pointer"
+                          onClick={() =>
+                            setOpenTicketId(
+                              openTicketId === reportTicket.ticket.id
+                                ? null
+                                : reportTicket.ticket.id
+                            )
+                          }
+                        >
+                          <div>
+                            <Link
+                              href={`/tickets/${reportTicket.ticket.id}`}
+                              className="text-blue-600 hover:underline font-semibold text-lg"
+                            >
+                              {reportTicket.ticket.title}
+                            </Link>
+                            <p className="text-gray-500 text-sm">
+                              工單 #{reportTicket.ticket.id}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-4">
                             <span
                               className={`px-2 py-1 text-xs font-medium rounded-full ${getTicketStatusColor(
                                 reportTicket.ticket.status
@@ -512,70 +531,81 @@ export default function ReportDetail() {
                                 reportTicket.ticket.priority
                               )}
                             </span>
+                            <ChevronDownIcon
+                              className={`h-6 w-6 text-gray-400 transition-transform ${
+                                openTicketId === reportTicket.ticket.id
+                                  ? 'transform rotate-180'
+                                  : ''
+                              }`}
+                            />
                           </div>
                         </div>
-                        <p className="text-gray-500 text-sm mb-2">
-                          工單 #{reportTicket.ticket.id}
-                        </p>
-                        <div className="flow-root mt-4">
-                          <p className="text-sm font-medium text-gray-700 mb-2">工單歷程:</p>
-                          <ul className="-mb-8">
-                            {reportTicket.ticket.activityLogs &&
-                            reportTicket.ticket.activityLogs.length > 0 ? (
-                              reportTicket.ticket.activityLogs.map(
-                                (log: any, logIdx: number) => (
-                                  <li key={log.id}>
-                                    <div className="relative pb-8">
-                                      {logIdx !==
-                                      reportTicket.ticket.activityLogs.length -
-                                        1 ? (
-                                        <span
-                                          className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                                          aria-hidden="true"
-                                        ></span>
-                                      ) : null}
-                                      <div className="relative flex space-x-3">
-                                        <div>
-                                          <span
-                                            className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white bg-gray-100 text-gray-800`}
-                                          >
-                                            <ClockIcon className="h-5 w-5" />
-                                          </span>
-                                        </div>
-                                        <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                                          <div>
-                                            <p className="text-sm text-gray-700">
-                                              <span className="font-semibold text-gray-700">
-                                                {log.user?.name || '系統'}
+                        {openTicketId === reportTicket.ticket.id && (
+                          <div className="p-4 border-t border-gray-200">
+                            <div className="flow-root">
+                              <p className="text-sm font-medium text-gray-700 mb-2">
+                                工單歷程:
+                              </p>
+                              <ul className="-mb-8">
+                                {reportTicket.ticket.activityLogs &&
+                                reportTicket.ticket.activityLogs.length > 0 ? (
+                                  reportTicket.ticket.activityLogs.map(
+                                    (log: any, logIdx: number) => (
+                                      <li key={log.id}>
+                                        <div className="relative pb-8">
+                                          {logIdx !==
+                                          reportTicket.ticket.activityLogs
+                                            .length -
+                                            1 ? (
+                                            <span
+                                              className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
+                                              aria-hidden="true"
+                                            ></span>
+                                          ) : null}
+                                          <div className="relative flex space-x-3">
+                                            <div>
+                                              <span
+                                                className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white bg-gray-100 text-gray-800`}
+                                              >
+                                                <ClockIcon className="h-5 w-5" />
                                               </span>
-                                              <span className="mx-2 text-gray-400">
-                                                |
-                                              </span>
-                                              <span className="text-xs text-gray-400">
-                                                {formatDate(log.createdAt)}
-                                              </span>
-                                            </p>
-                                            {log.content && (
-                                              <div className="mt-1 text-sm text-gray-900 bg-gray-50 rounded px-3 py-2 border border-gray-100">
-                                                {log.content}
+                                            </div>
+                                            <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                              <div>
+                                                <p className="text-sm text-gray-700">
+                                                  <span className="font-semibold text-gray-700">
+                                                    {log.user?.name || '系統'}
+                                                  </span>
+                                                  <span className="mx-2 text-gray-400">
+                                                    |
+                                                  </span>
+                                                  <span className="text-xs text-gray-400">
+                                                    {formatDate(log.createdAt)}
+                                                  </span>
+                                                </p>
+                                                {log.content && (
+                                                  <div className="mt-1 text-sm text-gray-900 bg-gray-50 rounded px-3 py-2 border border-gray-100">
+                                                    {log.content}
+                                                  </div>
+                                                )}
                                               </div>
-                                            )}
+                                            </div>
                                           </div>
                                         </div>
-                                      </div>
+                                      </li>
+                                    )
+                                  )
+                                ) : (
+                                  <li>
+                                    <div className="text-gray-400 text-sm">
+                                      尚無工單歷程
                                     </div>
                                   </li>
-                                )
-                              )
-                            ) : (
-                              <li>
-                                <div className="text-gray-400 text-sm">
-                                  尚無工單歷程
-                                </div>
-                              </li>
-                            )}
-                          </ul>
-                        </div>
+                                )}
+                              </ul>
+                            </div>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -584,7 +614,7 @@ export default function ReportDetail() {
                 )}
                 <Link
                   href={`/tickets/new?reportId=${report.id}`}
-                  className="btn-primary w-full block text-center"
+                  className="btn-primary w-full block text-center mt-6"
                 >
                   新增工單
                 </Link>
