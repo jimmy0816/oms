@@ -378,11 +378,13 @@ export const ticketService = {
    */
   async claimTicket(ticketId: string, userId: string): Promise<Ticket> {
     try {
-      const response = await fetch(`${API_URL}/api/tickets/${ticketId}`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ action: 'claim' }),
-      });
+      const response = await fetch(`${API_URL}/api/tickets/${ticketId}`,
+        {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ action: 'claim' }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -405,6 +407,44 @@ export const ticketService = {
       throw new Error('認領工單失敗');
     } catch (error) {
       console.error('認領工單失敗:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 放棄工單
+   */
+  async abandonTicket(ticketId: string, userId: string): Promise<Ticket> {
+    try {
+      const response = await fetch(`${API_URL}/api/tickets/${ticketId}`,
+        {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ action: 'abandon' }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '放棄工單失敗');
+      }
+
+      const result = await response.json();
+
+      // 處理日期格式
+      if (result.success && result.data) {
+        await this.addActivityLog(ticketId, '放棄工單', userId);
+
+        return {
+          ...result.data,
+          createdAt: new Date(result.data.createdAt),
+          updatedAt: new Date(result.data.updatedAt),
+        };
+      }
+
+      throw new Error('放棄工單失敗');
+    } catch (error) {
+      console.error('放棄工單失敗:', error);
       throw error;
     }
   },

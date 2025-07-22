@@ -91,6 +91,22 @@ export default function TicketDetail() {
     }
   };
 
+  const handleAbandon = async () => {
+    if (!ticket?.id) return;
+
+    try {
+      await ticketService.abandonTicket(ticket.id, user?.id.toString());
+
+      const updatedTicket = await ticketService.getTicketById(ticket.id);
+
+      setTicket(updatedTicket);
+      alert('放棄成功！');
+    } catch (error) {
+      console.error('Error abandoning ticket:', error);
+      alert('放棄失敗，請稍後再試');
+    }
+  };
+
   const updateTicketStatus = async (newStatus: string, log: string) => {
     if (!ticket?.id) return;
 
@@ -219,7 +235,7 @@ export default function TicketDetail() {
               {(ticket.status === TicketStatus.IN_PROGRESS ||
                 ticket.status === TicketStatus.VERIFICATION_FAILED) &&
                 user &&
-                user.permissions?.includes(Permission.EDIT_TICKETS) &&
+                user.permissions?.includes(Permission.COMPLETE_TICKETS) &&
                 user.id === ticket.assigneeId && (
                   <div className="flex gap-2">
                     <button
@@ -240,6 +256,12 @@ export default function TicketDetail() {
                       }
                     >
                       無法完成
+                    </button>
+                    <button
+                      className="btn-danger"
+                      onClick={handleAbandon}
+                    >
+                      放棄接單
                     </button>
                   </div>
                 )}

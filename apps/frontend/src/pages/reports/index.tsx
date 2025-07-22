@@ -372,7 +372,10 @@ export default function Reports() {
                           </span>
                         </td>
                         <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
-                          {getCategoryPath(report.categoryId, categories)}
+                          {getCategoryPath(report.categoryId, categories)
+                            ?.split(' > ')
+                            .slice(1)
+                            .join(' > ')}
                         </td>
                         <td className="px-2 py-3 whitespace-nowrap">
                           <span

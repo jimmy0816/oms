@@ -196,10 +196,10 @@ async function createReport(
 
   const creatorId = req.user.id;
 
-  if (!title || !description) {
+  if (!title) {
     return res.status(400).json({
       success: false,
-      error: 'Title and description are required',
+      error: 'Title is required',
     });
   }
 

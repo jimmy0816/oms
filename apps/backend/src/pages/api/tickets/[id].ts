@@ -279,44 +279,77 @@ async function claimTicket(
     return res.status(401).json({ success: false, error: '未登入' });
   }
   const { action } = req.body;
-  if (action !== 'claim') {
-    return res.status(400).json({ success: false, error: '不支援的操作' });
-  }
+
   // 查詢工單
   const ticket = await prisma.ticket.findUnique({
     where: { id: id as string },
   });
+
   if (!ticket) {
     return res.status(404).json({ success: false, error: '工單不存在' });
   }
-  if (ticket.assigneeId) {
-    return res.status(400).json({ success: false, error: '工單已被認領' });
-  }
-  if (ticket.status !== 'PENDING') {
-    return res.status(400).json({ success: false, error: '工單狀態非待接單' });
-  }
-  // 權限判斷
-  const hasClaimPermission = user.permissions?.includes('claim_tickets');
-  if (!hasClaimPermission) {
-    return res.status(403).json({ success: false, error: '沒有認領工單權限' });
-  }
-  // 認領
-  const updated = await prisma.ticket.update({
-    where: { id: id as string },
-    data: {
-      assigneeId: user.id,
-      status: 'IN_PROGRESS',
-    },
-  });
 
-  // Create notification for claiming the ticket
-  await notificationService.create({
-    title: '工單已認領',
-    message: `您已認領並被指派到工單「${updated.title}」`,
-    userId: user.id,
-    relatedId: updated.id,
-    relatedType: 'TICKET',
-  });
+  if (action === 'claim') {
+    if (ticket.assigneeId) {
+      return res.status(400).json({ success: false, error: '工單已被認領' });
+    }
+    if (ticket.status !== 'PENDING') {
+      return res
+        .status(400)
+        .json({ success: false, error: '工單狀態非待接單' });
+    }
+    // 權限判斷
+    const hasClaimPermission = user.permissions?.includes('claim_tickets');
+    if (!hasClaimPermission) {
+      return res
+        .status(403)
+        .json({ success: false, error: '沒有認領工單權限' });
+    }
+    // 認領
+    const updated = await prisma.ticket.update({
+      where: { id: id as string },
+      data: {
+        assigneeId: user.id,
+        status: 'IN_PROGRESS',
+      },
+    });
 
-  return res.status(200).json({ success: true, data: updated });
+    // Create notification for claiming the ticket
+    await notificationService.create({
+      title: '工單已認領',
+      message: `您已認領並被指派到工單「${updated.title}」`,
+      userId: user.id,
+      relatedId: updated.id,
+      relatedType: 'TICKET',
+    });
+
+    return res.status(200).json({ success: true, data: updated });
+  } else if (action === 'abandon') {
+    if (ticket.assigneeId !== user.id) {
+      return res
+        .status(403)
+        .json({ success: false, error: '您不是此工單的處理人' });
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: id as string },
+      data: {
+        assigneeId: null,
+        status: 'PENDING',
+      },
+    });
+
+    // Create notification for abandoning the ticket
+    await notificationService.create({
+      title: '工單已被放棄',
+      message: `您建立的工單「${updated.title}」已被處理人員放棄，請重新指派或處理。`,
+      userId: ticket.creatorId,
+      relatedId: updated.id,
+      relatedType: 'TICKET',
+    });
+
+    return res.status(200).json({ success: true, data: updated });
+  } else {
+    return res.status(400).json({ success: false, error: '不支援的操作' });
+  }
 }

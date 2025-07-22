@@ -36,7 +36,6 @@ interface CreateReportRequest {
   description: string;
   priority: string;
   categoryId: string;
-  categoryPath: string;
   locationId?: number;
   attachments?: FileInfo[];
   ticketIds?: string[];
@@ -89,9 +88,8 @@ export default function NewReport() {
   React.useEffect(() => {
     if (selectedCategoryId) {
       setValue('categoryId', selectedCategoryId);
-      setValue('categoryPath', selectedCategoryPath);
     }
-  }, [selectedCategoryId, selectedCategoryPath, setValue]);
+  }, [selectedCategoryId, setValue]);
 
   const handleFilesChange = (files: FileInfo[]) => {
     setUploadedFiles(files);
@@ -219,58 +217,6 @@ export default function NewReport() {
         <div className="bg-white shadow-sm rounded-lg overflow-hidden">
           <div className="p-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* 通報標題 */}
-              <div>
-                <label
-                  htmlFor="title"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  通報標題 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="title"
-                  type="text"
-                  {...register('title', {
-                    required: '請輸入通報標題',
-                    maxLength: {
-                      value: 100,
-                      message: '標題不能超過 100 個字元',
-                    },
-                  })}
-                  className="form-input"
-                  placeholder="請簡短描述問題"
-                />
-                {errors.title && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.title.message}
-                  </p>
-                )}
-              </div>
-
-              {/* 通報描述 */}
-              <div>
-                <label
-                  htmlFor="description"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  通報描述 <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="description"
-                  rows={5}
-                  {...register('description', {
-                    required: '請輸入通報描述',
-                  })}
-                  className="form-input"
-                  placeholder="請詳細描述問題，包括發生時間、影響範圍、重現步驟等"
-                />
-                {errors.description && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.description.message}
-                  </p>
-                )}
-              </div>
-
               {/* 通報類別 - 使用三層級分類選擇器 */}
               <div>
                 <input
@@ -288,6 +234,10 @@ export default function NewReport() {
                   onCategorySelect={(categoryId, categoryPath) => {
                     setSelectedCategoryId(categoryId);
                     setSelectedCategoryPath(categoryPath);
+                    if (categoryPath) {
+                      const mainCategory = categoryPath.split(' > ')[0];
+                      setValue('title', mainCategory);
+                    }
                   }}
                   selectedCategoryId={selectedCategoryId}
                 />
@@ -305,6 +255,19 @@ export default function NewReport() {
                   </div>
                 )}
               </div>
+
+              {/* 通報標題 (Hidden) */}
+              <input
+                id="title"
+                type="hidden"
+                {...register('title', {
+                  required: '請輸入通報標題',
+                  maxLength: {
+                    value: 100,
+                    message: '標題不能超過 100 個字元',
+                  },
+                })}
+              />
 
               {/* 優先級 */}
               <div>
@@ -347,6 +310,28 @@ export default function NewReport() {
                 {errors.locationId && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.locationId.message}
+                  </p>
+                )}
+              </div>
+
+              {/* 通報描述 */}
+              <div>
+                <label
+                  htmlFor="description"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  通報描述
+                </label>
+                <textarea
+                  id="description"
+                  rows={5}
+                  {...register('description')}
+                  className="form-input"
+                  placeholder="請詳細描述問題，包括發生時間、影響範圍、重現步驟等"
+                />
+                {errors.description && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.description.message}
                   </p>
                 )}
               </div>
