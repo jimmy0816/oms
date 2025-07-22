@@ -17,6 +17,12 @@ import {
   getStatusIcon,
   getPriorityColor,
 } from '@/services/reportService';
+import {
+  getStatusText as getTicketStatusText,
+  getPriorityText as getTicketPriorityText,
+  getStatusColor as getTicketStatusColor,
+  getPriorityColor as getTicketPriorityColor,
+} from '@/services/ticketService';
 import { ReportStatus, ReportPriority, Category } from 'shared-types';
 import { useAuth } from '@/contexts/AuthContext';
 import { categoryService, getCategoryPath } from '@/services/categoryService';
@@ -253,7 +259,7 @@ export default function ReportDetail() {
                       {getStatusName(report.status)}
                     </span>
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 ${getPriorityColor(
                         report.priority
                       )}`}
                     >
@@ -340,12 +346,14 @@ export default function ReportDetail() {
 
               {/* 通報詳細資訊 */}
               <div className="mt-6 space-y-4">
+                {report.description && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">描述</h3>
                   <p className="mt-1 text-gray-900 whitespace-pre-line">
                     {report.description}
                   </p>
                 </div>
+              )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                   <div>
@@ -471,66 +479,115 @@ export default function ReportDetail() {
                 )}
               </div>
 
-              {/* 通報歷程（明顯區隔卡片） */}
+              {/* 相關工單（主內容區） */}
               <div className="p-6 mt-6 bg-white rounded-lg shadow-lg border border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900 mb-4 items-center">
-                  處理歷程
+                  相關工單
                 </h3>
-                <div className="flow-root">
-                  <ul className="-mb-8">
-                    {report.activityLogs && report.activityLogs.length > 0 ? (
-                      report.activityLogs.map(
-                        (event: any, eventIdx: number) => (
-                          <li key={event.id}>
-                            <div className="relative pb-8">
-                              {eventIdx !== report.activityLogs.length - 1 ? (
-                                <span
-                                  className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                                  aria-hidden="true"
-                                ></span>
-                              ) : null}
-                              <div className="relative flex space-x-3">
-                                <div>
-                                  <span
-                                    className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white bg-blue-100 text-blue-800`}
-                                  >
-                                    <ClockIcon className="h-5 w-5" />
-                                  </span>
-                                </div>
-                                <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                                  <div>
-                                    <p className="text-sm text-gray-700">
-                                      <span className="font-semibold text-blue-700">
-                                        {event.user?.name || '系統'}
-                                      </span>
-                                      <span className="mx-2 text-gray-400">
-                                        |
-                                      </span>
-                                      <span className="text-xs text-gray-400">
-                                        {formatDate(event.createdAt)}
-                                      </span>
-                                    </p>
-                                    {event.content && (
-                                      <div className="mt-1 text-sm text-gray-900 bg-gray-50 rounded px-3 py-2 border border-gray-100">
-                                        {event.content}
+                {report.tickets && report.tickets.length > 0 ? (
+                  <ul className="divide-y divide-gray-100 mb-4">
+                    {report.tickets.map((reportTicket) => (
+                      <li key={reportTicket.ticket.id} className="py-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <Link
+                            href={`/tickets/${reportTicket.ticket.id}`}
+                            className="text-blue-600 hover:underline font-semibold text-lg"
+                          >
+                            {reportTicket.ticket.title}
+                          </Link>
+                          <div className="flex items-center space-x-2">
+                            <span
+                              className={`px-2 py-1 text-xs font-medium rounded-full ${getTicketStatusColor(
+                                reportTicket.ticket.status
+                              )}`}
+                            >
+                              {getTicketStatusText(reportTicket.ticket.status)}
+                            </span>
+                            <span
+                              className={`px-2 py-1 text-xs font-medium rounded-full ${getTicketPriorityColor(
+                                reportTicket.ticket.priority
+                              )}`}
+                            >
+                              {getTicketPriorityText(
+                                reportTicket.ticket.priority
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-gray-500 text-sm mb-2">
+                          工單 #{reportTicket.ticket.id}
+                        </p>
+                        <div className="flow-root mt-4">
+                          <p className="text-sm font-medium text-gray-700 mb-2">工單歷程:</p>
+                          <ul className="-mb-8">
+                            {reportTicket.ticket.activityLogs &&
+                            reportTicket.ticket.activityLogs.length > 0 ? (
+                              reportTicket.ticket.activityLogs.map(
+                                (log: any, logIdx: number) => (
+                                  <li key={log.id}>
+                                    <div className="relative pb-8">
+                                      {logIdx !==
+                                      reportTicket.ticket.activityLogs.length -
+                                        1 ? (
+                                        <span
+                                          className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
+                                          aria-hidden="true"
+                                        ></span>
+                                      ) : null}
+                                      <div className="relative flex space-x-3">
+                                        <div>
+                                          <span
+                                            className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white bg-gray-100 text-gray-800`}
+                                          >
+                                            <ClockIcon className="h-5 w-5" />
+                                          </span>
+                                        </div>
+                                        <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                          <div>
+                                            <p className="text-sm text-gray-700">
+                                              <span className="font-semibold text-gray-700">
+                                                {log.user?.name || '系統'}
+                                              </span>
+                                              <span className="mx-2 text-gray-400">
+                                                |
+                                              </span>
+                                              <span className="text-xs text-gray-400">
+                                                {formatDate(log.createdAt)}
+                                              </span>
+                                            </p>
+                                            {log.content && (
+                                              <div className="mt-1 text-sm text-gray-900 bg-gray-50 rounded px-3 py-2 border border-gray-100">
+                                                {log.content}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
                                       </div>
-                                    )}
-                                  </div>
+                                    </div>
+                                  </li>
+                                )
+                              )
+                            ) : (
+                              <li>
+                                <div className="text-gray-400 text-sm">
+                                  尚無工單歷程
                                 </div>
-                              </div>
-                            </div>
-                          </li>
-                        )
-                      )
-                    ) : (
-                      <li>
-                        <div className="text-gray-400 text-sm">
-                          尚無處理歷程
+                              </li>
+                            )}
+                          </ul>
                         </div>
                       </li>
-                    )}
+                    ))}
                   </ul>
-                </div>
+                ) : (
+                  <div className="text-gray-500 mb-4">目前尚無相關工單</div>
+                )}
+                <Link
+                  href={`/tickets/new?reportId=${report.id}`}
+                  className="btn-primary w-full block text-center"
+                >
+                  新增工單
+                </Link>
               </div>
 
               {/* 留言功能區塊 */}
@@ -590,45 +647,62 @@ export default function ReportDetail() {
               </div>
             </div>
 
-            {/* 右側相關工單區塊 */}
+            {/* 右側處理歷程區塊 */}
             <div className="w-full lg:w-80 flex-shrink-0 mt-8 lg:mt-0">
               <div className="p-6 bg-white rounded-lg shadow-sm">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  相關工單
+                  處理歷程
                 </h3>
-                {report.tickets && report.tickets.length > 0 ? (
-                  <ul className="divide-y divide-gray-100 mb-4">
-                    {report.tickets.map((reportTicket) => (
-                      <li
-                        key={reportTicket.ticket.id}
-                        className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-blue-700 text-sm break-words">
-                            {reportTicket.ticket.title}
-                          </p>
-                          <p className="text-gray-500 text-xs mt-0.5 break-all">
-                            工單 #{reportTicket.ticket.id}
-                          </p>
+                <div className="flow-root">
+                  <ul className="-mb-8">
+                    {report.activityLogs && report.activityLogs.length > 0 ? (
+                      report.activityLogs.map(
+                        (event: any, eventIdx: number) => (
+                          <li key={event.id}>
+                            <div className="relative pb-8">
+                              {eventIdx !== report.activityLogs.length - 1 ? (
+                                <span
+                                  className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
+                                  aria-hidden="true"
+                                ></span>
+                              ) : null}
+                              <div className="relative flex space-x-3">
+                                <div>
+                                  <span
+                                    className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white bg-blue-100 text-blue-800`}
+                                  >
+                                    <ClockIcon className="h-5 w-5" />
+                                  </span>
+                                </div>
+                                <div className="min-w-0 flex-1 pt-1.5">
+                                  <div className="flex flex-col">
+                                    <p className="text-sm text-gray-700 font-semibold">
+                                      {event.user?.name || '系統'}
+                                    </p>
+                                    <p className="text-xs text-gray-400">
+                                      {formatDate(event.createdAt)}
+                                    </p>
+                                  </div>
+                                  {event.content && (
+                                    <div className="mt-1 text-sm text-gray-900 bg-gray-50 rounded px-3 py-2 border border-gray-100">
+                                      {event.content}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </li>
+                        )
+                      )
+                    ) : (
+                      <li>
+                        <div className="text-gray-400 text-sm">
+                          尚無處理歷程
                         </div>
-                        <Link
-                          href={`/tickets/${reportTicket.ticket.id}`}
-                          className="text-blue-600 hover:underline text-sm mt-2 sm:mt-0 sm:ml-4 flex-shrink-0"
-                        >
-                          查看
-                        </Link>
                       </li>
-                    ))}
+                    )}
                   </ul>
-                ) : (
-                  <div className="text-gray-500 mb-4">目前尚無相關工單</div>
-                )}
-                <Link
-                  href={`/tickets/new?reportId=${report.id}`}
-                  className="btn-primary w-full block text-center"
-                >
-                  新增工單
-                </Link>
+                </div>
               </div>
             </div>
           </div>

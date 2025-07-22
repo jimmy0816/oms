@@ -156,7 +156,28 @@ async function getReportById(
           },
         },
       },
-      tickets: { include: { ticket: true } },
+      tickets: {
+        include: {
+          ticket: {
+            include: {
+              assignee: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+              creator: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -203,12 +224,37 @@ async function getReportById(
     orderBy: { createdAt: 'asc' },
   });
 
+  // Manually fetch activity logs for each ticket
+  if (report.tickets) {
+    for (const reportTicket of report.tickets) {
+      const ticketLogs = await prisma.activityLog.findMany({
+        where: {
+          parentId: reportTicket.ticket.id,
+          parentType: 'TICKET',
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+      (reportTicket.ticket as any).activityLogs = ticketLogs;
+    }
+  }
+
   // Manually attach attachments and activityLogs to the report object
   const reportWithRelations = {
     ...report,
     attachments,
     activityLogs,
   };
+
+  // console.log('report', reportWithRelations);
 
   return res.status(200).json({
     success: true,

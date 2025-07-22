@@ -266,6 +266,8 @@ export const reportService = {
 
       const result = await response.json();
 
+      console.log('result.data', result.data);
+
       // 處理日期格式
       if (result.success && result.data) {
         const report = {
@@ -289,6 +291,17 @@ export const reportService = {
             createdAt: new Date(activityLog.createdAt),
             updatedAt: new Date(activityLog.updatedAt),
           }));
+        }
+
+        if (report.tickets) {
+          for (const reportTickets of report.tickets) {
+            reportTickets.ticket.activityLogs =
+              reportTickets.ticket.activityLogs.map((activityLog: any) => ({
+                ...activityLog,
+                createdAt: new Date(activityLog.createdAt),
+                updatedAt: new Date(activityLog.updatedAt),
+              }));
+          }
         }
 
         console.log(report);
