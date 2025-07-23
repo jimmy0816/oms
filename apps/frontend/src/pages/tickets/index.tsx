@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import {
   FunnelIcon,
   MagnifyingGlassIcon,
   PlusIcon,
+  PencilIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import {
   TicketPriority,
@@ -32,63 +34,79 @@ export default function TicketsPage() {
     search: '',
   });
 
+  const handleDelete = async (ticketId: string, ticketTitle: string) => {
+    if (
+      window.confirm(`您確定要刪除工單「${ticketTitle}」嗎？此操作無法復原。`)
+    ) {
+      try {
+        await ticketService.deleteTicket(ticketId);
+        alert('工單已成功刪除！');
+        loadTickets();
+      } catch (error) {
+        console.error('刪除工單失敗:', error);
+        alert('刪除工單失敗，請稍後再試。');
+      }
+    }
+  };
+
   // 處理頁面變更
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
 
   // 從 API 加載工單數據
+  const loadTickets = useCallback(async () => {
+    try {
+      setLoading(true);
+      // 構建過濾條件
+      const apiFilters: Record<string, string> = {};
+      if (filters.status) apiFilters.status = filters.status;
+      if (filters.priority) apiFilters.priority = filters.priority;
+      if (filters.search) apiFilters.search = filters.search;
+
+      // 調用 API 獲取工單
+      const ticketsData = await ticketService.getAllTickets(
+        currentPage,
+        pageSize,
+        apiFilters
+      );
+
+      const ticketsWithDetails = ticketsData.items.map((ticket) => ({
+        ...ticket,
+        creator: {
+          id: ticket.creatorId,
+          name: `${ticket.creator.name}`,
+          email: `${ticket.creator.email}`,
+          role: 'ADMIN' as UserRole,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        assignee: ticket.assigneeId
+          ? {
+              id: ticket.assigneeId,
+              name: `${ticket.assignee.name}`,
+              email: `${ticket.assignee.email}`,
+              role: 'STAFF' as UserRole,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            }
+          : undefined,
+        comments: [],
+      }));
+
+      setTickets(ticketsWithDetails);
+      setTotalTickets(ticketsData.total);
+    } catch (error) {
+      console.error('加載工單數據時出錯:', error);
+      setTickets([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, pageSize, filters.status, filters.priority, filters.search]);
+
   useEffect(() => {
-    const loadTickets = async () => {
-      try {
-        setLoading(true);
-        // 構建過濾條件
-        const apiFilters: Record<string, string> = {};
-        if (filters.status) apiFilters.status = filters.status;
-        if (filters.priority) apiFilters.priority = filters.priority;
-
-        // 調用 API 獲取工單
-        const ticketsData = await ticketService.getAllTickets(
-          currentPage,
-          pageSize,
-          apiFilters
-        );
-
-        const ticketsWithDetails = ticketsData.items.map((ticket) => ({
-          ...ticket,
-          creator: {
-            id: ticket.creatorId,
-            name: `${ticket.creator.name}`,
-            email: `${ticket.creator.email}`,
-            role: 'ADMIN' as UserRole,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          assignee: ticket.assigneeId
-            ? {
-                id: ticket.assigneeId,
-                name: `${ticket.assignee.name}`,
-                email: `${ticket.assignee.email}`,
-                role: 'STAFF' as UserRole,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              }
-            : undefined,
-          comments: [],
-        }));
-
-        setTickets(ticketsWithDetails);
-        setTotalTickets(ticketsData.total);
-      } catch (error) {
-        console.error('加載工單數據時出錯:', error);
-        setTickets([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadTickets();
-  }, [currentPage, pageSize, filters.status, filters.priority]);
+  }, [loadTickets]);
 
   // 格式化日期
   const formatDate = (date: Date) => {
@@ -101,14 +119,20 @@ export default function TicketsPage() {
     });
   };
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
-  };
+  const handleFilterChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const { name, value } = e.target;
+      setFilters((prev) => ({ ...prev, [name]: value }));
+    },
+    []
+  );
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters((prev) => ({ ...prev, search: e.target.value }));
-  };
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFilters((prev) => ({ ...prev, search: e.target.value }));
+    },
+    []
+  );
 
   const filteredTickets = tickets.filter((ticket) => {
     if (filters.status && ticket.status !== filters.status) return false;
@@ -224,7 +248,7 @@ export default function TicketsPage() {
                           <p className="text-sm font-medium text-blue-600 truncate">
                             {ticket.title}
                           </p>
-                          <div className="ml-2 flex-shrink-0 flex">
+                          <div className="ml-2 flex-shrink-0 flex items-center space-x-2">
                             <p
                               className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
                                 ticket.status
@@ -232,6 +256,25 @@ export default function TicketsPage() {
                             >
                               {getStatusText(ticket.status)}
                             </p>
+                            <Link
+                              href={`/tickets/${ticket.id}/edit`}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="編輯"
+                              onClick={(e) => e.stopPropagation()} // 阻止 Link 的默認行為，避免觸發父級 Link
+                            >
+                              <PencilIcon className="h-5 w-5" />
+                            </Link>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation(); // 阻止按鈕的默認行為，避免觸發父級 Link
+                                e.preventDefault();
+                                handleDelete(ticket.id, ticket.title);
+                              }}
+                              className="text-red-600 hover:text-red-900"
+                              title="刪除"
+                            >
+                              <TrashIcon className="h-5 w-5" />
+                            </button>
                           </div>
                         </div>
                         <div className="mt-2 sm:flex sm:justify-between">

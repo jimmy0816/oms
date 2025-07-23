@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
-import { ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
-import { TicketPriority, UserRole } from 'shared-types';
+import Link from 'next/link';
+import {
+  ArrowLeftIcon,
+  ExclamationCircleIcon,
+} from '@heroicons/react/24/outline';
+import { Attachments, TicketPriority, FileInfo } from 'shared-types';
 import FileUploader from '@/components/FileUploader';
 import { ticketService } from '@/services/ticketService';
 import { roleService, getRoleName } from '@/services/roleService';
@@ -25,28 +29,22 @@ interface TicketFormData {
   reportIds?: string[]; // 確保 reportIds 是 string[] 類型，且是可選的
 }
 
-// 定義檔案資訊介面
-interface FileInfo {
-  id: string;
-  name: string;
-  url: string;
-  type: 'image' | 'video';
-  size?: number;
-}
-
-export default function NewTicket() {
+export default function EditTicket() {
   const router = useRouter();
-  const { query } = router;
+  const { id } = router.query;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
+  const [ticketData, setTicketData] = useState<any | null>(null);
+  const [loadingTicket, setLoadingTicket] = useState(true);
 
   const {
     register,
     handleSubmit,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<TicketFormData>();
 
@@ -54,11 +52,35 @@ export default function NewTicket() {
     roleService.getAllRoles().then((roles) => {
       setRoles(roles);
     });
-
-    if (query.reportId && typeof query.reportId === 'string') {
-      setSelectedReportIds([query.reportId]);
-    }
   }, []);
+
+  // Fetch existing ticket data
+  const fetchTicket = useCallback(async () => {
+    if (!id) return;
+    setLoadingTicket(true);
+    try {
+      const data = await ticketService.getTicketById(id as string);
+      setTicketData(data);
+      reset({
+        title: data.title,
+        description: data.description,
+        priority: data.priority as TicketPriority,
+        roleId: data.roleId || undefined,
+        reportIds: data.reports?.map((r) => r.reportId) || [],
+      });
+      setSelectedReportIds(data.reports?.map((r) => r.reportId) || []);
+      setUploadedFiles(data.attachments || []);
+    } catch (err) {
+      console.error('Error loading ticket:', err);
+      setError('無法載入工單資料');
+    } finally {
+      setLoadingTicket(false);
+    }
+  }, [id, reset]);
+
+  useEffect(() => {
+    fetchTicket();
+  }, [fetchTicket]);
 
   // 處理檔案變更
   const handleFilesChange = (files: FileInfo[]) => {
@@ -97,9 +119,14 @@ export default function NewTicket() {
     setIsSubmitting(true);
     setError(null);
 
+    if (!id) {
+      setError('工單 ID 不存在。');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      // 準備要發送到後端 API 的數據
-      const ticketData = {
+      const ticketDataToUpdate = {
         title: data.title,
         description: data.description,
         priority: data.priority,
@@ -108,25 +135,43 @@ export default function NewTicket() {
         reportIds: selectedReportIds,
       };
 
-      // 調用 ticketService 將數據發送到後端 API
-      const createdTicket = await ticketService.createTicket(ticketData);
+      const updatedTicket = await ticketService.updateTicket(
+        id as string,
+        ticketDataToUpdate
+      );
 
-      // 顯示成功訊息
-      alert('工單已成功建立！');
-
-      // 導向到工單列表頁面
-      router.push('/tickets');
+      alert('工單已成功更新！');
+      router.push(`/tickets/${id}`);
     } catch (err: any) {
-      setError(err.message || '建立工單時發生錯誤，請稍後再試。');
+      setError(err.message || '更新工單時發生錯誤，請稍後再試。');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (loadingTicket) {
+    return <div className="text-center py-12">載入中...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <ExclamationCircleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+        <h2 className="text-xl font-medium text-gray-900">發生錯誤</h2>
+        <p className="mt-2 text-gray-600">{error}</p>
+        <div className="mt-6">
+          <Link href={`/tickets/${id}`} className="btn-secondary">
+            返回詳情頁
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <Head>
-        <title>建立工單 | OMS 原型</title>
+        <title>編輯工單 | OMS 原型</title>
       </Head>
 
       <div className="space-y-6">
@@ -139,7 +184,9 @@ export default function NewTicket() {
             >
               <ArrowLeftIcon className="h-5 w-5 text-gray-500" />
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">建立新工單</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              編輯工單 - #{id} {ticketData?.title}
+            </h1>
           </div>
         </div>
 
@@ -298,6 +345,7 @@ export default function NewTicket() {
                 <FileUploader
                   onFilesChange={handleFilesChange}
                   uploadFunction={ticketUploadFunction} // <-- 新增這個 prop，傳入您已定義的上傳函式
+                  initialFiles={uploadedFiles} // <-- 新增此行
                 />
               </div>
 
@@ -341,10 +389,7 @@ export default function NewTicket() {
                       處理中...
                     </>
                   ) : (
-                    <>
-                      <DocumentTextIcon className="h-4 w-4 mr-2" />
-                      建立工單
-                    </>
+                    '儲存變更'
                   )}
                 </button>
               </div>

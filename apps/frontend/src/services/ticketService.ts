@@ -272,6 +272,8 @@ export const ticketService = {
         headers: getAuthHeaders(),
       });
 
+      console.log('delete ticket', response);
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || '刪除工單失敗');
@@ -378,13 +380,11 @@ export const ticketService = {
    */
   async claimTicket(ticketId: string, userId: string): Promise<Ticket> {
     try {
-      const response = await fetch(`${API_URL}/api/tickets/${ticketId}`,
-        {
-          method: 'PATCH',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ action: 'claim' }),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/tickets/${ticketId}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ action: 'claim' }),
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -416,13 +416,11 @@ export const ticketService = {
    */
   async abandonTicket(ticketId: string, userId: string): Promise<Ticket> {
     try {
-      const response = await fetch(`${API_URL}/api/tickets/${ticketId}`,
-        {
-          method: 'PATCH',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ action: 'abandon' }),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/tickets/${ticketId}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ action: 'abandon' }),
+      });
 
       if (!response.ok) {
         const errorData = await response.json();

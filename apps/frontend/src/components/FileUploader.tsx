@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Attachment } from 'shared-types';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { Attachments } from 'shared-types';
 
 // Define FileInfo interface
 interface FileInfo {
@@ -19,7 +19,7 @@ interface FileUploaderProps {
   uploadFunction: (file: File) => Promise<FileInfo>;
   onUploadStart?: () => void;
   onUploadEnd?: () => void;
-  initialFiles?: Attachment[]; // Add initialFiles prop
+  initialFiles?: Attachments[]; // Add initialFiles prop
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({
@@ -32,79 +32,93 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<PreviewFile[]>([]);
+  const initialFilesRef = useRef<Attachments[]>([]);
 
   // Initialize uploadedFiles with initialFiles
   useEffect(() => {
-    const initialPreviewFiles: PreviewFile[] = initialFiles.map((file) => ({
-      id: file.id,
-      filename: file.filename,
-      url: file.url,
-      fileType: file.fileType,
-      fileSize: file.fileSize,
-      objectURL: file.url, // For existing files, URL is already valid
-    }));
-    setUploadedFiles(initialPreviewFiles);
+    // Deep compare initialFiles to prevent infinite loop
+    if (
+      JSON.stringify(initialFiles) !== JSON.stringify(initialFilesRef.current)
+    ) {
+      const initialPreviewFiles: PreviewFile[] = initialFiles.map((file) => ({
+        id: file.id,
+        filename: file.filename,
+        url: file.url,
+        fileType: file.fileType,
+        fileSize: file.fileSize,
+        objectURL: file.url, // For existing files, URL is already valid
+      }));
+      setUploadedFiles(initialPreviewFiles);
+      initialFilesRef.current = initialFiles; // Update ref
+    }
   }, [initialFiles]);
 
-  const handleRemoveFile = useCallback((fileId: string) => {
-    setUploadedFiles((prevFiles) => {
-      const fileToRemove = prevFiles.find((file) => file.id === fileId);
-      if (fileToRemove && fileToRemove.url.startsWith('blob:')) {
-        // Only revoke object URL if it's a temporary blob URL
-        URL.revokeObjectURL(fileToRemove.objectURL);
+  const handleRemoveFile = useCallback(
+    (fileId: string) => {
+      setUploadedFiles((prevFiles) => {
+        const fileToRemove = prevFiles.find((file) => file.id === fileId);
+        if (fileToRemove && fileToRemove.url.startsWith('blob:')) {
+          // Only revoke object URL if it's a temporary blob URL
+          URL.revokeObjectURL(fileToRemove.objectURL);
+        }
+        const updatedFiles = prevFiles.filter((file) => file.id !== fileId);
+        onFilesChange(updatedFiles);
+        return updatedFiles;
+      });
+    },
+    [onFilesChange]
+  );
+
+  const handleFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      setUploading(true);
+      setError(null);
+      onUploadStart?.();
+
+      const fileType = file.type.startsWith('image/')
+        ? 'image'
+        : file.type.startsWith('video/')
+        ? 'video'
+        : undefined;
+      if (!fileType) {
+        setError('不支援的檔案類型');
+        setUploading(false);
+        onUploadEnd?.();
+        return;
       }
-      const updatedFiles = prevFiles.filter((file) => file.id !== fileId);
-      setTimeout(() => {
-        onFilesChange(updatedFiles);
-      }, 0);
-      return updatedFiles;
-    });
-  }, [onFilesChange]);
 
-  const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+      const objectURL = URL.createObjectURL(file);
 
-    setUploading(true);
-    setError(null);
-    onUploadStart?.();
-
-    const fileType = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : undefined;
-    if (!fileType) {
-      setError('不支援的檔案類型');
-      setUploading(false);
-      onUploadEnd?.();
-      return;
-    }
-
-    const objectURL = URL.createObjectURL(file);
-
-    try {
-      const newFile = await uploadFunction(file);
-      const previewFile: PreviewFile = {
-        ...newFile,
-        objectURL,
-        fileType: file.type, // Use original file.type for more accuracy
-      };
-      const updatedFiles = [...uploadedFiles, previewFile];
-      setUploadedFiles(updatedFiles);
-      setTimeout(() => {
-        onFilesChange(updatedFiles);
-      }, 0);
-
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || '上傳時發生錯誤');
-    } finally {
-      setUploading(false);
-      onUploadEnd?.();
-    }
-  }, [onFilesChange, onUploadStart, onUploadEnd, uploadedFiles, uploadFunction]);
+      try {
+        const newFile = await uploadFunction(file);
+        const previewFile: PreviewFile = {
+          ...newFile,
+          objectURL,
+          fileType: file.type, // Use original file.type for more accuracy
+        };
+        setUploadedFiles((prevFiles) => {
+          const updatedFiles = [...prevFiles, previewFile];
+          onFilesChange(updatedFiles);
+          return updatedFiles;
+        });
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message || '上傳時發生錯誤');
+      } finally {
+        setUploading(false);
+        onUploadEnd?.();
+      }
+    },
+    [onFilesChange, onUploadStart, onUploadEnd, uploadFunction]
+  );
 
   useEffect(() => {
     // Clean up object URLs when component unmounts or uploadedFiles change
     return () => {
-      uploadedFiles.forEach(file => {
+      uploadedFiles.forEach((file) => {
         if (file.url.startsWith('blob:')) {
           URL.revokeObjectURL(file.objectURL);
         }
@@ -155,11 +169,22 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
       <div className="mt-4 w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {uploadedFiles.map((file) => (
-          <div key={file.id} className="relative w-full h-32 border rounded-lg overflow-hidden group">
+          <div
+            key={file.id}
+            className="relative w-full h-32 border rounded-lg overflow-hidden group"
+          >
             {file.fileType.startsWith('image') ? (
-              <img src={file.objectURL} alt={file.filename} className="w-full h-full object-cover" />
+              <img
+                src={file.objectURL}
+                alt={file.filename}
+                className="w-full h-full object-cover"
+              />
             ) : (
-              <video src={file.objectURL} controls className="w-full h-full object-cover" />
+              <video
+                src={file.objectURL}
+                controls
+                className="w-full h-full object-cover"
+              />
             )}
             <button
               onClick={() => handleRemoveFile(file.id)}

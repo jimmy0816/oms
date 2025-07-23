@@ -1,4 +1,5 @@
 import { UserRole } from './permissions';
+import { ReportTicket } from './reports';
 
 // User related types
 export interface User {
@@ -45,7 +46,10 @@ export interface Ticket {
     name: string;
     email: string;
   };
-  attachments?: FileInfo[]; // New attachments field
+  reports: ReportTicket[];
+  roleId: string;
+  comments?: Comment[];
+  attachments?: Attachments[]; // New attachments field
   activityLogs?: ActivityLog[];
 }
 
@@ -72,6 +76,21 @@ export interface FileInfo {
   url: string;
   type: 'image' | 'video' | 'document' | 'other'; // 更通用的類型
   size?: number;
+}
+
+export interface Attachments {
+  id: string;
+  filename: string;
+  url: string;
+  fileType: string;
+  fileSize: number;
+  createdAt: Date;
+  createdById?: string | null;
+  createdBy: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
 }
 
 // Comment related types

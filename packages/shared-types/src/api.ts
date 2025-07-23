@@ -26,7 +26,9 @@ export interface UpdateTicketRequest {
   status?: TicketStatus;
   priority?: TicketPriority;
   assigneeId?: string;
+  roleId?: string;
   reportIds?: string[];
+  attachments?: FileInfo[];
 }
 
 export interface CreateCommentRequest {
