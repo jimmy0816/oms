@@ -331,7 +331,7 @@ export default function TicketDetail() {
 
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">工單內容</h3>
-            <div className="prose max-w-none text-gray-800 leading-relaxed">
+            <div className="max-w-none whitespace-pre-line text-gray-800 leading-relaxed">
               <p>{ticket.description}</p>
             </div>
           </div>
