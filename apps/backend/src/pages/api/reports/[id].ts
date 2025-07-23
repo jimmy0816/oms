@@ -284,7 +284,6 @@ async function updateReport(
 
   const existingReport = await prisma.report.findUnique({
     where: { id },
-    include: { attachments: true },
   });
 
   if (!existingReport) {
@@ -293,6 +292,13 @@ async function updateReport(
       error: 'Report not found',
     });
   }
+
+  const existingAttachments = await prisma.attachment.findMany({
+    where: {
+      parentId: id,
+      parentType: 'REPORT',
+    },
+  });
 
   const updateData: any = {};
   if (title !== undefined) updateData.title = title;
@@ -305,45 +311,181 @@ async function updateReport(
   if (contactPhone !== undefined) updateData.contactPhone = contactPhone;
   if (contactEmail !== undefined) updateData.contactEmail = contactEmail;
 
+  const userId = req.user.id; // 從認證請求中獲取用戶ID
+
+  // 輔助函數：創建活動日誌
+  const createActivityLog = async (
+    tx: any, // Prisma Transaction client
+    reportId: string,
+    actorId: string,
+    content: string
+  ) => {
+    await tx.activityLog.create({
+      data: {
+        parentId: reportId,
+        parentType: 'REPORT',
+        userId: actorId,
+        content: content,
+      },
+    });
+  };
+
   try {
     const updatedReport = await prisma.$transaction(async (tx) => {
+      // 記錄標量欄位變更的活動日誌
+      let dataChanged = false;
+      const fieldsToMonitor = [
+        'title',
+        'description',
+        'locationId',
+        'priority',
+        'categoryId',
+        'contactPhone',
+        'contactEmail',
+      ];
+
+      for (const field of fieldsToMonitor) {
+        if (
+          updateData[field] !== undefined &&
+          updateData[field] !== (existingReport as any)[field]
+        ) {
+          dataChanged = true;
+          break;
+        }
+      }
+
+      if (dataChanged) {
+        await createActivityLog(tx, id, userId, `通報資料已更新`);
+      }
+
+      // 處理人員變更的活動日誌
+      if (
+        updateData.assigneeId !== undefined &&
+        updateData.assigneeId !== existingReport.assigneeId
+      ) {
+        const oldAssignee = existingReport.assigneeId
+          ? await tx.user.findUnique({
+              where: { id: existingReport.assigneeId },
+            })
+          : null;
+        const newAssignee = updateData.assigneeId
+          ? await tx.user.findUnique({ where: { id: updateData.assigneeId } })
+          : null;
+        await createActivityLog(
+          tx,
+          id,
+          userId,
+          `處理人員從「${oldAssignee?.name || '未指派'}」變更為「${
+            newAssignee?.name || '未指派'
+          }」`
+        );
+      }
+
+      // 狀態變更的活動日誌
+      if (
+        updateData.status !== undefined &&
+        updateData.status !== existingReport.status
+      ) {
+        await createActivityLog(
+          tx,
+          id,
+          userId,
+          `通報狀態從「${existingReport.status}」變更為「${updateData.status}」`
+        );
+      }
+
       // Handle attachments update
       if (attachments !== undefined) {
-        const currentAttachmentIds = existingReport.attachments.map(
-          (a) => a.id
-        );
+        const currentAttachmentIds = existingAttachments.map((a) => a.id);
         const newAttachmentIds = attachments
           .map((a: any) => a.id)
           .filter(Boolean);
 
         const attachmentsToDelete = currentAttachmentIds.filter(
-          (id) => !newAttachmentIds.includes(id)
+          (attId) => !newAttachmentIds.includes(attId)
         );
-        const attachmentsToCreate = attachments.filter((a: any) => !a.id);
+        const attachmentsToCreate = attachments.filter(
+          (a: any) => !currentAttachmentIds.includes(a.id)
+        );
 
         if (attachmentsToDelete.length > 0) {
           await tx.attachment.deleteMany({
             where: { id: { in: attachmentsToDelete } },
           });
+          await createActivityLog(
+            tx,
+            id,
+            userId,
+            `移除了 ${attachmentsToDelete.length} 個附件`
+          );
         }
 
         if (attachmentsToCreate.length > 0) {
           await tx.attachment.createMany({
             data: attachmentsToCreate.map((a: any) => ({
-              ...a,
+              filename: a.name,
+              url: a.url,
+              fileType: a.type,
+              fileSize: a.size,
+              createdById: userId,
+              parentId: id, // Add parentId
+              parentType: 'REPORT', // Add parentType
             })),
           });
+          await createActivityLog(
+            tx,
+            id,
+            userId,
+            `新增了 ${attachmentsToCreate.length} 個附件`
+          );
         }
       }
 
       // Handle ticketIds update
       if (ticketIds !== undefined) {
-        updateData.tickets = {
-          set: ticketIds.map((ticketId) => ({
-            ticketId: ticketId,
-            reportId: id,
-          })),
-        };
+        const existingTicketIds = (
+          await tx.reportTicket.findMany({
+            where: { reportId: id },
+            select: { ticketId: true },
+          })
+        ).map((rt: any) => rt.ticketId);
+
+        const ticketsToDisconnect = existingTicketIds.filter(
+          (existingId: string) => !ticketIds.includes(existingId)
+        );
+        const ticketsToConnect = ticketIds.filter(
+          (newId: string) => !existingTicketIds.includes(newId)
+        );
+
+        if (ticketsToDisconnect.length > 0) {
+          await tx.reportTicket.deleteMany({
+            where: {
+              reportId: id,
+              ticketId: { in: ticketsToDisconnect },
+            },
+          });
+          await createActivityLog(
+            tx,
+            id,
+            userId,
+            `移除了與 ${ticketsToDisconnect.length} 個工單的關聯`
+          );
+        }
+
+        if (ticketsToConnect.length > 0) {
+          await tx.reportTicket.createMany({
+            data: ticketsToConnect.map((ticketId) => ({
+              ticketId: ticketId,
+              reportId: id,
+            })),
+          });
+          await createActivityLog(
+            tx,
+            id,
+            userId,
+            `新增了與 ${ticketsToConnect.length} 個工單的關聯`
+          );
+        }
       }
 
       // Update report
@@ -355,18 +497,41 @@ async function updateReport(
           creator: { select: { id: true, name: true, email: true } },
           assignee: { select: { id: true, name: true, email: true } },
           tickets: { include: { ticket: true } },
-          attachments: true,
         },
       });
 
       return report;
     });
 
+    // Fetch attachments separately after update
+    const updatedAttachments = await prisma.attachment.findMany({
+      where: {
+        parentId: id,
+        parentType: 'REPORT',
+      },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Manually attach attachments to the updatedReport object
+    const finalUpdatedReport = {
+      ...updatedReport,
+      attachments: updatedAttachments,
+    };
+
     // Create notification if assignee was changed
     if (assigneeId && assigneeId !== existingReport.assigneeId) {
       await notificationService.create({
         title: '通報已指派給您',
-        message: `您已被指派到通報：「${updatedReport.title}」`,
+        message: `您已被指派到通報：「${finalUpdatedReport.title}」`,
         userId: assigneeId,
         relatedId: id,
         relatedType: 'REPORT',
@@ -377,7 +542,70 @@ async function updateReport(
     if (status && status !== existingReport.status) {
       await notificationService.create({
         title: '通報狀態更新',
-        message: `您的通報「${updatedReport.title}」狀態已更新為 ${status}`,
+        message: `您的通報「${finalUpdatedReport.title}」狀態已更新為 ${status}`,
+        userId: existingReport.creatorId,
+        relatedId: id,
+        relatedType: 'REPORT',
+      });
+    }
+
+    // Create notification if other data was changed
+    let otherDataChanged = false;
+    const fieldsToMonitorForNotification = [
+      'title',
+      'description',
+      'locationId',
+      'priority',
+      'categoryId',
+      'contactPhone',
+      'contactEmail',
+    ];
+
+    for (const field of fieldsToMonitorForNotification) {
+      if (
+        updateData[field] !== undefined &&
+        updateData[field] !== (existingReport as any)[field]
+      ) {
+        otherDataChanged = true;
+        break;
+      }
+    }
+
+    // Check for attachment changes
+    if (attachments !== undefined) {
+      const currentAttachmentIds = existingAttachments.map((a) => a.id);
+      const newAttachmentIds = attachments
+        .map((a: any) => a.id)
+        .filter(Boolean);
+      if (
+        currentAttachmentIds.length !== newAttachmentIds.length ||
+        currentAttachmentIds.some((attId) => !newAttachmentIds.includes(attId))
+      ) {
+        otherDataChanged = true;
+      }
+    }
+
+    // Check for ticketIds changes
+    if (ticketIds !== undefined) {
+      const existingTicketIds = (
+        await prisma.reportTicket.findMany({
+          where: { reportId: id },
+          select: { ticketId: true },
+        })
+      ).map((rt: any) => rt.ticketId);
+
+      if (
+        existingTicketIds.length !== ticketIds.length ||
+        existingTicketIds.some((ticketId) => !ticketIds.includes(ticketId))
+      ) {
+        otherDataChanged = true;
+      }
+    }
+
+    if (otherDataChanged) {
+      await notificationService.create({
+        title: '通報資料已更新',
+        message: `您的通報「${finalUpdatedReport.title}」資料已更新。`,
         userId: existingReport.creatorId,
         relatedId: id,
         relatedType: 'REPORT',
@@ -386,7 +614,7 @@ async function updateReport(
 
     return res.status(200).json({
       success: true,
-      data: updatedReport,
+      data: finalUpdatedReport,
     });
   } catch (error: any) {
     console.error(`Error updating report ${id}:`, error);
