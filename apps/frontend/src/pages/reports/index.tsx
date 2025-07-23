@@ -6,6 +6,8 @@ import {
   FunnelIcon,
   PlusIcon,
   ExclamationCircleIcon,
+  PencilIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import {
   reportService,
@@ -33,6 +35,19 @@ export default function Reports() {
   const [totalReports, setTotalReports] = useState(0);
   const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
+
+  const handleDelete = async (reportId: string, reportTitle: string) => {
+    if (window.confirm(`您確定要刪除通報「${reportTitle}」嗎？此操作無法復原。`)) {
+      try {
+        await reportService.deleteReport(reportId);
+        alert('通報已成功刪除！');
+        loadReports(); // 重新加載通報列表
+      } catch (error) {
+        console.error('刪除通報失敗:', error);
+        alert('刪除通報失敗，請稍後再試。');
+      }
+    }
+  };
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -336,6 +351,12 @@ export default function Reports() {
                       >
                         建立者
                       </th>
+                    <th
+                        scope="col"
+                        className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
+                      >
+                        操作
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -394,6 +415,32 @@ export default function Reports() {
                         </td>
                         <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
                           {report.creator?.name || '未知'}
+                        </td>
+                        <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
+                          <div className="flex items-center space-x-2">
+                            {user?.permissions?.includes('review_reports') && (
+                              <Link
+                                href={`/reports/${report.id}/edit`}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="編輯"
+                                onClick={(e) => e.stopPropagation()} // 阻止行點擊事件
+                              >
+                                <PencilIcon className="h-5 w-5" />
+                              </Link>
+                            )}
+                            {user?.permissions?.includes('review_reports') && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation(); // 阻止行點擊事件
+                                  handleDelete(report.id, report.title);
+                                }}
+                                className="text-red-600 hover:text-red-900"
+                                title="刪除"
+                              >
+                                <TrashIcon className="h-5 w-5" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
