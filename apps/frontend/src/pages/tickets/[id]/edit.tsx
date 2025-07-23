@@ -83,9 +83,9 @@ export default function EditTicket() {
   }, [fetchTicket]);
 
   // 處理檔案變更
-  const handleFilesChange = (files: FileInfo[]) => {
-    setUploadedFiles(files);
-  };
+  // const handleFilesChange = useCallback((files: FileInfo[]) => {
+  //   setUploadedFiles(files);
+  // }, []);
 
   const ticketUploadFunction = async (file: File): Promise<FileInfo> => {
     const { signedUrl, fileUrl, fileId } = await uploadService.getUploadUrl(
@@ -343,9 +343,9 @@ export default function EditTicket() {
                   附件
                 </label>
                 <FileUploader
-                  onFilesChange={handleFilesChange}
+                  onFilesChange={setUploadedFiles}
                   uploadFunction={ticketUploadFunction} // <-- 新增這個 prop，傳入您已定義的上傳函式
-                  initialFiles={uploadedFiles} // <-- 新增此行
+                  initialFiles={ticketData?.attachments || []}
                 />
               </div>
 

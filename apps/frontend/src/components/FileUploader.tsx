@@ -53,6 +53,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     }
   }, [initialFiles]);
 
+  useEffect(() => {
+    onFilesChange(uploadedFiles);
+  }, [uploadedFiles, onFilesChange]);
+
   const handleRemoveFile = useCallback(
     (fileId: string) => {
       setUploadedFiles((prevFiles) => {
@@ -62,11 +66,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           URL.revokeObjectURL(fileToRemove.objectURL);
         }
         const updatedFiles = prevFiles.filter((file) => file.id !== fileId);
-        onFilesChange(updatedFiles);
+        // onFilesChange(updatedFiles);
         return updatedFiles;
       });
     },
-    [onFilesChange]
+    []
   );
 
   const handleFileChange = useCallback(
@@ -101,7 +105,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         };
         setUploadedFiles((prevFiles) => {
           const updatedFiles = [...prevFiles, previewFile];
-          onFilesChange(updatedFiles);
+          // onFilesChange(updatedFiles);
           return updatedFiles;
         });
       } catch (err: any) {
@@ -112,7 +116,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         onUploadEnd?.();
       }
     },
-    [onFilesChange, onUploadStart, onUploadEnd, uploadFunction]
+    [onUploadStart, onUploadEnd, uploadFunction]
   );
 
   useEffect(() => {
