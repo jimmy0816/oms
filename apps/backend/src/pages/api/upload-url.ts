@@ -16,7 +16,7 @@ const s3Client = new S3Client({
 const inputSchema = z.object({
   fileName: z.string(),
   fileType: z.string(),
-  module: z.enum(['reports', 'tickets', 'general']), // Define allowed modules
+  module: z.enum(['reports', 'tickets', 'general', 'ticket-reviews']), // Define allowed modules
 });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

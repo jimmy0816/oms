@@ -446,4 +446,31 @@ export const ticketService = {
       throw error;
     }
   },
+
+  /**
+   * 提交工單審核
+   */
+  async submitTicketReview(
+    ticketId: string,
+    content: string,
+    attachments: any[]
+  ): Promise<any> {
+    try {
+      const response = await fetch(`${API_URL}/api/tickets/${ticketId}/reviews`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ content, attachments }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '提交審核失敗');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('提交審核失敗:', error);
+      throw error;
+    }
+  },
 };

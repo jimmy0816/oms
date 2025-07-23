@@ -22,6 +22,7 @@ model User {
   reportsCreated  Report[]       @relation("CreatedReports")
   ticketsAssigned Ticket[]       @relation("AssignedTickets")
   ticketsCreated  Ticket[]       @relation("CreatedTickets")
+  ticketReviews   TicketReview[]
   userRoles       UserRole[]
   AuditLogs       AuditLog[]
   Attachment      Attachment[]
@@ -46,21 +47,22 @@ model Notification {
 }
 
 model Ticket {
-  id          String         @id @default(uuid())
-  title       String
-  description String
-  status      String         @default("OPEN")
-  priority    String         @default("MEDIUM")
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  creatorId   String
-  assigneeId  String?
-  roleId      String?
-  comments    Comment[]
-  assignee    User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
-  creator     User           @relation("CreatedTickets", fields: [creatorId], references: [id])
-  role        Role?          @relation("RoleTickets", fields: [roleId], references: [id])
-  reports     ReportTicket[]
+  id            String         @id @default(uuid())
+  title         String
+  description   String
+  status        String         @default("PENDING")
+  priority      String         @default("MEDIUM")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  creatorId     String
+  assigneeId    String?
+  roleId        String?
+  comments      Comment[]
+  assignee      User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  creator       User           @relation("CreatedTickets", fields: [creatorId], references: [id])
+  role          Role?          @relation("RoleTickets", fields: [roleId], references: [id])
+  reports       ReportTicket[]
+  ticketReviews TicketReview[] // Relation to TicketReview
 }
 
 model Comment {
@@ -223,4 +225,18 @@ model Location {
   id      Int      @id @default(autoincrement())
   name    String   @unique
   reports Report[]
+}
+
+model TicketReview {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  creatorId String
+  creator   User     @relation(fields: [creatorId], references: [id])
+
+  @@index([ticketId])
+  @@index([creatorId])
 }

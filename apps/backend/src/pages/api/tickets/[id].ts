@@ -84,6 +84,18 @@ async function getTicket(
         },
       },
       role: true,
+      ticketReviews: {
+        include: {
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      },
     },
   });
 
@@ -126,6 +138,19 @@ async function getTicket(
     },
     orderBy: { createdAt: 'asc' },
   });
+
+  // Manually fetch attachments for each ticket review
+  if (ticket && ticket.ticketReviews) {
+    for (const review of ticket.ticketReviews) {
+      const reviewAttachments = await prisma.attachment.findMany({
+        where: {
+          parentId: review.id,
+          parentType: 'TicketReview',
+        },
+      });
+      (review as any).attachments = reviewAttachments;
+    }
+  }
 
   // 確保 status 和 priority 屬性都是正確的枚舉類型
   const ticketWithCorrectTypes: Ticket = {
