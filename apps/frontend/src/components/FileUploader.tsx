@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { Attachment } from 'shared-types';
 
 // Define FileInfo interface
 interface FileInfo {
   id: string;
-  name: string;
+  filename: string;
   url: string;
-  type: 'image' | 'video';
-  size?: number;
+  fileType: string;
+  fileSize?: number;
 }
 
 interface PreviewFile extends FileInfo {
@@ -18,25 +19,41 @@ interface FileUploaderProps {
   uploadFunction: (file: File) => Promise<FileInfo>;
   onUploadStart?: () => void;
   onUploadEnd?: () => void;
+  initialFiles?: Attachment[]; // Add initialFiles prop
 }
 
-const FileUploader: React.FC<FileUploaderProps> = ({ 
+const FileUploader: React.FC<FileUploaderProps> = ({
   onFilesChange,
   uploadFunction,
   onUploadStart,
-  onUploadEnd 
+  onUploadEnd,
+  initialFiles = [], // Default to empty array
 }) => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<PreviewFile[]>([]);
 
+  // Initialize uploadedFiles with initialFiles
+  useEffect(() => {
+    const initialPreviewFiles: PreviewFile[] = initialFiles.map((file) => ({
+      id: file.id,
+      filename: file.filename,
+      url: file.url,
+      fileType: file.fileType,
+      fileSize: file.fileSize,
+      objectURL: file.url, // For existing files, URL is already valid
+    }));
+    setUploadedFiles(initialPreviewFiles);
+  }, [initialFiles]);
+
   const handleRemoveFile = useCallback((fileId: string) => {
-    setUploadedFiles(prevFiles => {
-      const fileToRemove = prevFiles.find(file => file.id === fileId);
-      if (fileToRemove) {
+    setUploadedFiles((prevFiles) => {
+      const fileToRemove = prevFiles.find((file) => file.id === fileId);
+      if (fileToRemove && fileToRemove.url.startsWith('blob:')) {
+        // Only revoke object URL if it's a temporary blob URL
         URL.revokeObjectURL(fileToRemove.objectURL);
       }
-      const updatedFiles = prevFiles.filter(file => file.id !== fileId);
+      const updatedFiles = prevFiles.filter((file) => file.id !== fileId);
       setTimeout(() => {
         onFilesChange(updatedFiles);
       }, 0);
@@ -67,14 +84,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       const previewFile: PreviewFile = {
         ...newFile,
         objectURL,
-        type: fileType,
+        fileType: file.type, // Use original file.type for more accuracy
       };
       const updatedFiles = [...uploadedFiles, previewFile];
       setUploadedFiles(updatedFiles);
       setTimeout(() => {
         onFilesChange(updatedFiles);
       }, 0);
-      
+
     } catch (err: any) {
       console.error(err);
       setError(err.message || '上傳時發生錯誤');
@@ -87,9 +104,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   useEffect(() => {
     // Clean up object URLs when component unmounts or uploadedFiles change
     return () => {
-      uploadedFiles.forEach(file => URL.revokeObjectURL(file.objectURL));
+      uploadedFiles.forEach(file => {
+        if (file.url.startsWith('blob:')) {
+          URL.revokeObjectURL(file.objectURL);
+        }
+      });
     };
-  }, []);
+  }, [uploadedFiles]);
 
   return (
     <div className="flex flex-col items-center justify-center w-full">
@@ -135,8 +156,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       <div className="mt-4 w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {uploadedFiles.map((file) => (
           <div key={file.id} className="relative w-full h-32 border rounded-lg overflow-hidden group">
-            {file.type === 'image' ? (
-              <img src={file.objectURL} alt={file.name} className="w-full h-full object-cover" />
+            {file.fileType.startsWith('image') ? (
+              <img src={file.objectURL} alt={file.filename} className="w-full h-full object-cover" />
             ) : (
               <video src={file.objectURL} controls className="w-full h-full object-cover" />
             )}

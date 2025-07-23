@@ -11,7 +11,6 @@ import CategorySelector from '@/components/CategorySelector';
 import FileUploader from '@/components/FileUploader';
 import { reportService } from '@/services/reportService';
 import { ReportPriority } from 'shared-types';
-import { getLocations, Location } from '@/services/locationService';
 import { uploadService } from '@/services/uploadService';
 import dynamic from 'next/dynamic';
 
@@ -47,12 +46,9 @@ export default function NewReport() {
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
-  const [selectedCategoryPath, setSelectedCategoryPath] = useState<string>('');
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
     null
   );
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [tickets, setTickets] = useState<any[]>([]);
 
   const {
     register,
@@ -60,29 +56,6 @@ export default function NewReport() {
     setValue,
     formState: { errors },
   } = useForm<CreateReportRequest>();
-
-  useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        const data = await getLocations();
-        setLocations(data);
-      } catch (error) {
-        console.error('Failed to fetch locations:', error);
-        // Optionally set an error state here to inform the user
-      }
-    };
-    fetchLocations();
-
-    const fetchTickets = async () => {
-      try {
-        const data = await ticketService.getAllTickets();
-        setTickets(data.items);
-      } catch (error) {
-        console.error('Failed to fetch tickets:', error);
-      }
-    };
-    fetchTickets();
-  }, []);
 
   // 確保選擇的類別會更新到表單中
   React.useEffect(() => {
@@ -224,16 +197,15 @@ export default function NewReport() {
                   id="categoryId"
                   {...register('categoryId', { required: '請選擇通報類別' })}
                 />
-                <input
+                {/* <input
                   type="hidden"
                   id="categoryPath"
                   {...register('categoryPath')}
-                />
+                /> */}
 
                 <CategorySelector
                   onCategorySelect={(categoryId, categoryPath) => {
                     setSelectedCategoryId(categoryId);
-                    setSelectedCategoryPath(categoryPath);
                     if (categoryPath) {
                       const mainCategory = categoryPath.split(' > ')[0];
                       setValue('title', mainCategory);
@@ -246,13 +218,6 @@ export default function NewReport() {
                   <p className="mt-1 text-sm text-red-600">
                     {errors.categoryId.message}
                   </p>
-                )}
-
-                {selectedCategoryId && (
-                  <div className="mt-2 text-sm text-gray-700">
-                    <span className="font-medium">已選擇：</span>{' '}
-                    {selectedCategoryPath}
-                  </div>
                 )}
               </div>
 

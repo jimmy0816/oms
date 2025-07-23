@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import { ApiResponse, Ticket, ReportStatus } from 'shared-types';
+import { ApiResponse, Ticket, ReportTicket, ReportStatus } from 'shared-types';
 import { notificationService } from '@/services/notificationService';
+import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 
 // Define Report type based on Prisma schema
 interface Report {
@@ -39,7 +40,7 @@ interface Report {
       email: string;
     };
   }>;
-  tickets?: Ticket[];
+  tickets?: ReportTicket[];
   attachments?: Array<{
     id: string;
     filename: string;
@@ -78,14 +79,14 @@ interface UpdateReportRequest {
   status?: ReportStatus;
   priority?: string;
   assigneeId?: string | null;
-  category?: string;
+  categoryId?: string;
   contactPhone?: string;
   contactEmail?: string;
   ticketIds?: string[];
   attachments?: any[];
 }
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Report>>
 ) {
@@ -264,7 +265,7 @@ async function getReportById(
 
 async function updateReport(
   id: string,
-  req: NextApiRequest,
+  req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<Report>>
 ) {
   const {
@@ -274,16 +275,16 @@ async function updateReport(
     status,
     priority,
     assigneeId,
-    category,
+    categoryId,
     contactPhone,
     contactEmail,
     attachments,
     ticketIds,
   } = req.body as UpdateReportRequest;
 
-  // Check if report exists
   const existingReport = await prisma.report.findUnique({
     where: { id },
+    include: { attachments: true },
   });
 
   if (!existingReport) {
@@ -293,7 +294,6 @@ async function updateReport(
     });
   }
 
-  // Prepare update data
   const updateData: any = {};
   if (title !== undefined) updateData.title = title;
   if (description !== undefined) updateData.description = description;
@@ -301,84 +301,107 @@ async function updateReport(
   if (status !== undefined) updateData.status = status;
   if (priority !== undefined) updateData.priority = priority;
   if (assigneeId !== undefined) updateData.assigneeId = assigneeId;
-  if (category !== undefined) updateData.category = category;
+  if (categoryId !== undefined) updateData.categoryId = categoryId;
   if (contactPhone !== undefined) updateData.contactPhone = contactPhone;
   if (contactEmail !== undefined) updateData.contactEmail = contactEmail;
 
-  // Handle ticketIds update
-  if (ticketIds !== undefined) {
-    updateData.tickets = {
-      set: ticketIds.map((ticketId) => ({
-        ticketId: ticketId,
-        reportId: id,
-      })),
-    };
-  }
+  try {
+    const updatedReport = await prisma.$transaction(async (tx) => {
+      // Handle attachments update
+      if (attachments !== undefined) {
+        const currentAttachmentIds = existingReport.attachments.map(
+          (a) => a.id
+        );
+        const newAttachmentIds = attachments
+          .map((a: any) => a.id)
+          .filter(Boolean);
 
-  // Update report
-  const updatedReport = await prisma.report.update({
-    where: { id },
-    data: updateData,
-    include: {
-      location: true, // Include location data
-      creator: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-      assignee: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-      tickets: {
-        // Include tickets in the response
+        const attachmentsToDelete = currentAttachmentIds.filter(
+          (id) => !newAttachmentIds.includes(id)
+        );
+        const attachmentsToCreate = attachments.filter((a: any) => !a.id);
+
+        if (attachmentsToDelete.length > 0) {
+          await tx.attachment.deleteMany({
+            where: { id: { in: attachmentsToDelete } },
+          });
+        }
+
+        if (attachmentsToCreate.length > 0) {
+          await tx.attachment.createMany({
+            data: attachmentsToCreate.map((a: any) => ({
+              ...a,
+            })),
+          });
+        }
+      }
+
+      // Handle ticketIds update
+      if (ticketIds !== undefined) {
+        updateData.tickets = {
+          set: ticketIds.map((ticketId) => ({
+            ticketId: ticketId,
+            reportId: id,
+          })),
+        };
+      }
+
+      // Update report
+      const report = await tx.report.update({
+        where: { id },
+        data: updateData,
         include: {
-          ticket: true,
+          location: true,
+          creator: { select: { id: true, name: true, email: true } },
+          assignee: { select: { id: true, name: true, email: true } },
+          tickets: { include: { ticket: true } },
+          attachments: true,
         },
-      },
-    },
-  });
+      });
 
-  // Create notification if assignee was changed
-  if (assigneeId && assigneeId !== existingReport.assigneeId) {
-    await notificationService.create({
-      title: '通報已指派給您',
-      message: `您已被指派到通報：「${updatedReport.title}」`,
-      userId: assigneeId,
-      relatedId: id,
-      relatedType: 'REPORT',
+      return report;
+    });
+
+    // Create notification if assignee was changed
+    if (assigneeId && assigneeId !== existingReport.assigneeId) {
+      await notificationService.create({
+        title: '通報已指派給您',
+        message: `您已被指派到通報：「${updatedReport.title}」`,
+        userId: assigneeId,
+        relatedId: id,
+        relatedType: 'REPORT',
+      });
+    }
+
+    // Create notification if status was changed
+    if (status && status !== existingReport.status) {
+      await notificationService.create({
+        title: '通報狀態更新',
+        message: `您的通報「${updatedReport.title}」狀態已更新為 ${status}`,
+        userId: existingReport.creatorId,
+        relatedId: id,
+        relatedType: 'REPORT',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: updatedReport,
+    });
+  } catch (error: any) {
+    console.error(`Error updating report ${id}:`, error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to update report.',
     });
   }
-
-  // Create notification if status was changed
-  if (status && status !== existingReport.status) {
-    // Notify creator
-    await notificationService.create({
-      title: '通報狀態更新',
-      message: `您的通報「${updatedReport.title}」狀態已更新為 ${status}`,
-      userId: existingReport.creatorId,
-      relatedId: id,
-      relatedType: 'REPORT',
-    });
-  }
-
-  return res.status(200).json({
-    success: true,
-    data: updatedReport,
-  });
 }
 
 async function deleteReport(
   id: string,
-  req: NextApiRequest,
+  req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<Report>>
 ) {
-  // Check if report exists
   const existingReport = await prisma.report.findUnique({
     where: { id },
   });
@@ -390,23 +413,52 @@ async function deleteReport(
     });
   }
 
-  // Delete related comments first to avoid foreign key constraint errors
-  await prisma.comment.deleteMany({
-    where: { reportId: id },
-  });
+  try {
+    const deletedReportData = await prisma.$transaction(async (tx) => {
+      // 1. 刪除相關的 ActivityLog (for the report itself)
+      await tx.activityLog.deleteMany({
+        where: { parentId: id, parentType: 'REPORT' },
+      });
 
-  // Delete related notifications
-  await prisma.notification.deleteMany({
-    where: { relatedId: id, relatedType: 'REPORT' },
-  });
+      // 2. 刪除相關的 Attachments
+      await tx.attachment.deleteMany({
+        where: { parentId: id, parentType: 'REPORT' },
+      });
 
-  // Delete the report
-  const deletedReport = await prisma.report.delete({
-    where: { id },
-  });
+      // 3. 刪除相關的 Comments
+      await tx.comment.deleteMany({
+        where: { reportId: id },
+      });
 
-  return res.status(200).json({
-    success: true,
-    data: deletedReport,
-  });
+      // 4. 刪除相關的 Notifications
+      await tx.notification.deleteMany({
+        where: { relatedId: id, relatedType: 'REPORT' },
+      });
+
+      // 5. 刪除與工單的關聯 (ReportTicket)
+      await tx.reportTicket.deleteMany({
+        where: { reportId: id },
+      });
+
+      // 6. 最後，刪除通報本身
+      const deletedReport = await tx.report.delete({
+        where: { id },
+      });
+
+      return deletedReport;
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: deletedReportData,
+    });
+  } catch (error: any) {
+    console.error(`Error deleting report ${id}:`, error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to delete report and its related data.',
+    });
+  }
 }
+
+export default withAuth(handler);

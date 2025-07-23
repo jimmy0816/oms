@@ -9,6 +9,8 @@ import {
   MapPinIcon,
   ExclamationCircleIcon,
   ChevronDownIcon,
+  PencilIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import {
   reportService,
@@ -16,6 +18,7 @@ import {
   getStatusName,
   getStatusColor,
   getStatusIcon,
+  getPriorityText,
   getPriorityColor,
 } from '@/services/reportService';
 import {
@@ -46,6 +49,8 @@ export default function ReportDetail() {
     canProcess: false, // process_reports 權限
     canClose: false, // close_reports 權限
     canReview: false, // review_reports 權限
+    canEdit: false,
+    canDelete: false,
   });
 
   // 模擬用戶角色與權限
@@ -55,6 +60,8 @@ export default function ReportDetail() {
       canProcess: user.permissions?.includes('process_reports'),
       canClose: user.permissions?.includes('process_reports'),
       canReview: user.permissions?.includes('review_reports'),
+      canEdit: user.permissions?.includes('review_reports'),
+      canDelete: user.permissions?.includes('review_reports'),
     });
   }, [user]);
 
@@ -90,6 +97,26 @@ export default function ReportDetail() {
   useEffect(() => {
     fetchReport();
   }, [fetchReport]);
+
+  const handleDelete = async () => {
+    if (!report) return;
+
+    if (
+      window.confirm(`您確定要刪除通報 "${report.title}" 嗎？此操作無法復原。`)
+    ) {
+      setProcessing(true);
+
+      try {
+        await reportService.deleteReport(report.id);
+        alert('通報已刪除成功');
+        router.push('/reports');
+      } catch (error) {
+        console.error('Error deleting report:', error);
+        alert('刪除失敗，請稍後再試');
+        setProcessing(false);
+      }
+    }
+  };
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,27 +274,46 @@ export default function ReportDetail() {
             <div className="flex-1 space-y-6">
               {/* 頁面標題 */}
               <div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                   <h1 className="text-2xl font-bold text-gray-900 truncate">
                     {report.title}
                   </h1>
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 ${
-                        getStatusInfo(report.status).color
-                      }`}
-                    >
-                      {getStatusInfo(report.status).icon}
-                      {getStatusName(report.status)}
-                    </span>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 ${getPriorityColor(
-                        report.priority
-                      )}`}
-                    >
-                      {report.priority}
-                    </span>
+                    {userPermissions.canEdit && (
+                      <Link
+                        href={`/reports/${report.id}/edit`}
+                        className="btn-icon"
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </Link>
+                    )}
+                    {userPermissions.canDelete && (
+                      <button
+                        onClick={handleDelete}
+                        className="btn-icon-danger"
+                        disabled={processing}
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    )}
                   </div>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 ${
+                      getStatusInfo(report.status).color
+                    }`}
+                  >
+                    {getStatusInfo(report.status).icon}
+                    {getStatusName(report.status)}
+                  </span>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 ${getPriorityColor(
+                      report.priority
+                    )}`}
+                  >
+                    {getPriorityText(report.priority as ReportPriority)}
+                  </span>
                 </div>
                 <span className="text-sm text-gray-500 mt-1 inline-block">
                   通報 #{report.id}
@@ -349,13 +395,13 @@ export default function ReportDetail() {
               {/* 通報詳細資訊 */}
               <div className="mt-6 space-y-4">
                 {report.description && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">描述</h3>
-                  <p className="mt-1 text-gray-900 whitespace-pre-line">
-                    {report.description}
-                  </p>
-                </div>
-              )}
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">描述</h3>
+                    <p className="mt-1 text-gray-900 whitespace-pre-line">
+                      {report.description}
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                   <div>
@@ -676,8 +722,6 @@ export default function ReportDetail() {
                 </form>
               </div>
             </div>
-
-            {/* 右側處理歷程區塊 */}
             <div className="w-full lg:w-80 flex-shrink-0 mt-8 lg:mt-0">
               <div className="p-6 bg-white rounded-lg shadow-sm">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">

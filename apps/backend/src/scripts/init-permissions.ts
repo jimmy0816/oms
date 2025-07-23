@@ -15,6 +15,8 @@ const permissions = [
   { name: 'view_all_reports', description: '查看所有通報' },
   { name: 'view_reports', description: '查看通報' },
   { name: 'create_reports', description: '建立通報' },
+  { name: 'edit_reports', description: '編輯通報' },
+  { name: 'delete_reports', description: '刪除通報' },
   { name: 'process_reports', description: '處理通報' },
   { name: 'review_reports', description: '審核通報' },
   { name: 'view_users', description: '查看用戶' },

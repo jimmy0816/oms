@@ -135,6 +135,8 @@ const RolesManagementPage: React.FC = () => {
         p.startsWith('view_all_reports') ||
         p.startsWith('view_reports') ||
         p.startsWith('create_reports') ||
+        p.startsWith('edit_reports') ||
+        p.startsWith('delete_reports') ||
         p.startsWith('process_reports') ||
         p.startsWith('review_reports')
     ),

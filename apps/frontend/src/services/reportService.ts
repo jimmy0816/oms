@@ -3,6 +3,7 @@ import {
   ReportStatus,
   ReportPriority,
   Ticket,
+  ReportTicket,
 } from 'shared-types';
 import {
   ExclamationCircleIcon,
@@ -66,7 +67,7 @@ export interface Report {
       email: string;
     };
   }>;
-  tickets?: Ticket[];
+  tickets?: ReportTicket[];
   attachments?: Array<{
     id: string;
     filename: string;
@@ -103,11 +104,20 @@ export interface CreateReportRequest {
   description: string;
   locationId?: number;
   priority?: string;
-  category?: string;
+  categoryId: string;
   contactPhone?: string;
   contactEmail?: string;
   images?: string[];
   assigneeId?: string;
+}
+
+export interface UpdateReportRequest {
+  title?: string;
+  description?: string;
+  locationId?: number;
+  priority?: string;
+  categoryId: string;
+  attachments?: any[];
 }
 
 export const getPriorityText = (priority: ReportPriority) => {
@@ -354,7 +364,10 @@ export const reportService = {
   /**
    * 更新通報
    */
-  async updateReport(id: string, reportData: Partial<Report>): Promise<Report> {
+  async updateReport(
+    id: string,
+    reportData: Partial<UpdateReportRequest>
+  ): Promise<Report> {
     try {
       const response = await fetch(`${API_URL}/api/reports/${id}`, {
         method: 'PUT',

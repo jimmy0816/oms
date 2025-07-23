@@ -25,6 +25,9 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedLevel1, setExpandedLevel1] = useState<string[]>([]);
+  const [displayCategoryPath, setDisplayCategoryPath] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -32,8 +35,24 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
         setLoading(true);
         const fetchedCategories = await categoryService.getAllCategories();
         setCategories(fetchedCategories as CategoryLevel1[]);
-        // 預設展開第一個大類
-        if (fetchedCategories.length > 0) {
+
+        // 如果有預設選中的分類，則展開其所屬的一級分類並顯示完整路徑
+        if (selectedCategoryId) {
+          for (const cat1 of fetchedCategories as CategoryLevel1[]) {
+            for (const cat2 of cat1.children) {
+              for (const cat3 of cat2.children) {
+                if (cat3.id === selectedCategoryId) {
+                  setExpandedLevel1([cat1.id]);
+                  setDisplayCategoryPath(
+                    `${cat1.name} > ${cat2.name} > ${cat3.name}`
+                  );
+                  break;
+                }
+              }
+            }
+          }
+        } else if (fetchedCategories.length > 0) {
+          // 否則，預設展開第一個大類
           setExpandedLevel1([fetchedCategories[0].id]);
         }
       } catch (err: any) {
@@ -63,6 +82,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   ) => {
     const categoryPath = `${level1Name} > ${level2Name} > ${category.name}`;
     onCategorySelect(category.id, categoryPath);
+    setDisplayCategoryPath(categoryPath);
   };
 
   if (loading) {
@@ -90,6 +110,14 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
           <ChevronDownIcon className="h-4 w-4 ml-1 transform rotate-180" />
         </button>
       </div>
+      {displayCategoryPath && (
+        <div className="mb-4">
+          <div className="text-sm text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis max-w-full block">
+            <span className="font-medium">已選擇：</span>
+            {displayCategoryPath}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         {categories.length === 0 ? (

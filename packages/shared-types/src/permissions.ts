@@ -15,6 +15,8 @@ export enum Permission {
   VIEW_ALL_REPORTS = 'view_all_reports', // 查看所有通報
   VIEW_REPORTS = 'view_reports', // 查看通報
   CREATE_REPORTS = 'create_reports', // 創建通報
+  EDIT_REPORTS = 'edit_reports', // 編輯通報
+  DELETE_REPORTS = 'delete_reports', // 刪除通報
   PROCESS_REPORTS = 'process_reports', // 處理通報
   REVIEW_REPORTS = 'review_reports', // 審核通報
 
@@ -56,6 +58,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_ALL_REPORTS,
     Permission.VIEW_REPORTS,
     Permission.CREATE_REPORTS,
+    Permission.EDIT_REPORTS,
+    Permission.DELETE_REPORTS,
     Permission.PROCESS_REPORTS,
     Permission.REVIEW_REPORTS,
     Permission.VIEW_USERS,
@@ -74,6 +78,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VERIFY_TICKETS,
     Permission.VIEW_ALL_REPORTS,
     Permission.VIEW_REPORTS,
+    Permission.EDIT_REPORTS,
+    Permission.DELETE_REPORTS,
     Permission.PROCESS_REPORTS,
     Permission.REVIEW_REPORTS,
     Permission.VIEW_USERS,
