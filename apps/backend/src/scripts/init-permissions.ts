@@ -29,10 +29,10 @@ const permissions = [
 
 const roles = [
   { name: 'ADMIN', description: '系統管理員' },
-  { name: 'MANAGER', description: '部門經理' },
-  { name: 'STAFF', description: '員工' },
+  { name: 'MANAGER', description: '區域總監' },
+  { name: 'STAFF', description: '管家' },
   { name: 'USER', description: '一般用戶' },
-  { name: 'REPORT_PROCESSOR', description: '通報處理員' },
+  { name: 'REPORT_PROCESSOR', description: '營業專員' },
   { name: 'REPORT_REVIEWER', description: '通報審核員' },
   { name: 'CUSTOMER_SERVICE', description: '客服人員' },
   { name: 'MAINTENANCE_WORKER', description: '維修工務' },

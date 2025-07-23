@@ -2,17 +2,6 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { UserRole, Permission } from 'shared-types';
 
-// 角色描述
-const ROLE_DESCRIPTIONS: Record<string, string> = {
-  [UserRole.ADMIN]: '系統管理員，擁有所有權限',
-  [UserRole.USER]: '一般用戶，可以瀏覽和提交報告',
-  [UserRole.MANAGER]: '管理者，可以管理用戶和查看報表',
-  [UserRole.REPORT_PROCESSOR]: '通報處理者，負責處理通報',
-  [UserRole.REPORT_REVIEWER]: '通報審核者，負責審核通報',
-  [UserRole.CUSTOMER_SERVICE]: '客服人員，負責處理客戶問題',
-  [UserRole.MAINTENANCE_WORKER]: '維修工務，負責處理維修工作',
-};
-
 /**
  * 用戶角色 API 處理程序
  * 獲取所有可用的用戶角色及其統計信息

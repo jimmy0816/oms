@@ -11,12 +11,12 @@ const getAuthToken = () =>
 export const getRoleName = (role: UserRole): string => {
   const roleNames: Partial<Record<UserRole, string>> = {
     [UserRole.ADMIN]: '系統管理員',
-    [UserRole.MANAGER]: '部門經理',
-    [UserRole.REPORT_PROCESSOR]: '通報處理者',
+    [UserRole.MANAGER]: '區域總監',
+    [UserRole.REPORT_PROCESSOR]: '營業專員',
     [UserRole.REPORT_REVIEWER]: '通報審核者',
     [UserRole.CUSTOMER_SERVICE]: '客服人員',
     [UserRole.MAINTENANCE_WORKER]: '維修工務',
-    [UserRole.STAFF]: '員工',
+    [UserRole.STAFF]: '管家',
     [UserRole.USER]: '一般用戶',
   };
 
