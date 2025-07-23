@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
-import { getLocations, Location } from '@/services/locationService';
+import { locationService, Location } from '@/services/locationService';
 
 interface LocationSelectorProps {
   value: number | null;
@@ -17,7 +17,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const data = await getLocations();
+        const data = await locationService.getAllLocations();
         setLocations(data);
       } catch (error) {
         console.error('Failed to fetch locations', error);

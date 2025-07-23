@@ -93,6 +93,7 @@ async function getReports(
   const assigneeId = req.query.assigneeId as string | undefined;
   const creatorId = req.query.creatorId as string | undefined;
   const search = req.query.search as string | undefined;
+  const locationIds = req.query.locationId as string | undefined;
 
   const skip = (page - 1) * pageSize;
 
@@ -102,6 +103,13 @@ async function getReports(
   if (priority) where.priority = priority;
   if (assigneeId) where.assigneeId = assigneeId;
   if (creatorId) where.creatorId = creatorId;
+
+  if (locationIds) {
+    const parsedLocationIds = locationIds.split(',').map(Number);
+    if (parsedLocationIds.length > 0) {
+      where.locationId = { in: parsedLocationIds };
+    }
+  }
 
   // Handle category filtering by top-level category
   if (categoryFilterId) {

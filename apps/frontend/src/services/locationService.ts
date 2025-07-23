@@ -7,7 +7,9 @@ export interface Location {
   name: string;
 }
 
-export const getLocations = async (): Promise<Location[]> => {
-  const response = await axios.get(`${API_URL}/api/locations`);
-  return response.data.data;
+export const locationService = {
+  async getAllLocations(): Promise<Location[]> {
+    const response = await axios.get(`${API_URL}/api/locations`);
+    return response.data.data;
+  },
 };
