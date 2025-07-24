@@ -8,6 +8,9 @@ import {
   ExclamationCircleIcon,
   PencilIcon,
   TrashIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronDownIcon, // Added ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import {
   reportService,
@@ -29,6 +32,8 @@ import { categoryService, getCategoryPath } from '@/services/categoryService';
 import { savedViewService } from '@/services/savedViewService';
 import LocationFilterModal from '@/components/LocationFilterModal';
 import SaveViewModal from '@/components/SaveViewModal';
+import ManageViewsModal from '@/components/ManageViewsModal';
+import ViewSelectorModal from '@/components/ViewSelectorModal'; // New import
 
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -47,8 +52,11 @@ export default function Reports() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
+  const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
+  const [isViewSelectorModalOpen, setIsViewSelectorModalOpen] = useState(false); // New state
   const [saveViewError, setSaveViewError] = useState<string | null>(null);
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
+  const [isFilterModified, setIsFilterModified] = useState(false);
 
   const handleDelete = async (reportId: string, reportTitle: string) => {
     if (
@@ -61,6 +69,23 @@ export default function Reports() {
       } catch (error) {
         console.error('刪除通報失敗:', error);
         alert('刪除通報失敗，請稍後再試。');
+      }
+    }
+  };
+
+  const handleDeleteView = async (viewId: string) => {
+    if (window.confirm('您確定要刪除此視圖嗎？')) {
+      try {
+        await savedViewService.deleteSavedView(viewId);
+        alert('視圖已成功刪除！');
+        loadSavedViews(); // 重新加載儲存的視圖
+        if (selectedViewId === viewId) {
+          // 如果刪除的是當前選中的視圖，則清除篩選
+          clearFilters();
+        }
+      } catch (error) {
+        console.error('刪除視圖失敗:', error);
+        alert('刪除視圖失敗，請稍後再試。');
       }
     }
   };
@@ -117,12 +142,16 @@ export default function Reports() {
       if (searchTerm) filters.search = searchTerm;
       if (locationFilter.length > 0) filters.locationIds = locationFilter;
 
+      console.log('Loading reports with filters:', filters); // Debug log
+
       // 調用 API 獲取報告
       const response = await reportService.getAllReports(
         page,
         pageSize,
         filters
       );
+
+      console.log('report with filters', response);
 
       setReports(response.items);
       setTotalReports(response.total);
@@ -163,6 +192,7 @@ export default function Reports() {
     setLocationFilter([]);
     setSelectedViewId(null); // Clear selected view
     setPage(1);
+    setIsFilterModified(false);
   };
 
   // 處理儲存視圖
@@ -175,11 +205,25 @@ export default function Reports() {
         priorityFilter,
         locationFilter,
       };
-      await savedViewService.createSavedView(viewName, currentFilters);
-      await loadSavedViews(); // Reload saved views after saving
+
+      if (selectedViewId) {
+        // 如果有選中的視圖，則更新它
+        await savedViewService.updateSavedView(
+          selectedViewId,
+          viewName,
+          currentFilters
+        );
+        alert('視圖已成功更新！');
+      } else {
+        // 否則創建一個新的視圖
+        await savedViewService.createSavedView(viewName, currentFilters);
+        alert('視圖已成功儲存！');
+      }
+
+      await loadSavedViews(); // Reload saved views after saving/updating
       setIsSaveViewModalOpen(false);
       setSaveViewError(null);
-      alert('視圖已成功儲存！');
+      setIsFilterModified(false);
     } catch (error: any) {
       console.error('Failed to save view:', error);
       setSaveViewError(error.message || '儲存視圖失敗');
@@ -197,7 +241,7 @@ export default function Reports() {
       setLocationFilter(viewToApply.filters.locationFilter || []);
       setSelectedViewId(viewId);
       setPage(1);
-      loadReports();
+      setIsFilterModified(false);
     }
   };
 
@@ -205,6 +249,40 @@ export default function Reports() {
   useEffect(() => {
     loadReports();
   }, [loadReports]);
+
+  useEffect(() => {
+    if (!selectedViewId) {
+      const hasFilters =
+        !!searchTerm ||
+        !!statusFilter ||
+        !!categoryFilter ||
+        !!priorityFilter ||
+        locationFilter.length > 0;
+      setIsFilterModified(hasFilters);
+      return;
+    }
+
+    const currentView = savedViews.find((v) => v.id === selectedViewId);
+    if (!currentView) return;
+
+    const filtersSame =
+      (currentView.filters.searchTerm || '') === searchTerm &&
+      (currentView.filters.statusFilter || '') === statusFilter &&
+      (currentView.filters.categoryFilter || '') === categoryFilter &&
+      (currentView.filters.priorityFilter || '') === priorityFilter &&
+      JSON.stringify(currentView.filters.locationFilter || []) ===
+        JSON.stringify(locationFilter);
+
+    setIsFilterModified(!filtersSame);
+  }, [
+    searchTerm,
+    statusFilter,
+    categoryFilter,
+    priorityFilter,
+    locationFilter,
+    selectedViewId,
+    savedViews,
+  ]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -233,6 +311,10 @@ export default function Reports() {
     };
   };
 
+  const currentViewName = selectedViewId
+    ? savedViews.find((view) => view.id === selectedViewId)?.name
+    : '所有通報'; // Changed from '新增視圖' to '所有通報' for clarity when no view is selected
+
   return (
     <>
       <Head>
@@ -241,7 +323,7 @@ export default function Reports() {
 
       <div className="space-y-6">
         {/* 頁面標題 */}
-        <div className="py-6">
+        <div className="py-4">
           <div className="mx-auto">
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl font-semibold text-gray-900">通報管理</h1>
@@ -268,34 +350,33 @@ export default function Reports() {
       </div>
 
       {/* Saved Views Section */}
-      <div className="py-2">
+      <div className="py-1">
         <div className="mx-auto">
           <div className="flex items-center space-x-3">
-            <select
-              value={selectedViewId || ''}
-              onChange={(e) => handleApplyView(e.target.value)}
-              className="block py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+            <div
+              className="relative flex items-center border border-gray-300 bg-white rounded-md shadow-sm cursor-pointer"
+              onClick={() => setIsViewSelectorModalOpen(true)}
             >
-              <option value="">選擇視圖</option>
-              {savedViews.map((view) => (
-                <option key={view.id} value={view.id}>
-                  {view.name}
-                </option>
-              ))}
-            </select>
+              <span className="block py-2 px-3 text-sm font-medium text-gray-700 truncate max-w-[200px]">
+                {currentViewName}
+              </span>
+              <ChevronDownIcon className="h-5 w-5 text-gray-400 mr-2" />
+            </div>
 
-            <button
-              className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
-              onClick={() => setIsSaveViewModalOpen(true)}
-            >
-              儲存視圖
-            </button>
+            {(!selectedViewId || isFilterModified) && (
+              <button
+                className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
+                onClick={() => setIsSaveViewModalOpen(true)}
+              >
+                {selectedViewId ? '更新視圖' : '儲存視圖'}
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* 篩選和搜尋 */}
-      <div className="bg-white shadow-sm rounded-lg p-4">
+      <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           {/* Search Input and Button */}
           <div className="flex-grow flex items-center">
@@ -435,10 +516,49 @@ export default function Reports() {
         onClose={() => setIsSaveViewModalOpen(false)}
         onSave={handleSaveView}
         errorMessage={saveViewError}
+        isUpdate={!!selectedViewId}
+        initialViewName={
+          selectedViewId
+            ? savedViews.find((v) => v.id === selectedViewId)?.name || ''
+            : ''
+        }
+      />
+
+      {/* Manage Views Modal */}
+      <ManageViewsModal
+        isOpen={isManageViewsModalOpen}
+        onClose={() => setIsManageViewsModalOpen(false)}
+        savedViews={savedViews}
+        onDeleteView={handleDeleteView}
+      />
+
+      {/* View Selector Modal */}
+      <ViewSelectorModal
+        isOpen={isViewSelectorModalOpen}
+        onClose={() => setIsViewSelectorModalOpen(false)}
+        savedViews={savedViews}
+        onApplyView={(viewId) => {
+          handleApplyView(viewId);
+          setIsViewSelectorModalOpen(false);
+        }}
+        onManageViews={() => {
+          setIsManageViewsModalOpen(true);
+          setIsViewSelectorModalOpen(false);
+        }}
+        onSaveNewView={() => {
+          setSelectedViewId(null); // Clear selected view to force new save
+          setIsSaveViewModalOpen(true);
+          setIsViewSelectorModalOpen(false);
+        }}
+        onClearView={() => {
+          clearFilters();
+          setIsViewSelectorModalOpen(false);
+        }}
+        selectedViewId={selectedViewId}
       />
 
       {/* 通報列表 */}
-      <div className="bg-white shadow-sm rounded-lg overflow-hidden w-full">
+      <div className="bg-white shadow-sm rounded-lg overflow-hidden w-full border border-gray-200">
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -460,7 +580,7 @@ export default function Reports() {
           <div>
             <div className="overflow-x-auto w-full">
               <table className="w-full divide-y divide-gray-200 table-fixed">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th
                       scope="col"
@@ -621,19 +741,20 @@ export default function Reports() {
                 筆，共 <span className="font-medium">{totalReports}</span> 筆
               </p>
 
-              <nav className="flex items-center space-x-2">
+              <nav
+                className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                aria-label="Pagination"
+              >
                 <button
                   onClick={() => handlePageChange(page - 1)}
                   disabled={page === 1}
-                  className={`px-3 py-1 rounded ${
-                    page === 1
-                      ? 'text-gray-400 cursor-not-allowed'
-                      : 'text-blue-600 hover:bg-blue-50'
-                  }`}
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                 >
-                  上一頁
+                  <span className="sr-only">上一頁</span>
+                  <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
                 </button>
 
+                {/* 頁碼顯示 */}
                 {Array.from({
                   length: Math.ceil(totalReports / pageSize) || 1,
                 })
@@ -641,10 +762,10 @@ export default function Reports() {
                     <button
                       key={i}
                       onClick={() => handlePageChange(i + 1)}
-                      className={`px-3 py-1 rounded ${
+                      className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
                         page === i + 1
-                          ? 'bg-blue-600 text-white'
-                          : 'text-blue-600 hover:bg-blue-50'
+                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                          : 'text-gray-700 hover:bg-gray-50'
                       }`}
                     >
                       {i + 1}
@@ -658,13 +779,10 @@ export default function Reports() {
                 <button
                   onClick={() => handlePageChange(page + 1)}
                   disabled={page >= Math.ceil(totalReports / pageSize)}
-                  className={`px-3 py-1 rounded ${
-                    page >= Math.ceil(totalReports / pageSize)
-                      ? 'text-gray-400 cursor-not-allowed'
-                      : 'text-blue-600 hover:bg-blue-50'
-                  }`}
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                 >
-                  下一頁
+                  <span className="sr-only">下一頁</span>
+                  <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
                 </button>
               </nav>
             </div>

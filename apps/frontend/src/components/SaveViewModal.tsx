@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
 interface SaveViewModalProps {
@@ -6,6 +6,8 @@ interface SaveViewModalProps {
   onClose: () => void;
   onSave: (viewName: string) => void;
   errorMessage?: string | null;
+  isUpdate?: boolean;
+  initialViewName?: string;
 }
 
 const SaveViewModal: React.FC<SaveViewModalProps> = ({
@@ -13,8 +15,16 @@ const SaveViewModal: React.FC<SaveViewModalProps> = ({
   onClose,
   onSave,
   errorMessage,
+  isUpdate = false,
+  initialViewName = '',
 }) => {
-  const [viewName, setViewName] = useState('');
+  const [viewName, setViewName] = useState(initialViewName);
+
+  useEffect(() => {
+    if (isOpen) {
+      setViewName(initialViewName);
+    }
+  }, [isOpen, initialViewName]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +44,9 @@ const SaveViewModal: React.FC<SaveViewModalProps> = ({
         >
           <XMarkIcon className="h-6 w-6" />
         </button>
-        <h2 className="text-xl font-semibold mb-4">儲存目前篩選為視圖</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          {isUpdate ? '更新視圖' : '儲存目前篩選為視圖'}
+        </h2>
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
@@ -67,7 +79,7 @@ const SaveViewModal: React.FC<SaveViewModalProps> = ({
               type="submit"
               className="btn-primary"
             >
-              儲存
+              {isUpdate ? '更新' : '儲存'}
             </button>
           </div>
         </form>
