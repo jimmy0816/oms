@@ -9,8 +9,9 @@ interface ViewSelectorModalProps {
   onApplyView: (viewId: string) => void;
   onManageViews: () => void;
   onSaveNewView: () => void;
-  onClearView: () => void; // New prop
+  onClearView: () => void;
   selectedViewId: string | null;
+  clearViewText?: string;
 }
 
 const ViewSelectorModal: React.FC<ViewSelectorModalProps> = ({
@@ -20,8 +21,9 @@ const ViewSelectorModal: React.FC<ViewSelectorModalProps> = ({
   onApplyView,
   onManageViews,
   onSaveNewView,
-  onClearView, // Destructure new prop
+  onClearView,
   selectedViewId,
+  clearViewText = '清除視圖 (顯示所有通報)',
 }) => {
   if (!isOpen) return null;
 
@@ -61,7 +63,7 @@ const ViewSelectorModal: React.FC<ViewSelectorModalProps> = ({
               }}
               className={`flex-grow text-left text-sm font-medium ${!selectedViewId ? 'text-blue-600' : 'text-gray-700'}`}
             >
-              清除視圖 (顯示所有通報)
+              {clearViewText}
             </button>
           </li>
           {savedViews.length === 0 ? (

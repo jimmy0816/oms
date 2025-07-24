@@ -9,12 +9,14 @@ import {
   TrashIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import {
   TicketPriority,
   TicketStatus,
   UserRole,
   TicketWithDetails,
+  SavedView,
 } from 'shared-types';
 import {
   ticketService,
@@ -23,6 +25,11 @@ import {
   getStatusColor,
   getPriorityColor,
 } from '@/services/ticketService';
+import { savedViewService } from '@/services/savedViewService';
+import SaveViewModal from '@/components/SaveViewModal';
+import ViewSelectorModal from '@/components/ViewSelectorModal';
+import ManageViewsModal from '@/components/ManageViewsModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<TicketWithDetails[]>([]);
@@ -35,6 +42,14 @@ export default function TicketsPage() {
     priority: '',
     search: '',
   });
+  const { user } = useAuth();
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
+  const [isFilterModified, setIsFilterModified] = useState(false);
+  const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
+  const [isViewSelectorModalOpen, setIsViewSelectorModalOpen] = useState(false);
+  const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
+  const [saveViewError, setSaveViewError] = useState<string | null>(null);
 
   const handleDelete = async (ticketId: string, ticketTitle: string) => {
     if (
@@ -51,22 +66,34 @@ export default function TicketsPage() {
     }
   };
 
-  // 處理頁面變更
+  const handleDeleteView = async (viewId: string) => {
+    if (window.confirm('您確定要刪除此視圖嗎？')) {
+      try {
+        await savedViewService.deleteSavedView(viewId);
+        alert('視圖已成功刪除！');
+        loadSavedViews();
+        if (selectedViewId === viewId) {
+          clearFilters();
+        }
+      } catch (error) {
+        console.error('刪除視圖失敗:', error);
+        alert('刪除視圖失敗，請稍後再試。');
+      }
+    }
+  };
+
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
 
-  // 從 API 加載工單數據
   const loadTickets = useCallback(async () => {
     try {
       setLoading(true);
-      // 構建過濾條件
       const apiFilters: Record<string, string> = {};
       if (filters.status) apiFilters.status = filters.status;
       if (filters.priority) apiFilters.priority = filters.priority;
       if (filters.search) apiFilters.search = filters.search;
 
-      // 調用 API 獲取工單
       const ticketsData = await ticketService.getAllTickets(
         currentPage,
         pageSize,
@@ -106,13 +133,25 @@ export default function TicketsPage() {
     }
   }, [currentPage, pageSize, filters.status, filters.priority, filters.search]);
 
+  const loadSavedViews = useCallback(async () => {
+    if (!user) return;
+    try {
+      const views = await savedViewService.getAllSavedViews('TICKET');
+      setSavedViews(views);
+    } catch (error) {
+      console.error('Failed to load saved views:', error);
+    }
+  }, [user]);
+
   useEffect(() => {
     loadTickets();
   }, [loadTickets]);
 
-  // 格式化日期
+  useEffect(() => {
+    loadSavedViews();
+  }, [loadSavedViews]);
+
   const formatDate = (date: Date) => {
-    // 確保 date 是 Date 對象
     const dateObj = date instanceof Date ? date : new Date(date);
     return dateObj.toLocaleDateString('zh-TW', {
       year: 'numeric',
@@ -136,6 +175,68 @@ export default function TicketsPage() {
     []
   );
 
+  const handleApplyView = (viewId: string) => {
+    const viewToApply = savedViews.find((view) => view.id === viewId);
+    if (viewToApply) {
+      setFilters({
+        status: viewToApply.filters.status || '',
+        priority: viewToApply.filters.priority || '',
+        search: viewToApply.filters.search || '',
+      });
+      setSelectedViewId(viewId);
+      setCurrentPage(1);
+      setIsFilterModified(false);
+    }
+  };
+
+  const clearFilters = () => {
+    setFilters({ status: '', priority: '', search: '' });
+    setSelectedViewId(null);
+    setCurrentPage(1);
+    setIsFilterModified(false);
+  };
+
+  const handleSaveView = async (viewName: string) => {
+    try {
+      if (selectedViewId) {
+        await savedViewService.updateSavedView(selectedViewId, viewName, filters);
+        alert('視圖已成功更新！');
+      } else {
+        await savedViewService.createSavedView(viewName, filters, 'TICKET');
+        alert('視圖已成功儲存！');
+      }
+      await loadSavedViews();
+      setIsSaveViewModalOpen(false);
+      setSaveViewError(null);
+      setIsFilterModified(false);
+    } catch (error: any) {
+      console.error('Failed to save view:', error);
+      setSaveViewError(error.message || '儲存視圖失敗');
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedViewId) {
+      const hasFilters = !!filters.search || !!filters.status || !!filters.priority;
+      setIsFilterModified(hasFilters);
+      return;
+    }
+
+    const currentView = savedViews.find((v) => v.id === selectedViewId);
+    if (!currentView) return;
+
+    const filtersSame =
+      (currentView.filters.search || '') === filters.search &&
+      (currentView.filters.status || '') === filters.status &&
+      (currentView.filters.priority || '') === filters.priority;
+
+    setIsFilterModified(!filtersSame);
+  }, [filters, selectedViewId, savedViews]);
+
+  const currentViewName = selectedViewId
+    ? savedViews.find((view) => view.id === selectedViewId)?.name
+    : '所有工單';
+
   return (
     <>
       <Head>
@@ -156,6 +257,30 @@ export default function TicketsPage() {
             <PlusIcon className="h-5 w-5 mr-2" />
             新增工單
           </Link>
+        </div>
+
+        {/* Saved Views Section */}
+        <div className="py-1">
+          <div className="flex items-center space-x-3">
+            <div
+              className="relative flex items-center border border-gray-300 bg-white rounded-md shadow-sm cursor-pointer"
+              onClick={() => setIsViewSelectorModalOpen(true)}
+            >
+              <span className="block py-2 px-3 text-sm font-medium text-gray-700 truncate max-w-[200px]">
+                {currentViewName}
+              </span>
+              <ChevronDownIcon className="h-5 w-5 text-gray-400 mr-2" />
+            </div>
+
+            {(!selectedViewId || isFilterModified) && (
+              <button
+                className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
+                onClick={() => setIsSaveViewModalOpen(true)}
+              >
+                {selectedViewId ? '更新視圖' : '儲存視圖'}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filters */}
@@ -372,6 +497,53 @@ export default function TicketsPage() {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <SaveViewModal
+        isOpen={isSaveViewModalOpen}
+        onClose={() => setIsSaveViewModalOpen(false)}
+        onSave={handleSaveView}
+        errorMessage={saveViewError}
+        isUpdate={!!selectedViewId}
+        initialViewName={
+          selectedViewId
+            ? savedViews.find((v) => v.id === selectedViewId)?.name || ''
+            : ''
+        }
+      />
+
+      <ViewSelectorModal
+        isOpen={isViewSelectorModalOpen}
+        onClose={() => setIsViewSelectorModalOpen(false)}
+        savedViews={savedViews}
+        onApplyView={(viewId) => {
+          handleApplyView(viewId);
+          setIsViewSelectorModalOpen(false);
+        }}
+        onManageViews={() => {
+          setIsManageViewsModalOpen(true);
+          setIsViewSelectorModalOpen(false);
+        }}
+        onSaveNewView={() => {
+          setSelectedViewId(null);
+          setIsSaveViewModalOpen(true);
+          setIsViewSelectorModalOpen(false);
+        }}
+        onClearView={() => {
+          clearFilters();
+          setIsViewSelectorModalOpen(false);
+        }}
+        selectedViewId={selectedViewId}
+        clearViewText="清除視圖 (顯示所有工單)"
+      />
+
+      <ManageViewsModal
+        isOpen={isManageViewsModalOpen}
+        onClose={() => setIsManageViewsModalOpen(false)}
+        savedViews={savedViews}
+        onDeleteView={handleDeleteView}
+      />
     </>
   );
 }
+

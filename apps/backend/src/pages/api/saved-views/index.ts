@@ -46,9 +46,15 @@ async function getSavedViews(
   res: NextApiResponse<ApiResponse<SavedView[]>>
 ) {
   const userId = req.user.id;
+  const type = req.query.type as string | undefined;
+
+  const where: any = { userId };
+  if (type) {
+    where.type = type;
+  }
 
   const savedViews = await prisma.savedView.findMany({
-    where: { userId },
+    where,
     orderBy: { createdAt: 'desc' },
   });
 
@@ -59,13 +65,13 @@ async function createSavedView(
   req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<SavedView>>
 ) {
-  const { name, filters } = req.body;
+  const { name, filters, type } = req.body;
   const userId = req.user.id;
 
-  if (!name || !filters) {
+  if (!name || !filters || !type) {
     return res
       .status(400)
-      .json({ success: false, error: 'Name and filters are required' });
+      .json({ success: false, error: 'Name, filters, and type are required' });
   }
 
   try {
@@ -74,6 +80,7 @@ async function createSavedView(
         name,
         userId,
         filters,
+        type,
       },
     });
     return res.status(201).json({ success: true, data: newSavedView });

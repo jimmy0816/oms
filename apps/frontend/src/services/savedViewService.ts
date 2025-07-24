@@ -15,17 +15,22 @@ const getAuthHeaders = (): HeadersInit => {
 };
 
 export const savedViewService = {
-  async getAllSavedViews(): Promise<SavedView[]> {
+  async getAllSavedViews(type: 'REPORT' | 'TICKET'): Promise<SavedView[]> {
     const response = await axios.get(`${API_URL}/api/saved-views`, {
       headers: getAuthHeaders(),
+      params: { type },
     });
     return response.data.data;
   },
 
-  async createSavedView(name: string, filters: any): Promise<SavedView> {
+  async createSavedView(
+    name: string,
+    filters: any,
+    type: 'REPORT' | 'TICKET'
+  ): Promise<SavedView> {
     const response = await axios.post(
       `${API_URL}/api/saved-views`,
-      { name, filters },
+      { name, filters, type },
       {
         headers: getAuthHeaders(),
       }
