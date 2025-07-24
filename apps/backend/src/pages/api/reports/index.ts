@@ -141,7 +141,7 @@ async function getReports(
     where.OR = [
       { title: { contains: search, mode: 'insensitive' } },
       { description: { contains: search, mode: 'insensitive' } },
-      { location: { contains: search, mode: 'insensitive' } },
+      { location: { name: { contains: search, mode: 'insensitive' } } },
     ];
   }
 

@@ -21,13 +21,7 @@ import {
 import { ReportStatus, ReportPriority, Category } from 'shared-types';
 import { useAuth } from '@/contexts/AuthContext';
 import { categoryService, getCategoryPath } from '@/services/categoryService';
-import dynamic from 'next/dynamic';
 import LocationFilterModal from '@/components/LocationFilterModal';
-
-const LocationMultiSelector = dynamic(
-  () => import('@/components/LocationMultiSelector'),
-  { ssr: false }
-);
 
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -475,7 +469,7 @@ export default function Reports() {
                             {getPriorityText(report.priority as ReportPriority)}
                           </span>
                         </td>
-                        <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
                           {report.location?.name}
                         </td>
                         <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
