@@ -48,14 +48,27 @@ async function getTickets(
   const priority = req.query.priority as string | undefined;
   const assigneeId = req.query.assigneeId as string | undefined;
   const creatorId = req.query.creatorId as string | undefined;
+  const search = req.query.search as string | undefined;
 
   const skip = (page - 1) * pageSize;
 
   const where: any = {};
-  if (status) where.status = status;
-  if (priority) where.priority = priority;
-  if (assigneeId) where.assigneeId = assigneeId;
-  if (creatorId) where.creatorId = creatorId;
+  const andClauses = [];
+
+  if (status) andClauses.push({ status });
+  if (priority) andClauses.push({ priority });
+  if (assigneeId) andClauses.push({ assigneeId });
+  if (creatorId) andClauses.push({ creatorId });
+
+  if (search) {
+    andClauses.push({
+      OR: [
+        { title: { contains: search, mode: 'insensitive' } },
+        { creator: { name: { contains: search, mode: 'insensitive' } } },
+        { assignee: { name: { contains: search, mode: 'insensitive' } } },
+      ],
+    });
+  }
 
   const userId = req.user.id;
   const userPermissions = req.user.permissions || [];
@@ -73,14 +86,20 @@ async function getTickets(
     });
     const userRoleIds = userRoles.map((ur) => ur.roleId);
 
-    where.OR = [
-      { assigneeId: userId }, // 自己認領的工單
-      {
-        // 被分配到該角色，且未接單待處理的工單
-        roleId: { in: userRoleIds },
-        status: TicketStatus.PENDING, // 假設 'PENDING' 表示未接單待處理
-      },
-    ];
+    andClauses.push({
+      OR: [
+        { assigneeId: userId }, // 自己認領的工單
+        {
+          // 被分配到該角色，且未接單待處理的工單
+          roleId: { in: userRoleIds },
+          status: TicketStatus.PENDING, // 假設 'PENDING' 表示未接單待處理
+        },
+      ],
+    });
+  }
+
+  if (andClauses.length > 0) {
+    where.AND = andClauses;
   }
 
   const [tickets, total] = await Promise.all([

@@ -243,14 +243,19 @@ model TicketReview {
 }
 
 model SavedView {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   name      String
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   filters   Json
+  type      SavedViewType @default(REPORT)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([userId, name]) // Ensure a user cannot have two views with the same name
-  @@index([userId])
+  @@unique([userId, name])
+}
+
+enum SavedViewType {
+  REPORT
+  TICKET
 }

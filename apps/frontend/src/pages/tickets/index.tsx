@@ -7,6 +7,8 @@ import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 import {
   TicketPriority,
@@ -134,17 +136,6 @@ export default function TicketsPage() {
     []
   );
 
-  const filteredTickets = tickets.filter((ticket) => {
-    if (filters.status && ticket.status !== filters.status) return false;
-    if (filters.priority && ticket.priority !== filters.priority) return false;
-    if (
-      filters.search &&
-      !ticket.title.toLowerCase().includes(filters.search.toLowerCase())
-    )
-      return false;
-    return true;
-  });
-
   return (
     <>
       <Head>
@@ -236,8 +227,8 @@ export default function TicketsPage() {
             </div>
           ) : (
             <ul className="divide-y divide-gray-200">
-              {filteredTickets.length > 0 ? (
-                filteredTickets.map((ticket) => (
+              {tickets.length > 0 ? (
+                tickets.map((ticket) => (
                   <li key={ticket.id}>
                     <Link
                       href={`/tickets/${ticket.id}`}
@@ -318,6 +309,67 @@ export default function TicketsPage() {
               )}
             </ul>
           )}
+          {/* Pagination */}
+          <div className="flex justify-between items-center mt-4 p-4">
+            <p className="text-sm text-gray-700">
+              顯示{' '}
+              <span className="font-medium">
+                {totalTickets > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+              </span>{' '}
+              到{' '}
+              <span className="font-medium">
+                {Math.min(currentPage * pageSize, totalTickets)}
+              </span>{' '}
+              筆，共 <span className="font-medium">{totalTickets}</span> 筆
+            </p>
+
+            <nav
+              className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+              aria-label="Pagination"
+            >
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+              >
+                <span className="sr-only">上一頁</span>
+                <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
+              </button>
+
+              {Array.from({
+                length: Math.ceil(totalTickets / pageSize) || 1,
+              })
+                .map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handlePageChange(i + 1)}
+                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
+                      currentPage === i + 1
+                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))
+                .slice(
+                  Math.max(0, currentPage - 3),
+                  Math.min(
+                    Math.ceil(totalTickets / pageSize) || 1,
+                    currentPage + 2
+                  )
+                )}
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= Math.ceil(totalTickets / pageSize)}
+                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+              >
+                <span className="sr-only">下一頁</span>
+                <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </nav>
+          </div>
         </div>
       </div>
     </>
