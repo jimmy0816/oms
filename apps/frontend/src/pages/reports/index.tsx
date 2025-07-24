@@ -111,7 +111,7 @@ export default function Reports() {
   const loadSavedViews = useCallback(async () => {
     if (!user) return; // Only load if user is authenticated
     try {
-      const views = await savedViewService.getAllSavedViews();
+      const views = await savedViewService.getAllSavedViews('REPORT');
       setSavedViews(views);
     } catch (error) {
       console.error('Failed to load saved views:', error);
@@ -216,7 +216,11 @@ export default function Reports() {
         alert('視圖已成功更新！');
       } else {
         // 否則創建一個新的視圖
-        await savedViewService.createSavedView(viewName, currentFilters);
+        await savedViewService.createSavedView(
+          viewName,
+          currentFilters,
+          'REPORT'
+        );
         alert('視圖已成功儲存！');
       }
 
