@@ -93,7 +93,7 @@ async function getReports(
   const assigneeId = req.query.assigneeId as string | undefined;
   const creatorId = req.query.creatorId as string | undefined;
   const search = req.query.search as string | undefined;
-  const locationIds = req.query.locationId as string | undefined;
+  const locationIds = req.query.locationIds as string | undefined;
 
   const skip = (page - 1) * pageSize;
 

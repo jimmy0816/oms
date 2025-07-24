@@ -220,15 +220,28 @@ export const reportService = {
   async getAllReports(
     page = 1,
     pageSize = 10,
-    filters: Record<string, string> = {}
+    filters: {
+      status?: string;
+      category?: string;
+      priority?: string;
+      search?: string;
+      locationIds?: number[];
+    } = {}
   ): Promise<PaginatedResponse<Report>> {
     try {
       // 構建查詢參數
       const queryParams = new URLSearchParams({
         page: page.toString(),
         pageSize: pageSize.toString(),
-        ...filters,
       });
+
+      if (filters.status) queryParams.append('status', filters.status);
+      if (filters.category) queryParams.append('category', filters.category);
+      if (filters.priority) queryParams.append('priority', filters.priority);
+      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.locationIds && filters.locationIds.length > 0) {
+        queryParams.append('locationIds', filters.locationIds.join(','));
+      }
 
       const response = await fetch(
         `${API_URL}/api/reports?${queryParams.toString()}`,

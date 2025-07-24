@@ -21,6 +21,12 @@ import {
 import { ReportStatus, ReportPriority, Category } from 'shared-types';
 import { useAuth } from '@/contexts/AuthContext';
 import { categoryService, getCategoryPath } from '@/services/categoryService';
+import dynamic from 'next/dynamic';
+
+const LocationMultiSelector = dynamic(
+  () => import('@/components/LocationMultiSelector'),
+  { ssr: false }
+);
 
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -28,6 +34,7 @@ export default function Reports() {
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -73,11 +80,18 @@ export default function Reports() {
       setError(null);
 
       // 構建過濾條件
-      const filters: Record<string, string> = {};
+      const filters: {
+        status?: string;
+        category?: string;
+        priority?: string;
+        search?: string;
+        locationIds?: number[];
+      } = {};
       if (statusFilter) filters.status = statusFilter;
       if (categoryFilter) filters.category = categoryFilter;
       if (priorityFilter) filters.priority = priorityFilter;
       if (searchTerm) filters.search = searchTerm;
+      if (locationFilter.length > 0) filters.locationIds = locationFilter;
 
       // 調用 API 獲取報告
       const response = await reportService.getAllReports(
@@ -101,6 +115,7 @@ export default function Reports() {
     categoryFilter,
     priorityFilter,
     searchTerm,
+    locationFilter,
   ]);
 
   // 處理搜索和過濾
@@ -191,87 +206,97 @@ export default function Reports() {
 
         {/* 篩選和搜尋 */}
         <div className="bg-white shadow-sm rounded-lg p-4">
-          <div className="flex flex-wrap gap-4 mb-6">
-            {/* 搜索和過濾區域 */}
-            <div className="w-full md:w-1/3 lg:w-1/4">
-              <div className="relative flex">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+            {/* Search Input and Button */}
+            <div className="flex-grow flex items-center">
+              <div className="relative flex-grow">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   type="text"
                   placeholder="搜尋通報..."
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 />
-                <button
-                  type="button"
-                  onClick={handleSearch}
-                  className="ml-2 inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
-                >
-                  <MagnifyingGlassIcon className="h-4 w-4 mr-1" />
-                  搜尋
-                </button>
               </div>
+              <button
+                type="button"
+                onClick={handleSearch}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-r-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
+              >
+                <MagnifyingGlassIcon className="h-4 w-4 mr-1" />
+                搜尋
+              </button>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* 狀態篩選 */}
-            <div className="w-full md:w-auto">
-              <div className="relative">
-                <select
-                  className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="">全部狀態</option>
-
-                  <option value={ReportStatus.UNCONFIRMED}>未確認</option>
-                  <option value={ReportStatus.PROCESSING}>處理中</option>
-                  <option value={ReportStatus.REJECTED}>不處理</option>
-                  <option value={ReportStatus.PENDING_REVIEW}>待審核</option>
-                  <option value={ReportStatus.REVIEWED}>已歸檔</option>
-                  <option value={ReportStatus.RETURNED}>已退回</option>
-                </select>
-              </div>
+            <div>
+              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">狀態</label>
+              <select
+                id="status-filter"
+                className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">全部狀態</option>
+                <option value={ReportStatus.UNCONFIRMED}>未確認</option>
+                <option value={ReportStatus.PROCESSING}>處理中</option>
+                <option value={ReportStatus.REJECTED}>不處理</option>
+                <option value={ReportStatus.PENDING_REVIEW}>待審核</option>
+                <option value={ReportStatus.REVIEWED}>已歸檔</option>
+                <option value={ReportStatus.RETURNED}>已退回</option>
+              </select>
             </div>
 
             {/* 類別篩選 */}
-            <div className="w-full md:w-auto">
-              <div className="relative">
-                <select
-                  className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                >
-                  <option value="">全部類別</option>
-                  {categories
-                    .filter((cat) => cat.level === 1)
-                    .map((cat1) => (
-                      <option key={cat1.id} value={cat1.id}>
-                        {cat1.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
+            <div>
+              <label htmlFor="category-filter" className="block text-sm font-medium text-gray-700 mb-1">類別</label>
+              <select
+                id="category-filter"
+                className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="">全部類別</option>
+                {categories
+                  .filter((cat) => cat.level === 1)
+                  .map((cat1) => (
+                    <option key={cat1.id} value={cat1.id}>
+                      {cat1.name}
+                    </option>
+                  ))}
+              </select>
             </div>
 
             {/* 優先級篩選 */}
-            <div className="w-full md:w-auto">
-              <div className="relative">
-                <select
-                  className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-                  value={priorityFilter}
-                  onChange={(e) => setPriorityFilter(e.target.value)}
-                >
-                  <option value="">全部優先級</option>
-                  <option value={ReportPriority.LOW}>低</option>
-                  <option value={ReportPriority.MEDIUM}>中</option>
-                  <option value={ReportPriority.HIGH}>高</option>
-                  <option value={ReportPriority.URGENT}>緊急</option>
-                </select>
-              </div>
+            <div>
+              <label htmlFor="priority-filter" className="block text-sm font-medium text-gray-700 mb-1">優先級</label>
+              <select
+                id="priority-filter"
+                className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+              >
+                <option value="">全部優先級</option>
+                <option value={ReportPriority.LOW}>低</option>
+                <option value={ReportPriority.MEDIUM}>中</option>
+                <option value={ReportPriority.HIGH}>高</option>
+                <option value={ReportPriority.URGENT}>緊急</option>
+              </select>
+            </div>
+
+            {/* 地點篩選 */}
+            <div>
+              <label htmlFor="location-filter" className="block text-sm font-medium text-gray-700 mb-1">地點</label>
+              <LocationMultiSelector
+                value={locationFilter}
+                onChange={setLocationFilter}
+              />
             </div>
           </div>
         </div>
