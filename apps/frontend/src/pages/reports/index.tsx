@@ -22,6 +22,7 @@ import { ReportStatus, ReportPriority, Category } from 'shared-types';
 import { useAuth } from '@/contexts/AuthContext';
 import { categoryService, getCategoryPath } from '@/services/categoryService';
 import dynamic from 'next/dynamic';
+import LocationFilterModal from '@/components/LocationFilterModal';
 
 const LocationMultiSelector = dynamic(
   () => import('@/components/LocationMultiSelector'),
@@ -35,6 +36,7 @@ export default function Reports() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState<number[]>([]);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -44,7 +46,9 @@ export default function Reports() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   const handleDelete = async (reportId: string, reportTitle: string) => {
-    if (window.confirm(`您確定要刪除通報「${reportTitle}」嗎？此操作無法復原。`)) {
+    if (
+      window.confirm(`您確定要刪除通報「${reportTitle}」嗎？此操作無法復原。`)
+    ) {
       try {
         await reportService.deleteReport(reportId);
         alert('通報已成功刪除！');
@@ -136,6 +140,7 @@ export default function Reports() {
     setStatusFilter('');
     setCategoryFilter('');
     setPriorityFilter('');
+    setLocationFilter([]);
     setPage(1);
   };
 
@@ -236,7 +241,12 @@ export default function Reports() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* 狀態篩選 */}
             <div>
-              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">狀態</label>
+              <label
+                htmlFor="status-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                狀態
+              </label>
               <select
                 id="status-filter"
                 className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
@@ -255,7 +265,12 @@ export default function Reports() {
 
             {/* 類別篩選 */}
             <div>
-              <label htmlFor="category-filter" className="block text-sm font-medium text-gray-700 mb-1">類別</label>
+              <label
+                htmlFor="category-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                類別
+              </label>
               <select
                 id="category-filter"
                 className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
@@ -275,7 +290,12 @@ export default function Reports() {
 
             {/* 優先級篩選 */}
             <div>
-              <label htmlFor="priority-filter" className="block text-sm font-medium text-gray-700 mb-1">優先級</label>
+              <label
+                htmlFor="priority-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                優先級
+              </label>
               <select
                 id="priority-filter"
                 className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
@@ -292,14 +312,37 @@ export default function Reports() {
 
             {/* 地點篩選 */}
             <div>
-              <label htmlFor="location-filter" className="block text-sm font-medium text-gray-700 mb-1">地點</label>
-              <LocationMultiSelector
-                value={locationFilter}
-                onChange={setLocationFilter}
-              />
+              <label
+                htmlFor="location-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                地點
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsLocationModalOpen(true)}
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+              >
+                {locationFilter.length > 0
+                  ? `已選 ${locationFilter.length} 個地點`
+                  : '選擇地點...'}
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Location Filter Modal */}
+        <LocationFilterModal
+          isOpen={isLocationModalOpen}
+          onClose={() => setIsLocationModalOpen(false)}
+          onConfirm={(selectedIds) => {
+            setLocationFilter(selectedIds);
+            setIsLocationModalOpen(false);
+            setPage(1); // Reset page when filter changes
+            loadReports(); // Reload reports with new filter
+          }}
+          initialSelectedLocationIds={locationFilter}
+        />
 
         {/* 通報列表 */}
         <div className="bg-white shadow-sm rounded-lg overflow-hidden w-full">
@@ -366,7 +409,7 @@ export default function Reports() {
                       </th>
                       <th
                         scope="col"
-                        className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32"
+                        className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w24"
                       >
                         建立時間
                       </th>
@@ -376,7 +419,7 @@ export default function Reports() {
                       >
                         建立者
                       </th>
-                    <th
+                      <th
                         scope="col"
                         className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
                       >
