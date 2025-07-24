@@ -49,7 +49,7 @@ export interface Ticket {
   reports: ReportTicket[];
   roleId: string;
   comments?: Comment[];
-  attachments?: Attachments[]; // New attachments field
+  attachments?: FileInfo[]; // New attachments field
   activityLogs?: ActivityLog[];
 }
 
