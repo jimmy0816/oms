@@ -137,3 +137,12 @@ export interface Location {
   id: number;
   name: string;
 }
+
+export interface SavedView {
+  id: string;
+  name: string;
+  userId: string;
+  filters: any; // This will be a JSON object storing filter criteria
+  createdAt: Date;
+  updatedAt: Date;
+}

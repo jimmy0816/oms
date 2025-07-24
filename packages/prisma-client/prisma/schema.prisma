@@ -27,6 +27,7 @@ model User {
   AuditLogs       AuditLog[]
   Attachment      Attachment[]
   activityLogs    ActivityLog[]
+  savedViews      SavedView[]
 }
 
 model Notification {
@@ -239,4 +240,17 @@ model TicketReview {
 
   @@index([ticketId])
   @@index([creatorId])
+}
+
+model SavedView {
+  id        String   @id @default(uuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  filters   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name]) // Ensure a user cannot have two views with the same name
+  @@index([userId])
 }
