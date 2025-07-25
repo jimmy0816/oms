@@ -8,6 +8,7 @@ import FileUploader from '@/components/FileUploader';
 import { ticketService } from '@/services/ticketService';
 import { roleService, getRoleName } from '@/services/roleService';
 import { uploadService } from '@/services/uploadService';
+import { useToast } from '@/contexts/ToastContext';
 import dynamic from 'next/dynamic';
 
 const ReportMultiSelector = dynamic(
@@ -42,6 +43,7 @@ export default function NewTicket() {
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
+  const { showToast } = useToast();
 
   const {
     register,
@@ -112,12 +114,12 @@ export default function NewTicket() {
       const createdTicket = await ticketService.createTicket(ticketData);
 
       // 顯示成功訊息
-      alert('工單已成功建立！');
+      showToast('工單已成功建立！', 'success');
 
       // 導向到工單列表頁面
       router.push((query.returnUrl as string) || '/tickets');
     } catch (err: any) {
-      setError(err.message || '建立工單時發生錯誤，請稍後再試。');
+      showToast(err.message || '建立工單時發生錯誤，請稍後再試。', 'error');
     } finally {
       setIsSubmitting(false);
     }

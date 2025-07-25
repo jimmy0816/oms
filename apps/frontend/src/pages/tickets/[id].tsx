@@ -14,6 +14,7 @@ import { uploadService } from '@/services/uploadService';
 import { TicketStatus, Permission, FileInfo } from 'shared-types';
 import { getRoleName } from '@/services/roleService';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import TicketReviewForm from '@/components/TicketReviewForm';
 import TicketReviewDetailModal from '@/components/TicketReviewDetailModal';
 
@@ -25,6 +26,7 @@ export default function TicketDetail() {
   const [newCommentContent, setNewCommentContent] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [isReviewFormOpen, setIsReviewFormOpen] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [selectedReview, setSelectedReview] = useState<any>(null);
@@ -74,9 +76,10 @@ export default function TicketDetail() {
       );
       setNewCommentContent('');
       await fetchTicket();
+      showToast('留言已成功新增！', 'success');
     } catch (error) {
       console.error('Error adding comment:', error);
-      alert('新增留言失敗，請稍後再試');
+      showToast('新增留言失敗，請稍後再試', 'error');
     }
   };
 
@@ -97,10 +100,10 @@ export default function TicketDetail() {
     try {
       await ticketService.claimTicket(ticket.id, user.id);
       await fetchTicket();
-      alert('認領成功！');
+      showToast('認領成功！', 'success');
     } catch (error) {
       console.error('Error claiming ticket:', error);
-      alert('認領失敗，請稍後再試');
+      showToast('認領失敗，請稍後再試', 'error');
     }
   };
 
@@ -110,10 +113,10 @@ export default function TicketDetail() {
     try {
       await ticketService.abandonTicket(ticket.id, user.id);
       await fetchTicket();
-      alert('放棄成功！');
+      showToast('放棄成功！', 'success');
     } catch (error) {
       console.error('Error abandoning ticket:', error);
-      alert('放棄失敗，請稍後再試');
+      showToast('放棄失敗，請稍後再試', 'error');
     }
   };
 
@@ -126,10 +129,10 @@ export default function TicketDetail() {
         await ticketService.addActivityLog(ticket.id, log, user.id);
       }
       await fetchTicket();
-      alert(`工單狀態已更新為 ${getStatusText(newStatus)}`);
+      showToast(`工單狀態已更新為 ${getStatusText(newStatus)}`, 'success');
     } catch (error) {
       console.error('Error updating ticket status:', error);
-      alert('更新工單狀態失敗，請稍後再試');
+      showToast('更新工單狀態失敗，請稍後再試', 'error');
     }
   };
 
@@ -168,10 +171,10 @@ export default function TicketDetail() {
       await ticketService.submitTicketReview(ticket.id, content, attachments);
       setIsReviewFormOpen(false);
       await fetchTicket();
-      alert('審核已成功送出');
+      showToast('審核已成功送出', 'success');
     } catch (error) {
       console.error('Error submitting review:', error);
-      alert('提交審核失敗，請稍後再試');
+      showToast('提交審核失敗，請稍後再試', 'error');
     } finally {
       setIsSubmittingReview(false);
     }

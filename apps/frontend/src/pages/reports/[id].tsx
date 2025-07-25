@@ -29,6 +29,7 @@ import {
 } from '@/services/ticketService';
 import { ReportStatus, ReportPriority, Category } from 'shared-types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import { categoryService, getCategoryPath } from '@/services/categoryService';
 
 export default function ReportDetail() {
@@ -43,6 +44,7 @@ export default function ReportDetail() {
   const [newCommentContent, setNewCommentContent] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [openTicketId, setOpenTicketId] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   // 根據用戶角色設置權限
   const [userPermissions, setUserPermissions] = useState({
@@ -108,11 +110,11 @@ export default function ReportDetail() {
 
       try {
         await reportService.deleteReport(report.id);
-        alert('通報已刪除成功');
+        showToast('通報已刪除成功', 'success');
         router.push('/reports');
       } catch (error) {
         console.error('Error deleting report:', error);
-        alert('刪除失敗，請稍後再試');
+        showToast('刪除失敗，請稍後再試', 'error');
         setProcessing(false);
       }
     }
@@ -131,9 +133,10 @@ export default function ReportDetail() {
       );
       setNewCommentContent('');
       fetchReport(); // Re-fetch report to update comments
+      showToast('留言已成功新增！', 'success');
     } catch (error) {
       console.error('Error adding comment:', error);
-      alert('新增留言失敗，請稍後再試');
+      showToast('新增留言失敗，請稍後再試', 'error');
     } finally {
       setProcessing(false);
     }
@@ -161,10 +164,10 @@ export default function ReportDetail() {
 
       fetchReport(); // Re-fetch report to update status and logs
 
-      alert(`通報狀態已更新為${getStatusName(newStatus)}`);
+      showToast(`通報狀態已更新為${getStatusName(newStatus)}`, 'success');
     } catch (error) {
       console.error('Error updating report status:', error);
-      alert('更新通報狀態失敗，請稍後再試');
+      showToast('更新通報狀態失敗，請稍後再試', 'error');
     } finally {
       setProcessing(false);
     }
@@ -659,7 +662,11 @@ export default function ReportDetail() {
                   <div className="text-gray-500 mb-4">目前尚無相關工單</div>
                 )}
                 <Link
-                  href={`/tickets/new?reportId=${report.id}&returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                  href={`/tickets/new?reportId=${
+                    report.id
+                  }&returnUrl=${encodeURIComponent(
+                    window.location.pathname + window.location.search
+                  )}`}
                   className="btn-primary w-full block text-center mt-6"
                 >
                   新增工單

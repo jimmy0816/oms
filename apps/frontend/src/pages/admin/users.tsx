@@ -15,9 +15,11 @@ import { userService } from '@/services/userService';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 function UsersPage() {
   const { user: currentUser } = useAuth();
+  const { showToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -244,7 +246,7 @@ function UsersPage() {
       setIsModalOpen(false);
     } catch (error) {
       console.error('Error saving user:', error);
-      alert('保存用戶時出錯');
+      showToast('保存用戶時出錯', 'error');
     }
   };
 
@@ -261,9 +263,11 @@ function UsersPage() {
 
       // 關閉刪除模態框
       setIsDeleteModalOpen(false);
+
+      showToast('使用者已成功刪除！', 'success');
     } catch (error) {
-      console.error('Error deleting user:', error);
-      alert('刪除用戶時出錯');
+      console.error('刪除使用者失敗:', error);
+      showToast('刪除使用者失敗，請稍後再試。', 'error');
     }
   };
 

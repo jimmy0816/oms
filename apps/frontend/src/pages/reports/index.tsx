@@ -28,6 +28,7 @@ import {
   ReportPriority,
 } from 'shared-types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import { categoryService, getCategoryPath } from '@/services/categoryService';
 import { savedViewService } from '@/services/savedViewService';
 import LocationFilterModal from '@/components/LocationFilterModal';
@@ -57,6 +58,7 @@ export default function Reports() {
   const [saveViewError, setSaveViewError] = useState<string | null>(null);
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
   const [isFilterModified, setIsFilterModified] = useState(false);
+  const { showToast } = useToast();
 
   const handleDelete = async (reportId: string, reportTitle: string) => {
     if (
@@ -64,11 +66,11 @@ export default function Reports() {
     ) {
       try {
         await reportService.deleteReport(reportId);
-        alert('通報已成功刪除！');
+        showToast('通報已成功刪除！', 'success');
         loadReports(); // 重新加載通報列表
       } catch (error) {
         console.error('刪除通報失敗:', error);
-        alert('刪除通報失敗，請稍後再試。');
+        showToast('刪除通報失敗，請稍後再試。', 'error');
       }
     }
   };
@@ -77,7 +79,7 @@ export default function Reports() {
     if (window.confirm('您確定要刪除此視圖嗎？')) {
       try {
         await savedViewService.deleteSavedView(viewId);
-        alert('視圖已成功刪除！');
+        showToast('視圖已成功刪除！', 'success');
         loadSavedViews(); // 重新加載儲存的視圖
         if (selectedViewId === viewId) {
           // 如果刪除的是當前選中的視圖，則清除篩選
@@ -85,7 +87,7 @@ export default function Reports() {
         }
       } catch (error) {
         console.error('刪除視圖失敗:', error);
-        alert('刪除視圖失敗，請稍後再試。');
+        showToast('刪除視圖失敗，請稍後再試。', 'error');
       }
     }
   };
@@ -213,7 +215,7 @@ export default function Reports() {
           viewName,
           currentFilters
         );
-        alert('視圖已成功更新！');
+        showToast('視圖已成功更新！', 'success');
       } else {
         // 否則創建一個新的視圖
         await savedViewService.createSavedView(
@@ -221,7 +223,7 @@ export default function Reports() {
           currentFilters,
           'REPORT'
         );
-        alert('視圖已成功儲存！');
+        showToast('視圖已成功儲存！', 'success');
       }
 
       await loadSavedViews(); // Reload saved views after saving/updating

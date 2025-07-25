@@ -12,6 +12,7 @@ import FileUploader from '@/components/FileUploader';
 import { ticketService } from '@/services/ticketService';
 import { roleService, getRoleName } from '@/services/roleService';
 import { uploadService } from '@/services/uploadService';
+import { useToast } from '@/contexts/ToastContext';
 import dynamic from 'next/dynamic';
 
 const ReportMultiSelector = dynamic(
@@ -39,6 +40,7 @@ export default function EditTicket() {
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
   const [ticketData, setTicketData] = useState<any | null>(null);
   const [loadingTicket, setLoadingTicket] = useState(true);
+  const { showToast } = useToast();
 
   const {
     register,
@@ -140,10 +142,10 @@ export default function EditTicket() {
         ticketDataToUpdate
       );
 
-      alert('工單已成功更新！');
+      showToast('工單已成功更新！', 'success');
       router.push(`/tickets/${id}`);
     } catch (err: any) {
-      setError(err.message || '更新工單時發生錯誤，請稍後再試。');
+      showToast(err.message || '更新工單時發生錯誤，請稍後再試。', 'error');
     } finally {
       setIsSubmitting(false);
     }

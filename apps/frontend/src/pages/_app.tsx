@@ -3,6 +3,7 @@ import type { AppProps } from 'next/app';
 import { Layout } from '@/components/Layout';
 import { useEffect } from 'react';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ToastProvider } from '@/contexts/ToastContext';
 
 export default function App({ Component, pageProps }: AppProps) {
   // Force a client-side render to ensure styles are applied
@@ -13,9 +14,11 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <AuthProvider>
-      <Layout>
-        <Component {...pageProps} />
-      </Layout>
+      <ToastProvider>
+        <Layout>
+          <Component {...pageProps} />
+        </Layout>
+      </ToastProvider>
     </AuthProvider>
   );
 }

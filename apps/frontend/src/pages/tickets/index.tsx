@@ -30,6 +30,7 @@ import SaveViewModal from '@/components/SaveViewModal';
 import ViewSelectorModal from '@/components/ViewSelectorModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<TicketWithDetails[]>([]);
@@ -43,6 +44,7 @@ export default function TicketsPage() {
     search: '',
   });
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
   const [isFilterModified, setIsFilterModified] = useState(false);
@@ -57,11 +59,11 @@ export default function TicketsPage() {
     ) {
       try {
         await ticketService.deleteTicket(ticketId);
-        alert('工單已成功刪除！');
+        showToast('工單已成功刪除！', 'success');
         loadTickets();
       } catch (error) {
         console.error('刪除工單失敗:', error);
-        alert('刪除工單失敗，請稍後再試。');
+        showToast('刪除工單失敗，請稍後再試。', 'error');
       }
     }
   };
@@ -70,14 +72,14 @@ export default function TicketsPage() {
     if (window.confirm('您確定要刪除此視圖嗎？')) {
       try {
         await savedViewService.deleteSavedView(viewId);
-        alert('視圖已成功刪除！');
+        showToast('視圖已成功刪除！', 'success');
         loadSavedViews();
         if (selectedViewId === viewId) {
           clearFilters();
         }
       } catch (error) {
         console.error('刪除視圖失敗:', error);
-        alert('刪除視圖失敗，請稍後再試。');
+        showToast('刪除視圖失敗，請稍後再試。', 'error');
       }
     }
   };
@@ -200,10 +202,10 @@ export default function TicketsPage() {
     try {
       if (selectedViewId) {
         await savedViewService.updateSavedView(selectedViewId, viewName, filters);
-        alert('視圖已成功更新！');
+        showToast('視圖已成功更新！', 'success');
       } else {
         await savedViewService.createSavedView(viewName, filters, 'TICKET');
-        alert('視圖已成功儲存！');
+        showToast('視圖已成功儲存！', 'success');
       }
       await loadSavedViews();
       setIsSaveViewModalOpen(false);

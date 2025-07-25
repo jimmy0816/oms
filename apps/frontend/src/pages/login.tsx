@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 /**
  * 登入頁面組件
@@ -12,6 +13,7 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
   
   // If user is already logged in, redirect to dashboard
   useEffect(() => {
@@ -34,7 +36,7 @@ const LoginPage: React.FC = () => {
     try {
       // 驗證輸入
       if (!email || !password) {
-        setError('請輸入電子郵件和密碼');
+        showToast('請輸入電子郵件和密碼', 'error');
         setLoading(false);
         return;
       }
@@ -45,7 +47,7 @@ const LoginPage: React.FC = () => {
       // 登入成功後重定向到首頁
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : '登入失敗，請檢查您的憑證');
+      showToast(err instanceof Error ? err.message : '登入失敗，請檢查您的憑證', 'error');
     } finally {
       setLoading(false);
     }

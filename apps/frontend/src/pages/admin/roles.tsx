@@ -2,17 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { UserRole, Permission } from 'shared-types';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { roleService, getRoleName } from '@/services/roleService';
-// 暫時使用自定義的提示功能代替 react-hot-toast
-const toast = {
-  success: (message: string) => {
-    alert(`成功: ${message}`);
-  },
-  error: (message: string) => {
-    alert(`錯誤: ${message}`);
-  },
-};
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 /**
  * 角色權限管理頁面
@@ -22,6 +14,7 @@ const RolesManagementPage: React.FC = () => {
   const [rolePermissions, setRolePermissions] = useState<Permission[]>([]);
   const [allPermissions] = useState<Permission[]>(Object.values(Permission));
   const { user } = useAuth(); // 獲取當前用戶
+  const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isResetting, setIsResetting] = useState<boolean>(false);
@@ -44,7 +37,7 @@ const RolesManagementPage: React.FC = () => {
       setRolePermissions(permissions);
     } catch (error) {
       console.error(`Error fetching permissions for role ${role}:`, error);
-      toast.error('獲取角色權限失敗');
+      showToast('獲取角色權限失敗', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -62,16 +55,16 @@ const RolesManagementPage: React.FC = () => {
       );
 
       if (result.success) {
-        toast.success('權限已成功保存');
+        showToast('權限已成功保存', 'success');
       } else {
-        toast.error(result.message || '保存權限失敗');
+        showToast(result.message || '保存權限失敗', 'error');
       }
     } catch (error) {
       console.error(
         `Error saving permissions for role ${selectedRole}:`,
         error
       );
-      toast.error('保存權限失敗');
+      showToast('保存權限失敗', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -90,18 +83,18 @@ const RolesManagementPage: React.FC = () => {
       const result = await roleService.resetRolePermissions(selectedRole);
 
       if (result.success) {
-        toast.success('權限已重置為默認值');
+        showToast('權限已重置為默認值', 'success');
         // 重新獲取權限
         fetchRolePermissions(selectedRole);
       } else {
-        toast.error(result.message || '重置權限失敗');
+        showToast(result.message || '重置權限失敗', 'error');
       }
     } catch (error) {
       console.error(
         `Error resetting permissions for role ${selectedRole}:`,
         error
       );
-      toast.error('重置權限失敗');
+      showToast('重置權限失敗', 'error');
     } finally {
       setIsResetting(false);
     }

@@ -19,6 +19,7 @@ const LocationSelector = dynamic(
   { ssr: false }
 );
 import { ticketService } from '@/services/ticketService';
+import { useToast } from '@/contexts/ToastContext';
 
 // 定義檔案資訊介面
 interface FileInfo {
@@ -49,6 +50,7 @@ export default function NewReport() {
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
     null
   );
+  const { showToast } = useToast();
 
   const {
     register,
@@ -132,11 +134,11 @@ export default function NewReport() {
 
       // 導航完成後顯示成功訊息
       setTimeout(() => {
-        alert('通報已成功建立！');
+        showToast('通報已成功建立！', 'success');
       }, 100);
     } catch (err) {
       console.error('建立通報時發生錯誤:', err);
-      setError('建立通報時發生錯誤，請稍後再試。');
+      showToast('建立通報時發生錯誤，請稍後再試。', 'error');
     } finally {
       setIsSubmitting(false);
     }
