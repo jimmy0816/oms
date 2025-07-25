@@ -312,15 +312,23 @@ export default function TicketsPage() {
       </Head>
 
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-semibold text-gray-900">工單管理</h1>
-          <Link
-            href={`/tickets/new?returnUrl=${encodeURIComponent(currentPath)}`}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            新增工單
-          </Link>
+          <div className="flex items-center space-x-3">
+            <button
+              className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
+              onClick={clearFilters}
+            >
+              清除篩選
+            </button>
+            <Link
+              href={`/tickets/new?returnUrl=${encodeURIComponent(currentPath)}`}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+            >
+              <PlusIcon className="h-5 w-5 mr-2" />
+              新增工單
+            </Link>
+          </div>
         </div>
 
         {/* Saved Views Section */}
@@ -347,81 +355,101 @@ export default function TicketsPage() {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white shadow rounded-lg p-4">
-          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-            <div className="flex-1">
-              <div className="relative rounded-md shadow-sm">
+        {/* 篩選和搜尋 */}
+        <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+            {/* Search Input and Button */}
+            <div className="flex-grow flex items-center">
+              <div className="relative flex-grow">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   type="text"
-                  name="search"
+                  placeholder="搜尋工單..."
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   value={filters.search}
                   onChange={handleSearchChange}
-                  className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-                  placeholder="搜尋工單"
+                  onKeyPress={(e) => e.key === 'Enter' && loadTickets()} // Trigger search on Enter
                 />
               </div>
+              <button
+                type="button"
+                onClick={loadTickets} // Trigger search on button click
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-r-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
+              >
+                <MagnifyingGlassIcon className="h-4 w-4 mr-1" />
+                搜尋
+              </button>
             </div>
-            <div className="flex space-x-4">
-              <div>
-                <label htmlFor="status" className="sr-only">
-                  Status
-                </label>
-                <select
-                  id="status"
-                  name="status"
-                  value={filters.status}
-                  onChange={handleFilterChange}
-                  className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                >
-                  <option value="">所有狀態</option>
-                  {Object.values(TicketStatus).map((status) => (
-                    <option key={status} value={status}>
-                      {getStatusText(status)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="priority" className="sr-only">
-                  Priority
-                </label>
-                <select
-                  id="priority"
-                  name="priority"
-                  value={filters.priority}
-                  onChange={handleFilterChange}
-                  className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                >
-                  <option value="">所有優先級</option>
-                  {Object.values(TicketPriority).map((priority) => (
-                    <option key={priority} value={priority}>
-                      {getPriorityText(priority)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {/* 地點篩選 */}
-              <div>
-                <label
-                  htmlFor="location-filter"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  地點
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setIsLocationModalOpen(true)}
-                  className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
-                >
-                  {filters.locationIds.length > 0
-                    ? `已選 ${filters.locationIds.length} 個地點`
-                    : '選擇地點...'}
-                </button>
-              </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 狀態篩選 */}
+            <div>
+              <label
+                htmlFor="status-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                狀態
+              </label>
+              <select
+                id="status-filter"
+                name="status"
+                value={filters.status}
+                onChange={handleFilterChange}
+                className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+              >
+                <option value="">所有狀態</option>
+                {Object.values(TicketStatus).map((status) => (
+                  <option key={status} value={status}>
+                    {getStatusText(status)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 優先級篩選 */}
+            <div>
+              <label
+                htmlFor="priority-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                優先級
+              </label>
+              <select
+                id="priority-filter"
+                name="priority"
+                value={filters.priority}
+                onChange={handleFilterChange}
+                className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+              >
+                <option value="">所有優先級</option>
+                {Object.values(TicketPriority).map((priority) => (
+                  <option key={priority} value={priority}>
+                    {getPriorityText(priority)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 地點篩選 */}
+            <div>
+              <label
+                htmlFor="location-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                地點
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsLocationModalOpen(true)}
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+              >
+                {filters.locationIds.length > 0
+                  ? `已選 ${filters.locationIds.length} 個地點`
+                  : '選擇地點...'}
+              </button>
             </div>
           </div>
         </div>
