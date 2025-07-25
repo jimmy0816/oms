@@ -110,8 +110,19 @@ export const ticketService = {
       const queryParams = new URLSearchParams({
         page: page.toString(),
         pageSize: pageSize.toString(),
-        ...filters,
       });
+
+      // 處理 locationIds 陣列，將其轉換為逗號分隔的字串
+      if (filters.locationIds && filters.locationIds.length > 0) {
+        queryParams.append('locationIds', filters.locationIds.join(','));
+      }
+
+      // 將其他過濾條件添加到查詢參數中
+      for (const key in filters) {
+        if (key !== 'locationIds' && filters[key]) {
+          queryParams.append(key, filters[key].toString());
+        }
+      }
 
       const response = await fetch(
         `${API_URL}/api/tickets?${queryParams.toString()}`,

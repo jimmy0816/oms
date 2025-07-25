@@ -62,20 +62,30 @@ async function getTickets(
   if (creatorId) andClauses.push({ creatorId });
 
   if (locationIds) {
-    const parsedLocationIds = Array.isArray(locationIds)
-      ? locationIds.map(Number)
-      : [Number(locationIds)];
-    andClauses.push({
-      reports: {
-        some: {
-          report: {
-            locationId: {
-              in: parsedLocationIds,
+    let parsedLocationIds: number[] = [];
+    if (Array.isArray(locationIds)) {
+      parsedLocationIds = locationIds.map(Number);
+    } else if (typeof locationIds === 'string') {
+      // 如果是逗號分隔的字串，則分割並轉換為數字
+      parsedLocationIds = locationIds.split(',').map(Number);
+    }
+
+    // 過濾掉無效的數字 (NaN)
+    parsedLocationIds = parsedLocationIds.filter(id => !isNaN(id));
+
+    if (parsedLocationIds.length > 0) {
+      andClauses.push({
+        reports: {
+          some: {
+            report: {
+              locationId: {
+                in: parsedLocationIds,
+              },
             },
           },
         },
-      },
-    });
+      });
+    }
   }
 
   if (search) {

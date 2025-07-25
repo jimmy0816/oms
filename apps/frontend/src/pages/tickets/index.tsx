@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import {
@@ -56,6 +56,7 @@ export default function TicketsPage() {
   const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
   const [saveViewError, setSaveViewError] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState('');
+  const isInitialLoad = useRef(true);
 
   const handleDelete = async (ticketId: string, ticketTitle: string) => {
     if (
@@ -198,13 +199,14 @@ export default function TicketsPage() {
 
   // Load default view on initial load
   useEffect(() => {
-    if (savedViews.length > 0 && !selectedViewId) {
+    if (isInitialLoad.current && savedViews.length > 0) {
       const defaultView = savedViews.find((view) => view.isDefault);
       if (defaultView) {
         handleApplyView(defaultView.id);
       }
+      isInitialLoad.current = false;
     }
-  }, [savedViews, selectedViewId, handleApplyView]);
+  }, [savedViews, handleApplyView]);
 
   const formatDate = (date: Date) => {
     const dateObj = date instanceof Date ? date : new Date(date);
@@ -639,7 +641,6 @@ export default function TicketsPage() {
           setFilters((prev) => ({ ...prev, locationIds: selectedIds }));
           setIsLocationModalOpen(false);
           setCurrentPage(1); // Reset page when filter changes
-          loadTickets(); // Reload tickets with new filter
         }}
         initialSelectedLocationIds={filters.locationIds}
       />
