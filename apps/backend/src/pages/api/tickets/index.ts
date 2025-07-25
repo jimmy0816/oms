@@ -49,6 +49,7 @@ async function getTickets(
   const assigneeId = req.query.assigneeId as string | undefined;
   const creatorId = req.query.creatorId as string | undefined;
   const search = req.query.search as string | undefined;
+  const locationIds = req.query.locationIds as string | string[] | undefined;
 
   const skip = (page - 1) * pageSize;
 
@@ -59,6 +60,23 @@ async function getTickets(
   if (priority) andClauses.push({ priority });
   if (assigneeId) andClauses.push({ assigneeId });
   if (creatorId) andClauses.push({ creatorId });
+
+  if (locationIds) {
+    const parsedLocationIds = Array.isArray(locationIds)
+      ? locationIds.map(Number)
+      : [Number(locationIds)];
+    andClauses.push({
+      reports: {
+        some: {
+          report: {
+            locationId: {
+              in: parsedLocationIds,
+            },
+          },
+        },
+      },
+    });
+  }
 
   if (search) {
     andClauses.push({
@@ -111,6 +129,15 @@ async function getTickets(
       include: {
         creator: { select: { id: true, name: true, email: true } },
         assignee: { select: { id: true, name: true, email: true } },
+        reports: {
+          include: {
+            report: {
+              include: {
+                location: true,
+              },
+            },
+          },
+        },
       },
     }),
     prisma.ticket.count({ where }),

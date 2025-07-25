@@ -26,6 +26,7 @@ import {
   getPriorityColor,
 } from '@/services/ticketService';
 import { savedViewService } from '@/services/savedViewService';
+import LocationFilterModal from '@/components/LocationFilterModal'; // Added import
 import SaveViewModal from '@/components/SaveViewModal';
 import ViewSelectorModal from '@/components/ViewSelectorModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
@@ -42,7 +43,9 @@ export default function TicketsPage() {
     status: '',
     priority: '',
     search: '',
+    locationIds: [] as number[], // Added locationIds to filters
   });
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false); // Added state for location modal
   const { user } = useAuth();
   const { showToast } = useToast();
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
@@ -103,10 +106,12 @@ export default function TicketsPage() {
   const loadTickets = useCallback(async () => {
     try {
       setLoading(true);
-      const apiFilters: Record<string, string> = {};
+      const apiFilters: Record<string, any> = {}; // Changed to 'any' to allow number[]
       if (filters.status) apiFilters.status = filters.status;
       if (filters.priority) apiFilters.priority = filters.priority;
       if (filters.search) apiFilters.search = filters.search;
+      if (filters.locationIds.length > 0)
+        apiFilters.locationIds = filters.locationIds;
 
       const ticketsData = await ticketService.getAllTickets(
         currentPage,
@@ -145,7 +150,14 @@ export default function TicketsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, filters.status, filters.priority, filters.search]);
+  }, [
+    currentPage,
+    pageSize,
+    filters.status,
+    filters.priority,
+    filters.search,
+    filters.locationIds,
+  ]);
 
   const loadSavedViews = useCallback(async () => {
     if (!user) return;
@@ -166,24 +178,28 @@ export default function TicketsPage() {
     setCurrentPath(window.location.pathname);
   }, [loadSavedViews]);
 
-  const handleApplyView = useCallback((viewId: string) => {
-    const viewToApply = savedViews.find((view) => view.id === viewId);
-    if (viewToApply) {
-      setFilters({
-        status: viewToApply.filters.status || '',
-        priority: viewToApply.filters.priority || '',
-        search: viewToApply.filters.search || '',
-      });
-      setSelectedViewId(viewId);
-      setCurrentPage(1);
-      setIsFilterModified(false);
-    }
-  }, [savedViews]);
+  const handleApplyView = useCallback(
+    (viewId: string) => {
+      const viewToApply = savedViews.find((view) => view.id === viewId);
+      if (viewToApply) {
+        setFilters({
+          status: viewToApply.filters.status || '',
+          priority: viewToApply.filters.priority || '',
+          search: viewToApply.filters.search || '',
+          locationIds: viewToApply.filters.locationIds || [],
+        });
+        setSelectedViewId(viewId);
+        setCurrentPage(1);
+        setIsFilterModified(false);
+      }
+    },
+    [savedViews]
+  );
 
   // Load default view on initial load
   useEffect(() => {
     if (savedViews.length > 0 && !selectedViewId) {
-      const defaultView = savedViews.find(view => view.isDefault);
+      const defaultView = savedViews.find((view) => view.isDefault);
       if (defaultView) {
         handleApplyView(defaultView.id);
       }
@@ -215,7 +231,7 @@ export default function TicketsPage() {
   );
 
   const clearFilters = () => {
-    setFilters({ status: '', priority: '', search: '' });
+    setFilters({ status: '', priority: '', search: '', locationIds: [] });
     setSelectedViewId(null);
     setCurrentPage(1);
     setIsFilterModified(false);
@@ -223,11 +239,26 @@ export default function TicketsPage() {
 
   const handleSaveView = async (viewName: string) => {
     try {
+      const currentFilters = {
+        status: filters.status,
+        priority: filters.priority,
+        search: filters.search,
+        locationIds: filters.locationIds,
+      };
+
       if (selectedViewId) {
-        await savedViewService.updateSavedView(selectedViewId, viewName, filters);
+        await savedViewService.updateSavedView(
+          selectedViewId,
+          viewName,
+          currentFilters
+        );
         showToast('視圖已成功更新！', 'success');
       } else {
-        await savedViewService.createSavedView(viewName, filters, 'TICKET');
+        await savedViewService.createSavedView(
+          viewName,
+          currentFilters,
+          'TICKET'
+        );
         showToast('視圖已成功儲存！', 'success');
       }
       await loadSavedViews();
@@ -242,7 +273,11 @@ export default function TicketsPage() {
 
   useEffect(() => {
     if (!selectedViewId) {
-      const hasFilters = !!filters.search || !!filters.status || !!filters.priority;
+      const hasFilters =
+        !!filters.search ||
+        !!filters.status ||
+        !!filters.priority ||
+        filters.locationIds.length > 0;
       setIsFilterModified(hasFilters);
       return;
     }
@@ -253,7 +288,9 @@ export default function TicketsPage() {
     const filtersSame =
       (currentView.filters.search || '') === filters.search &&
       (currentView.filters.status || '') === filters.status &&
-      (currentView.filters.priority || '') === filters.priority;
+      (currentView.filters.priority || '') === filters.priority &&
+      (currentView.filters.locationIds || []).sort().join(',') ===
+        filters.locationIds.sort().join(',');
 
     setIsFilterModified(!filtersSame);
   }, [filters, selectedViewId, savedViews]);
@@ -365,6 +402,24 @@ export default function TicketsPage() {
                   ))}
                 </select>
               </div>
+              {/* 地點篩選 */}
+              <div>
+                <label
+                  htmlFor="location-filter"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  地點
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsLocationModalOpen(true)}
+                  className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+                >
+                  {filters.locationIds.length > 0
+                    ? `已選 ${filters.locationIds.length} 個地點`
+                    : '選擇地點...'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -434,6 +489,12 @@ export default function TicketsPage() {
                             </p>
                           </div>
                           <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                            <p className="flex items-center text-sm text-gray-500 mr-3">
+                              <span className="truncate">
+                                {ticket.reports[0]?.report?.location?.name ||
+                                  '-'}
+                              </span>
+                            </p>
                             <p
                               className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColor(
                                 ticket.priority
@@ -569,7 +630,19 @@ export default function TicketsPage() {
         onDeleteView={handleDeleteView}
         onSetDefaultView={handleSetDefaultView}
       />
+
+      {/* Location Filter Modal */}
+      <LocationFilterModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        onConfirm={(selectedIds) => {
+          setFilters((prev) => ({ ...prev, locationIds: selectedIds }));
+          setIsLocationModalOpen(false);
+          setCurrentPage(1); // Reset page when filter changes
+          loadTickets(); // Reload tickets with new filter
+        }}
+        initialSelectedLocationIds={filters.locationIds}
+      />
     </>
   );
 }
-

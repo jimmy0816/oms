@@ -103,7 +103,7 @@ export const ticketService = {
   async getAllTickets(
     page = 1,
     pageSize = 10,
-    filters: Record<string, string> = {}
+    filters: Record<string, any> = {} // Changed to 'any' to allow number[]
   ): Promise<PaginatedResponse<Ticket>> {
     try {
       // 構建查詢參數
