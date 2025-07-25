@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import {
@@ -59,6 +59,7 @@ export default function Reports() {
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
   const [isFilterModified, setIsFilterModified] = useState(false);
   const { showToast } = useToast();
+  const isInitialLoad = useRef(true);
 
   const handleDelete = async (reportId: string, reportTitle: string) => {
     if (
@@ -272,13 +273,14 @@ export default function Reports() {
 
   // Load default view on initial load
   useEffect(() => {
-    if (savedViews.length > 0 && !selectedViewId) {
+    if (isInitialLoad.current && savedViews.length > 0) {
       const defaultView = savedViews.find((view) => view.isDefault);
       if (defaultView) {
         handleApplyView(defaultView.id);
       }
+      isInitialLoad.current = false;
     }
-  }, [savedViews, selectedViewId, handleApplyView]);
+  }, [savedViews, handleApplyView]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -385,7 +387,10 @@ export default function Reports() {
                 placeholder="搜尋通報..."
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setIsFilterModified(true);
+                }}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
@@ -413,7 +418,10 @@ export default function Reports() {
               id="status-filter"
               className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setIsFilterModified(true);
+              }}
             >
               <option value="">全部狀態</option>
               <option value={ReportStatus.UNCONFIRMED}>未確認</option>
@@ -437,7 +445,10 @@ export default function Reports() {
               id="category-filter"
               className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setIsFilterModified(true);
+              }}
             >
               <option value="">全部類別</option>
               {categories
@@ -462,7 +473,10 @@ export default function Reports() {
               id="priority-filter"
               className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
               value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
+              onChange={(e) => {
+                setPriorityFilter(e.target.value);
+                setIsFilterModified(true);
+              }}
             >
               <option value="">全部優先級</option>
               <option value={ReportPriority.LOW}>低</option>
@@ -501,7 +515,7 @@ export default function Reports() {
           setLocationFilter(selectedIds);
           setIsLocationModalOpen(false);
           setPage(1); // Reset page when filter changes
-          loadReports(); // Reload reports with new filter
+          setIsFilterModified(true); // Set filter modified when location changes
         }}
         initialSelectedLocationIds={locationFilter}
       />
@@ -617,7 +631,7 @@ export default function Reports() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w24"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
                     >
                       建立時間
                     </th>
