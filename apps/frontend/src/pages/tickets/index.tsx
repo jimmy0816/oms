@@ -52,6 +52,7 @@ export default function TicketsPage() {
   const [isViewSelectorModalOpen, setIsViewSelectorModalOpen] = useState(false);
   const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
   const [saveViewError, setSaveViewError] = useState<string | null>(null);
+  const [currentPath, setCurrentPath] = useState('');
 
   const handleDelete = async (ticketId: string, ticketTitle: string) => {
     if (
@@ -81,6 +82,17 @@ export default function TicketsPage() {
         console.error('刪除視圖失敗:', error);
         showToast('刪除視圖失敗，請稍後再試。', 'error');
       }
+    }
+  };
+
+  const handleSetDefaultView = async (viewId: string) => {
+    try {
+      await savedViewService.setDefaultSavedView(viewId, 'TICKET');
+      showToast('預設視圖已設定！', 'success');
+      await loadSavedViews(); // Reload saved views to reflect new default
+    } catch (error) {
+      console.error('設定預設視圖失敗:', error);
+      showToast('設定預設視圖失敗，請稍後再試。', 'error');
     }
   };
 
@@ -151,7 +163,32 @@ export default function TicketsPage() {
 
   useEffect(() => {
     loadSavedViews();
+    setCurrentPath(window.location.pathname);
   }, [loadSavedViews]);
+
+  const handleApplyView = useCallback((viewId: string) => {
+    const viewToApply = savedViews.find((view) => view.id === viewId);
+    if (viewToApply) {
+      setFilters({
+        status: viewToApply.filters.status || '',
+        priority: viewToApply.filters.priority || '',
+        search: viewToApply.filters.search || '',
+      });
+      setSelectedViewId(viewId);
+      setCurrentPage(1);
+      setIsFilterModified(false);
+    }
+  }, [savedViews]);
+
+  // Load default view on initial load
+  useEffect(() => {
+    if (savedViews.length > 0 && !selectedViewId) {
+      const defaultView = savedViews.find(view => view.isDefault);
+      if (defaultView) {
+        handleApplyView(defaultView.id);
+      }
+    }
+  }, [savedViews, selectedViewId, handleApplyView]);
 
   const formatDate = (date: Date) => {
     const dateObj = date instanceof Date ? date : new Date(date);
@@ -176,20 +213,6 @@ export default function TicketsPage() {
     },
     []
   );
-
-  const handleApplyView = (viewId: string) => {
-    const viewToApply = savedViews.find((view) => view.id === viewId);
-    if (viewToApply) {
-      setFilters({
-        status: viewToApply.filters.status || '',
-        priority: viewToApply.filters.priority || '',
-        search: viewToApply.filters.search || '',
-      });
-      setSelectedViewId(viewId);
-      setCurrentPage(1);
-      setIsFilterModified(false);
-    }
-  };
 
   const clearFilters = () => {
     setFilters({ status: '', priority: '', search: '' });
@@ -253,7 +276,7 @@ export default function TicketsPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">工單管理</h1>
           <Link
-            href={`/tickets/new?returnUrl=${encodeURIComponent(window.location.pathname)}`}
+            href={`/tickets/new?returnUrl=${encodeURIComponent(currentPath)}`}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
@@ -544,6 +567,7 @@ export default function TicketsPage() {
         onClose={() => setIsManageViewsModalOpen(false)}
         savedViews={savedViews}
         onDeleteView={handleDeleteView}
+        onSetDefaultView={handleSetDefaultView}
       />
     </>
   );

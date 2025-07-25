@@ -15,10 +15,10 @@ const getAuthHeaders = (): HeadersInit => {
 };
 
 export const savedViewService = {
-  async getAllSavedViews(type: 'REPORT' | 'TICKET'): Promise<SavedView[]> {
+  async getAllSavedViews(viewType: 'REPORT' | 'TICKET'): Promise<SavedView[]> {
     const response = await axios.get(`${API_URL}/api/saved-views`, {
       headers: getAuthHeaders(),
-      params: { type },
+      params: { viewType },
     });
     return response.data.data;
   },
@@ -26,11 +26,12 @@ export const savedViewService = {
   async createSavedView(
     name: string,
     filters: any,
-    type: 'REPORT' | 'TICKET'
+    viewType: 'REPORT' | 'TICKET',
+    isDefault: boolean = false
   ): Promise<SavedView> {
     const response = await axios.post(
       `${API_URL}/api/saved-views`,
-      { name, filters, type },
+      { name, filters, viewType, isDefault },
       {
         headers: getAuthHeaders(),
       }
@@ -45,10 +46,10 @@ export const savedViewService = {
     return response.data.data;
   },
 
-  async updateSavedView(id: string, name: string, filters: any): Promise<SavedView> {
+  async updateSavedView(id: string, name: string, filters: any, isDefault?: boolean): Promise<SavedView> {
     const response = await axios.put(
       `${API_URL}/api/saved-views/${id}`,
-      { name, filters },
+      { name, filters, isDefault },
       {
         headers: getAuthHeaders(),
       }
@@ -60,5 +61,16 @@ export const savedViewService = {
     await axios.delete(`${API_URL}/api/saved-views/${id}`, {
       headers: getAuthHeaders(),
     });
+  },
+
+  async setDefaultSavedView(id: string, viewType: 'REPORT' | 'TICKET'): Promise<SavedView> {
+    const response = await axios.put(
+      `${API_URL}/api/saved-views/${id}/set-default`,
+      { viewType },
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+    return response.data.data;
   },
 };

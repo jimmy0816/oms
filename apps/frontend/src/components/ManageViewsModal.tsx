@@ -7,6 +7,7 @@ interface ManageViewsModalProps {
   onClose: () => void;
   savedViews: SavedView[];
   onDeleteView: (viewId: string) => void;
+  onSetDefaultView: (viewId: string) => void;
 }
 
 const ManageViewsModal: React.FC<ManageViewsModalProps> = ({
@@ -14,6 +15,7 @@ const ManageViewsModal: React.FC<ManageViewsModalProps> = ({
   onClose,
   savedViews,
   onDeleteView,
+  onSetDefaultView,
 }) => {
   if (!isOpen) return null;
 
@@ -42,14 +44,30 @@ const ManageViewsModal: React.FC<ManageViewsModalProps> = ({
                 >
                   <span className="text-sm font-medium text-gray-700">
                     {view.name}
+                    {view.isDefault && (
+                      <span className="ml-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        預設
+                      </span>
+                    )}
                   </span>
-                  <button
-                    onClick={() => onDeleteView(view.id)}
-                    className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-100"
-                    title="刪除視圖"
-                  >
-                    <TrashIcon className="h-5 w-5" />
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    {!view.isDefault && (
+                      <button
+                        onClick={() => onSetDefaultView(view.id)}
+                        className="text-blue-600 hover:text-blue-900 p-1 rounded-full hover:bg-blue-100 text-xs"
+                        title="設為預設"
+                      >
+                        設為預設
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onDeleteView(view.id)}
+                      className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-100"
+                      title="刪除視圖"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

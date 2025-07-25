@@ -45,6 +45,7 @@ export default function ReportDetail() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [openTicketId, setOpenTicketId] = useState<string | null>(null);
   const { showToast } = useToast();
+  const [currentPath, setCurrentPath] = useState('');
 
   // 根據用戶角色設置權限
   const [userPermissions, setUserPermissions] = useState({
@@ -98,6 +99,7 @@ export default function ReportDetail() {
 
   useEffect(() => {
     fetchReport();
+    setCurrentPath(window.location.pathname + window.location.search);
   }, [fetchReport]);
 
   const handleDelete = async () => {
@@ -662,11 +664,8 @@ export default function ReportDetail() {
                   <div className="text-gray-500 mb-4">目前尚無相關工單</div>
                 )}
                 <Link
-                  href={`/tickets/new?reportId=${
-                    report.id
-                  }&returnUrl=${encodeURIComponent(
-                    window.location.pathname + window.location.search
-                  )}`}
+                  <Link
+                  href={`/tickets/new?reportId=${report.id}&returnUrl=${encodeURIComponent(currentPath)}`}
                   className="btn-primary w-full block text-center mt-6"
                 >
                   新增工單

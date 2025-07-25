@@ -243,16 +243,17 @@ model TicketReview {
 }
 
 model SavedView {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   name      String
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   filters   Json
-  type      SavedViewType @default(REPORT)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  viewType  SavedViewType @default(REPORT)
+  isDefault Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
-  @@unique([userId, name])
+  @@unique([userId, name, viewType])
 }
 
 enum SavedViewType {

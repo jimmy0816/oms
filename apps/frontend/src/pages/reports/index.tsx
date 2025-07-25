@@ -92,6 +92,17 @@ export default function Reports() {
     }
   };
 
+  const handleSetDefaultView = async (viewId: string) => {
+    try {
+      await savedViewService.setDefaultSavedView(viewId, 'REPORT');
+      showToast('預設視圖已設定！', 'success');
+      await loadSavedViews(); // Reload saved views to reflect new default
+    } catch (error) {
+      console.error('設定預設視圖失敗:', error);
+      showToast('設定預設視圖失敗，請稍後再試。', 'error');
+    }
+  };
+
   // Fetch categories on component mount
   useEffect(() => {
     const fetchCategories = async () => {
@@ -119,10 +130,6 @@ export default function Reports() {
       console.error('Failed to load saved views:', error);
     }
   }, [user]);
-
-  useEffect(() => {
-    loadSavedViews();
-  }, [loadSavedViews]);
 
   // 從 API 加載報告數據
   const loadReports = useCallback(async () => {
@@ -236,59 +243,42 @@ export default function Reports() {
     }
   };
 
+  useEffect(() => {
+    loadSavedViews();
+  }, [loadSavedViews]);
+
   // 處理套用視圖
-  const handleApplyView = (viewId: string) => {
-    const viewToApply = savedViews.find((view) => view.id === viewId);
-    if (viewToApply) {
-      setSearchTerm(viewToApply.filters.searchTerm || '');
-      setStatusFilter(viewToApply.filters.statusFilter || '');
-      setCategoryFilter(viewToApply.filters.categoryFilter || '');
-      setPriorityFilter(viewToApply.filters.priorityFilter || '');
-      setLocationFilter(viewToApply.filters.locationFilter || []);
-      setSelectedViewId(viewId);
-      setPage(1);
-      setIsFilterModified(false);
-    }
-  };
+  const handleApplyView = useCallback(
+    (viewId: string) => {
+      const viewToApply = savedViews.find((view) => view.id === viewId);
+      if (viewToApply) {
+        setSearchTerm(viewToApply.filters.searchTerm || '');
+        setStatusFilter(viewToApply.filters.statusFilter || '');
+        setCategoryFilter(viewToApply.filters.categoryFilter || '');
+        setPriorityFilter(viewToApply.filters.priorityFilter || '');
+        setLocationFilter(viewToApply.filters.locationFilter || []);
+        setSelectedViewId(viewId);
+        setPage(1);
+        setIsFilterModified(false);
+      }
+    },
+    [savedViews]
+  );
 
   // 初始化時加載數據
   useEffect(() => {
     loadReports();
   }, [loadReports]);
 
+  // Load default view on initial load
   useEffect(() => {
-    if (!selectedViewId) {
-      const hasFilters =
-        !!searchTerm ||
-        !!statusFilter ||
-        !!categoryFilter ||
-        !!priorityFilter ||
-        locationFilter.length > 0;
-      setIsFilterModified(hasFilters);
-      return;
+    if (savedViews.length > 0 && !selectedViewId) {
+      const defaultView = savedViews.find((view) => view.isDefault);
+      if (defaultView) {
+        handleApplyView(defaultView.id);
+      }
     }
-
-    const currentView = savedViews.find((v) => v.id === selectedViewId);
-    if (!currentView) return;
-
-    const filtersSame =
-      (currentView.filters.searchTerm || '') === searchTerm &&
-      (currentView.filters.statusFilter || '') === statusFilter &&
-      (currentView.filters.categoryFilter || '') === categoryFilter &&
-      (currentView.filters.priorityFilter || '') === priorityFilter &&
-      JSON.stringify(currentView.filters.locationFilter || []) ===
-        JSON.stringify(locationFilter);
-
-    setIsFilterModified(!filtersSame);
-  }, [
-    searchTerm,
-    statusFilter,
-    categoryFilter,
-    priorityFilter,
-    locationFilter,
-    selectedViewId,
-    savedViews,
-  ]);
+  }, [savedViews, selectedViewId, handleApplyView]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -536,6 +526,7 @@ export default function Reports() {
         onClose={() => setIsManageViewsModalOpen(false)}
         savedViews={savedViews}
         onDeleteView={handleDeleteView}
+        onSetDefaultView={handleSetDefaultView}
       />
 
       {/* View Selector Modal */}

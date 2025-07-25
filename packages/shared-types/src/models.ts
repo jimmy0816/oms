@@ -143,6 +143,8 @@ export interface SavedView {
   name: string;
   userId: string;
   filters: any; // This will be a JSON object storing filter criteria
+  viewType: 'REPORT' | 'TICKET'; // Add viewType to the interface
+  isDefault?: boolean; // New field to indicate if this is the default view
   createdAt: Date;
   updatedAt: Date;
 }

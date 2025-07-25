@@ -3,15 +3,6 @@ import { ApiResponse, PaginatedResponse, SavedView } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
 
-// interface SavedView {
-//   id: string;
-//   name: string;
-//   userId: string;
-//   filters: any; // JSON type for filters
-//   createdAt: Date;
-//   updatedAt: Date;
-// }
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<
@@ -32,12 +23,10 @@ export default async function handler(
     }
   } catch (error: any) {
     console.error('Error in saved-views API:', error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        error: error.message || 'Internal Server Error',
-      });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal Server Error',
+    });
   }
 }
 
@@ -46,11 +35,11 @@ async function getSavedViews(
   res: NextApiResponse<ApiResponse<SavedView[]>>
 ) {
   const userId = req.user.id;
-  const type = req.query.type as string | undefined;
+  const viewType = req.query.viewType as string | undefined;
 
   const where: any = { userId };
-  if (type) {
-    where.type = type;
+  if (viewType) {
+    where.viewType = viewType;
   }
 
   const savedViews = await prisma.savedView.findMany({
@@ -65,22 +54,40 @@ async function createSavedView(
   req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<SavedView>>
 ) {
-  const { name, filters, type } = req.body;
+  const { name, filters, viewType, isDefault } = req.body;
   const userId = req.user.id;
 
-  if (!name || !filters || !type) {
+  if (!name || !filters || !viewType) {
     return res
       .status(400)
-      .json({ success: false, error: 'Name, filters, and type are required' });
+      .json({
+        success: false,
+        error: 'Name, filters, and viewType are required',
+      });
   }
 
   try {
+    // 如果設置為預設，則先將該用戶和該視圖類型下的所有其他視圖的 isDefault 設為 false
+    if (isDefault) {
+      await prisma.savedView.updateMany({
+        where: {
+          userId: userId,
+          viewType: viewType,
+          isDefault: true,
+        },
+        data: {
+          isDefault: false,
+        },
+      });
+    }
+
     const newSavedView = await prisma.savedView.create({
       data: {
         name,
         userId,
         filters,
-        type,
+        viewType,
+        isDefault,
       },
     });
     return res.status(201).json({ success: true, data: newSavedView });
@@ -89,6 +96,15 @@ async function createSavedView(
       return res
         .status(409)
         .json({ success: false, error: '視圖名稱已存在，請使用不同的名稱。' });
+    }
+    // 處理 UniqueDefaultView 約束錯誤
+    if (
+      error.code === 'P2002' &&
+      error.meta?.target?.includes('UniqueDefaultView')
+    ) {
+      return res
+        .status(409)
+        .json({ success: false, error: '每個視圖類型只能有一個預設視圖。' });
     }
     throw error;
   }
