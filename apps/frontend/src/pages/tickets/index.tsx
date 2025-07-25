@@ -251,7 +251,7 @@ export default function TicketsPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">工單管理</h1>
           <Link
-            href="/tickets/new"
+            href={`/tickets/new?returnUrl=${encodeURIComponent(window.location.pathname)}`}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
           >
             <PlusIcon className="h-5 w-5 mr-2" />

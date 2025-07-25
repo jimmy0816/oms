@@ -115,7 +115,7 @@ export default function NewTicket() {
       alert('工單已成功建立！');
 
       // 導向到工單列表頁面
-      router.push('/tickets');
+      router.push((query.returnUrl as string) || '/tickets');
     } catch (err: any) {
       setError(err.message || '建立工單時發生錯誤，請稍後再試。');
     } finally {

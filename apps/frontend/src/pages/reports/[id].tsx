@@ -659,7 +659,7 @@ export default function ReportDetail() {
                   <div className="text-gray-500 mb-4">目前尚無相關工單</div>
                 )}
                 <Link
-                  href={`/tickets/new?reportId=${report.id}`}
+                  href={`/tickets/new?reportId=${report.id}&returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
                   className="btn-primary w-full block text-center mt-6"
                 >
                   新增工單
