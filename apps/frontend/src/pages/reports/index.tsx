@@ -34,11 +34,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { categoryService, getCategoryPath } from '@/services/categoryService';
 import { savedViewService } from '@/services/savedViewService';
-import LocationFilterModal from '@/components/LocationFilterModal';
+import { locationService, Location } from '@/services/locationService'; // Import Location and locationService
 import SaveViewModal from '@/components/SaveViewModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
 import ViewSelectorModal from '@/components/ViewSelectorModal'; // New import
-import MultiSelectFilterModal from '@/components/MultiSelectFilterModal';
+import MultiSelectFilterModal, { MultiSelectOption } from '@/components/MultiSelectFilterModal'; // Import MultiSelectOption
 
 const SortIcon = ({
   field,
@@ -79,6 +79,7 @@ export default function Reports() {
   const [totalReports, setTotalReports] = useState(0);
   const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [allLocations, setAllLocations] = useState<Location[]>([]); // New state for all locations
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
   const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
@@ -134,21 +135,22 @@ export default function Reports() {
     }
   };
 
-  // Fetch categories on component mount
+  // Fetch categories and locations on component mount
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         const fetchedCategories = await categoryService.getAllCategories();
         setCategories(fetchedCategories);
-        console.log('Fetched categories:', fetchedCategories); // Debug: Log fetched categories
+        const fetchedLocations = await locationService.getAllLocations(); // Fetch locations
+        setAllLocations(fetchedLocations); // Set locations
       } catch (err) {
-        console.error('Error fetching categories:', err);
+        console.error('Error fetching data:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchCategories();
+    fetchData();
   }, []);
 
   // Fetch saved views on component mount
@@ -535,16 +537,18 @@ export default function Reports() {
       </div>
 
       {/* Location Filter Modal */}
-      <LocationFilterModal
+      <MultiSelectFilterModal
         isOpen={isLocationModalOpen}
         onClose={() => setIsLocationModalOpen(false)}
         onConfirm={(selectedIds) => {
-          setLocationFilter(selectedIds);
+          setLocationFilter(selectedIds as number[]); // Cast to number[]
           setIsLocationModalOpen(false);
           setPage(1); // Reset page when filter changes
           setIsFilterModified(true); // Set filter modified when location changes
         }}
-        initialSelectedLocationIds={locationFilter}
+        initialSelectedIds={locationFilter}
+        options={allLocations.map((loc) => ({ id: loc.id, name: loc.name }))} // Pass locations as options
+        title="選擇地點"
       />
 
       {/* Status Filter Modal */}

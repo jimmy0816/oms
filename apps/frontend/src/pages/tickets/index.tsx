@@ -26,7 +26,7 @@ import {
   getPriorityColor,
 } from '@/services/ticketService';
 import { savedViewService } from '@/services/savedViewService';
-import LocationFilterModal from '@/components/LocationFilterModal';
+import { locationService, Location } from '@/services/locationService'; // Import Location and locationService
 import SaveViewModal from '@/components/SaveViewModal';
 import ViewSelectorModal from '@/components/ViewSelectorModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
@@ -52,6 +52,7 @@ export default function TicketsPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const [allLocations, setAllLocations] = useState<Location[]>([]); // New state for all locations
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
   const [isFilterModified, setIsFilterModified] = useState(false);
   const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
@@ -189,6 +190,18 @@ export default function TicketsPage() {
       console.error('Failed to load saved views:', error);
     }
   }, [user]);
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const data = await locationService.getAllLocations();
+        setAllLocations(data);
+      } catch (err) {
+        console.error('Failed to fetch locations:', err);
+      }
+    };
+    fetchLocations();
+  }, []);
 
   useEffect(() => {
     loadTickets();
@@ -754,15 +767,17 @@ export default function TicketsPage() {
       />
 
       {/* Location Filter Modal */}
-      <LocationFilterModal
+      <MultiSelectFilterModal
         isOpen={isLocationModalOpen}
         onClose={() => setIsLocationModalOpen(false)}
         onConfirm={(selectedIds) => {
-          setFilters((prev) => ({ ...prev, locationIds: selectedIds }));
+          setFilters((prev) => ({ ...prev, locationIds: selectedIds as number[] })); // Cast to number[]
           setIsLocationModalOpen(false);
           setCurrentPage(1); // Reset page when filter changes
         }}
-        initialSelectedLocationIds={filters.locationIds}
+        initialSelectedIds={filters.locationIds}
+        options={allLocations.map((loc) => ({ id: loc.id, name: loc.name }))} // Pass locations as options
+        title="選擇地點"
       />
 
       {/* Status Filter Modal */}
