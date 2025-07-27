@@ -11,8 +11,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronDownIcon, // Added ChevronDownIcon
-  ArrowUpIcon,
-  ArrowDownIcon,
+  Bars3Icon,
+  BarsArrowDownIcon,
+  BarsArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import {
   reportService,
@@ -37,6 +38,27 @@ import LocationFilterModal from '@/components/LocationFilterModal';
 import SaveViewModal from '@/components/SaveViewModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
 import ViewSelectorModal from '@/components/ViewSelectorModal'; // New import
+
+const SortIcon = ({
+  field,
+  sortField,
+  sortOrder,
+}: {
+  field: string;
+  sortField: string | null;
+  sortOrder: 'asc' | 'desc' | null;
+}) => {
+  // When column is not being sorted, show both up and down arrows in gray
+  if (sortField !== field) {
+    return <Bars3Icon className="h3 w-3 text-gray-400" />;
+  }
+  // When column is sorted ascending, show black up arrow
+  if (sortOrder === 'asc') {
+    return <BarsArrowUpIcon className="h-3 w-3 text-black" />;
+  }
+  // When column is sorted descending, show black down arrow
+  return <BarsArrowDownIcon className="h-3 w-3 text-black" />;
+};
 
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -207,6 +229,7 @@ export default function Reports() {
     const isAsc = sortField === field && sortOrder === 'asc';
     setSortOrder(isAsc ? 'desc' : 'asc');
     setSortField(field);
+    setIsFilterModified(true);
     setPage(1); // Reset page to 1 when sorting changes
   };
 
@@ -228,14 +251,14 @@ export default function Reports() {
   const handleSaveView = async (viewName: string) => {
     try {
       const currentFilters = {
-          searchTerm,
-          statusFilter,
-          categoryFilter,
-          priorityFilter,
-          locationFilter,
-          sortField,
-          sortOrder,
-        };
+        searchTerm,
+        statusFilter,
+        categoryFilter,
+        priorityFilter,
+        locationFilter,
+        sortField,
+        sortOrder,
+      };
 
       if (selectedViewId) {
         // 如果有選中的視圖，則更新它
@@ -627,15 +650,13 @@ export default function Reports() {
                       className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4 cursor-pointer"
                       onClick={() => handleSort('title')}
                     >
-                      <div className="flex items-center">
-                        標題
-                        {sortField === 'title' && (
-                          sortOrder === 'asc' ? (
-                            <ArrowUpIcon className="h-3 w-3 ml-1" />
-                          ) : (
-                            <ArrowDownIcon className="h-3 w-3 ml-1" />
-                          )
-                        )}
+                      <div className="flex items-center space-x-1">
+                        <span>標題</span>
+                        <SortIcon
+                          field="title"
+                          sortField={sortField}
+                          sortOrder={sortOrder}
+                        />
                       </div>
                     </th>
                     <th
@@ -643,15 +664,13 @@ export default function Reports() {
                       className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20 cursor-pointer"
                       onClick={() => handleSort('status')}
                     >
-                      <div className="flex items-center">
-                        狀態
-                        {sortField === 'status' && (
-                          sortOrder === 'asc' ? (
-                            <ArrowUpIcon className="h-3 w-3 ml-1" />
-                          ) : (
-                            <ArrowDownIcon className="h-3 w-3 ml-1" />
-                          )
-                        )}
+                      <div className="flex items-center space-x-1">
+                        <span>狀態</span>
+                        <SortIcon
+                          field="status"
+                          sortField={sortField}
+                          sortOrder={sortOrder}
+                        />
                       </div>
                     </th>
                     <th
@@ -659,15 +678,13 @@ export default function Reports() {
                       className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20 cursor-pointer"
                       onClick={() => handleSort('category')}
                     >
-                      <div className="flex items-center">
-                        類別
-                        {sortField === 'category' && (
-                          sortOrder === 'asc' ? (
-                            <ArrowUpIcon className="h-3 w-3 ml-1" />
-                          ) : (
-                            <ArrowDownIcon className="h-3 w-3 ml-1" />
-                          )
-                        )}
+                      <div className="flex items-center space-x-1">
+                        <span>類別</span>
+                        <SortIcon
+                          field="category"
+                          sortField={sortField}
+                          sortOrder={sortOrder}
+                        />
                       </div>
                     </th>
                     <th
@@ -675,15 +692,13 @@ export default function Reports() {
                       className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 cursor-pointer"
                       onClick={() => handleSort('priority')}
                     >
-                      <div className="flex items-center">
-                        優先級
-                        {sortField === 'priority' && (
-                          sortOrder === 'asc' ? (
-                            <ArrowUpIcon className="h-3 w-3 ml-1" />
-                          ) : (
-                            <ArrowDownIcon className="h-3 w-3 ml-1" />
-                          )
-                        )}
+                      <div className="flex items-center space-x-1">
+                        <span>優先級</span>
+                        <SortIcon
+                          field="priority"
+                          sortField={sortField}
+                          sortOrder={sortOrder}
+                        />
                       </div>
                     </th>
                     <th
@@ -691,15 +706,13 @@ export default function Reports() {
                       className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer"
                       onClick={() => handleSort('location')}
                     >
-                      <div className="flex items-center">
-                        地點
-                        {sortField === 'location' && (
-                          sortOrder === 'asc' ? (
-                            <ArrowUpIcon className="h-3 w-3 ml-1" />
-                          ) : (
-                            <ArrowDownIcon className="h-3 w-3 ml-1" />
-                          )
-                        )}
+                      <div className="flex items-center space-x-1">
+                        <span>地點</span>
+                        <SortIcon
+                          field="location"
+                          sortField={sortField}
+                          sortOrder={sortOrder}
+                        />
                       </div>
                     </th>
                     <th
@@ -707,15 +720,13 @@ export default function Reports() {
                       className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer"
                       onClick={() => handleSort('createdAt')}
                     >
-                      <div className="flex items-center">
-                        建立時間
-                        {sortField === 'createdAt' && (
-                          sortOrder === 'asc' ? (
-                            <ArrowUpIcon className="h-3 w-3 ml-1" />
-                          ) : (
-                            <ArrowDownIcon className="h-3 w-3 ml-1" />
-                          )
-                        )}
+                      <div className="flex items-center space-x-1">
+                        <span>建立時間</span>
+                        <SortIcon
+                          field="createdAt"
+                          sortField={sortField}
+                          sortOrder={sortOrder}
+                        />
                       </div>
                     </th>
                     <th
@@ -723,15 +734,13 @@ export default function Reports() {
                       className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer"
                       onClick={() => handleSort('creator')}
                     >
-                      <div className="flex items-center">
-                        建立者
-                        {sortField === 'creator' && (
-                          sortOrder === 'asc' ? (
-                            <ArrowUpIcon className="h-3 w-3 ml-1" />
-                          ) : (
-                            <ArrowDownIcon className="h-3 w-3 ml-1" />
-                          )
-                        )}
+                      <div className="flex items-center space-x-1">
+                        <span>建立者</span>
+                        <SortIcon
+                          field="creator"
+                          sortField={sortField}
+                          sortOrder={sortOrder}
+                        />
                       </div>
                     </th>
                     <th
