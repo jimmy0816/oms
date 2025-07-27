@@ -311,306 +311,348 @@ export default function TicketsPage() {
         />
       </Head>
 
-      <div className="space-y-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold text-gray-900">工單管理</h1>
-          <div className="flex items-center space-x-3">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-semibold text-gray-900">工單管理</h1>
+        <div className="flex items-center space-x-3">
+          <button
+            className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
+            onClick={clearFilters}
+          >
+            清除篩選
+          </button>
+          <Link
+            href={`/tickets/new?returnUrl=${encodeURIComponent(currentPath)}`}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          >
+            <PlusIcon className="h-5 w-5 mr-2" />
+            新增工單
+          </Link>
+        </div>
+      </div>
+
+      {/* Saved Views Section */}
+      <div className="py-1">
+        <div className="flex items-center space-x-3">
+          <div
+            className="relative flex items-center border border-gray-300 bg-white rounded-md shadow-sm cursor-pointer"
+            onClick={() => setIsViewSelectorModalOpen(true)}
+          >
+            <span className="block py-2 px-3 text-sm font-medium text-gray-700 truncate max-w-[200px]">
+              {currentViewName}
+            </span>
+            <ChevronDownIcon className="h-5 w-5 text-gray-400 mr-2" />
+          </div>
+
+          {(!selectedViewId || isFilterModified) && (
             <button
               className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
-              onClick={clearFilters}
+              onClick={() => setIsSaveViewModalOpen(true)}
             >
-              清除篩選
+              {selectedViewId ? '更新視圖' : '儲存視圖'}
             </button>
-            <Link
-              href={`/tickets/new?returnUrl=${encodeURIComponent(currentPath)}`}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              新增工單
-            </Link>
-          </div>
+          )}
         </div>
+      </div>
 
-        {/* Saved Views Section */}
-        <div className="py-1">
-          <div className="flex items-center space-x-3">
-            <div
-              className="relative flex items-center border border-gray-300 bg-white rounded-md shadow-sm cursor-pointer"
-              onClick={() => setIsViewSelectorModalOpen(true)}
-            >
-              <span className="block py-2 px-3 text-sm font-medium text-gray-700 truncate max-w-[200px]">
-                {currentViewName}
-              </span>
-              <ChevronDownIcon className="h-5 w-5 text-gray-400 mr-2" />
-            </div>
-
-            {(!selectedViewId || isFilterModified) && (
-              <button
-                className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
-                onClick={() => setIsSaveViewModalOpen(true)}
-              >
-                {selectedViewId ? '更新視圖' : '儲存視圖'}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* 篩選和搜尋 */}
-        <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-            {/* Search Input and Button */}
-            <div className="flex-grow flex items-center">
-              <div className="relative flex-grow">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="搜尋工單..."
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  value={filters.search}
-                  onChange={handleSearchChange}
-                  onKeyPress={(e) => e.key === 'Enter' && loadTickets()} // Trigger search on Enter
-                />
+      {/* 篩選和搜尋 */}
+      <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+          {/* Search Input and Button */}
+          <div className="flex-grow flex items-center">
+            <div className="relative flex-grow">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
               </div>
-              <button
-                type="button"
-                onClick={loadTickets} // Trigger search on button click
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-r-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
-              >
-                <MagnifyingGlassIcon className="h-4 w-4 mr-1" />
-                搜尋
-              </button>
+              <input
+                type="text"
+                placeholder="搜尋工單..."
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                value={filters.search}
+                onChange={handleSearchChange}
+                onKeyPress={(e) => e.key === 'Enter' && loadTickets()} // Trigger search on Enter
+              />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* 狀態篩選 */}
-            <div>
-              <label
-                htmlFor="status-filter"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                狀態
-              </label>
-              <select
-                id="status-filter"
-                name="status"
-                value={filters.status}
-                onChange={handleFilterChange}
-                className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-              >
-                <option value="">所有狀態</option>
-                {Object.values(TicketStatus).map((status) => (
-                  <option key={status} value={status}>
-                    {getStatusText(status)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 優先級篩選 */}
-            <div>
-              <label
-                htmlFor="priority-filter"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                優先級
-              </label>
-              <select
-                id="priority-filter"
-                name="priority"
-                value={filters.priority}
-                onChange={handleFilterChange}
-                className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-              >
-                <option value="">所有優先級</option>
-                {Object.values(TicketPriority).map((priority) => (
-                  <option key={priority} value={priority}>
-                    {getPriorityText(priority)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 地點篩選 */}
-            <div>
-              <label
-                htmlFor="location-filter"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                地點
-              </label>
-              <button
-                type="button"
-                onClick={() => setIsLocationModalOpen(true)}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
-              >
-                {filters.locationIds.length > 0
-                  ? `已選 ${filters.locationIds.length} 個地點`
-                  : '選擇地點...'}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={loadTickets} // Trigger search on button click
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-r-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
+            >
+              <MagnifyingGlassIcon className="h-4 w-4 mr-1" />
+              搜尋
+            </button>
           </div>
         </div>
 
-        {/* Tickets List */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
-          ) : (
-            <ul className="divide-y divide-gray-200">
-              {tickets.length > 0 ? (
-                tickets.map((ticket) => (
-                  <li key={ticket.id}>
-                    <Link
-                      href={`/tickets/${ticket.id}`}
-                      className="block hover:bg-gray-50"
-                    >
-                      <div className="px-4 py-4 sm:px-6">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-blue-600 truncate">
-                            {ticket.title}
-                          </p>
-                          <div className="ml-2 flex-shrink-0 flex items-center space-x-2">
-                            <p
-                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
-                                ticket.status
-                              )}`}
-                            >
-                              {getStatusText(ticket.status)}
-                            </p>
-                            <Link
-                              href={`/tickets/${ticket.id}/edit`}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="編輯"
-                              onClick={(e) => e.stopPropagation()} // 阻止 Link 的默認行為，避免觸發父級 Link
-                            >
-                              <PencilIcon className="h-5 w-5" />
-                            </Link>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation(); // 阻止按鈕的默認行為，避免觸發父級 Link
-                                e.preventDefault();
-                                handleDelete(ticket.id, ticket.title);
-                              }}
-                              className="text-red-600 hover:text-red-900"
-                              title="刪除"
-                            >
-                              <TrashIcon className="h-5 w-5" />
-                            </button>
-                          </div>
-                        </div>
-                        <div className="mt-2 sm:flex sm:justify-between">
-                          <div className="sm:flex">
-                            <p className="flex items-center text-sm text-gray-500">
-                              <span className="truncate">
-                                建立者: {ticket.creator.name}
-                              </span>
-                            </p>
-                            <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                              <span className="truncate">
-                                {ticket.assignee
-                                  ? `負責人: ${ticket.assignee.name}`
-                                  : '尚未指派'}
-                              </span>
-                            </p>
-                          </div>
-                          <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                            <p className="flex items-center text-sm text-gray-500 mr-3">
-                              <span className="truncate">
-                                {ticket.reports[0]?.report?.location?.name ||
-                                  '-'}
-                              </span>
-                            </p>
-                            <p
-                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColor(
-                                ticket.priority
-                              )} mr-3`}
-                            >
-                              {getPriorityText(ticket.priority)}
-                            </p>
-                            <p>
-                              <time dateTime={ticket.createdAt.toString()}>
-                                {formatDate(ticket.createdAt)}
-                              </time>
-                            </p>
-                          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 狀態篩選 */}
+          <div>
+            <label
+              htmlFor="status-filter"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              狀態
+            </label>
+            <select
+              id="status-filter"
+              name="status"
+              value={filters.status}
+              onChange={handleFilterChange}
+              className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+            >
+              <option value="">所有狀態</option>
+              {Object.values(TicketStatus).map((status) => (
+                <option key={status} value={status}>
+                  {getStatusText(status)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 優先級篩選 */}
+          <div>
+            <label
+              htmlFor="priority-filter"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              優先級
+            </label>
+            <select
+              id="priority-filter"
+              name="priority"
+              value={filters.priority}
+              onChange={handleFilterChange}
+              className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+            >
+              <option value="">所有優先級</option>
+              {Object.values(TicketPriority).map((priority) => (
+                <option key={priority} value={priority}>
+                  {getPriorityText(priority)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 地點篩選 */}
+          <div>
+            <label
+              htmlFor="location-filter"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              地點
+            </label>
+            <button
+              type="button"
+              onClick={() => setIsLocationModalOpen(true)}
+              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+            >
+              {filters.locationIds.length > 0
+                ? `已選 ${filters.locationIds.length} 個地點`
+                : '選擇地點...'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tickets List */}
+      <div className="">
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        ) : (
+          <ul className="space-y-4">
+            {tickets.length > 0 ? (
+              tickets.map((ticket) => (
+                <li
+                  key={ticket.id}
+                  className="bg-white shadow-md rounded-lg border border-gray-200 hover:shadow-lg transition-shadow duration-200"
+                >
+                  <Link href={`/tickets/${ticket.id}`} className="block p-6">
+                    {/* Card Header */}
+                    <div className="flex justify-between items-start mb-4">
+                      <h2 className="text-lg font-bold text-gray-800 hover:text-blue-600 w-3/4">
+                        {ticket.title}
+                      </h2>
+                      <div className="flex items-center space-x-2 flex-shrink-0">
+                        <span
+                          className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
+                            ticket.status
+                          )}`}
+                        >
+                          {getStatusText(ticket.status)}
+                        </span>
+                        <span
+                          className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColor(
+                            ticket.priority
+                          )}`}
+                        >
+                          {getPriorityText(ticket.priority)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Card Body */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-sm">
+                      <div>
+                        <p className="text-gray-500 font-medium">
+                          地點 (關聯 {ticket.reports.length} 個通報)
+                        </p>
+                        <div className="text-gray-800">
+                          {(() => {
+                            const locations = [
+                              ...new Set(
+                                ticket.reports
+                                  .map((r) => r.report.location?.name)
+                                  .filter(Boolean)
+                              ),
+                            ] as string[];
+
+                            if (locations.length === 0) {
+                              return '無';
+                            }
+
+                            const displayLocations = locations.slice(0, 2);
+                            const remainingCount =
+                              locations.length - displayLocations.length;
+
+                            return (
+                              <>
+                                {displayLocations.map((loc) => (
+                                  <span key={loc} className="block">
+                                    {loc}
+                                  </span>
+                                ))}
+                                {remainingCount > 0 && (
+                                  <span className="text-xs text-gray-500">
+                                    ...及其他 {remainingCount} 個地點
+                                  </span>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
-                    </Link>
-                  </li>
-                ))
-              ) : (
-                <li className="px-4 py-6 text-center text-gray-500">
-                  沒有符合篩選條件的工單。
+                      <div>
+                        <p className="text-gray-500 font-medium">建立者</p>
+                        <p className="text-gray-800">{ticket.creator.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 font-medium">負責人</p>
+                        <p className="text-gray-800">
+                          {ticket.assignee ? ticket.assignee.name : '未指派'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Card Footer */}
+                    <div className="flex justify-between items-center border-t border-gray-200 pt-4 mt-4">
+                      <div className="text-xs text-gray-500">
+                        <p>工單ID: #{ticket.id.substring(0, 8)}...</p>
+                        <p className="mt-1">
+                          建立於:{' '}
+                          <time dateTime={ticket.createdAt.toString()}>
+                            {formatDate(ticket.createdAt)}
+                          </time>
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Link
+                          href={`/tickets/${ticket.id}/edit`}
+                          className="text-blue-600 hover:text-blue-800 transition-colors"
+                          title="編輯"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </Link>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleDelete(ticket.id, ticket.title);
+                          }}
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                          title="刪除"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </Link>
                 </li>
-              )}
-            </ul>
-          )}
-          {/* Pagination */}
-          <div className="flex justify-between items-center mt-4 p-4">
-            <p className="text-sm text-gray-700">
-              顯示{' '}
-              <span className="font-medium">
-                {totalTickets > 0 ? (currentPage - 1) * pageSize + 1 : 0}
-              </span>{' '}
-              到{' '}
-              <span className="font-medium">
-                {Math.min(currentPage * pageSize, totalTickets)}
-              </span>{' '}
-              筆，共 <span className="font-medium">{totalTickets}</span> 筆
-            </p>
+              ))
+            ) : (
+              <li className="px-4 py-12 text-center text-gray-500 bg-gray-50 rounded-lg">
+                <FunnelIcon className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">
+                  沒有符合條件的工單
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  請嘗試調整篩選條件或建立新工單。
+                </p>
+              </li>
+            )}
+          </ul>
+        )}
+        {/* Pagination */}
+        <div className="flex justify-between items-center mt-4 p-4">
+          <p className="text-sm text-gray-700">
+            顯示{' '}
+            <span className="font-medium">
+              {totalTickets > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+            </span>{' '}
+            到{' '}
+            <span className="font-medium">
+              {Math.min(currentPage * pageSize, totalTickets)}
+            </span>{' '}
+            筆，共 <span className="font-medium">{totalTickets}</span> 筆
+          </p>
 
-            <nav
-              className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-              aria-label="Pagination"
+          <nav
+            className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+            aria-label="Pagination"
+          >
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
             >
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-              >
-                <span className="sr-only">上一頁</span>
-                <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
-              </button>
+              <span className="sr-only">上一頁</span>
+              <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
+            </button>
 
-              {Array.from({
-                length: Math.ceil(totalTickets / pageSize) || 1,
-              })
-                .map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handlePageChange(i + 1)}
-                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
-                      currentPage === i + 1
-                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))
-                .slice(
-                  Math.max(0, currentPage - 3),
-                  Math.min(
-                    Math.ceil(totalTickets / pageSize) || 1,
-                    currentPage + 2
-                  )
-                )}
+            {Array.from({
+              length: Math.ceil(totalTickets / pageSize) || 1,
+            })
+              .map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => handlePageChange(i + 1)}
+                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === i + 1
+                      ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))
+              .slice(
+                Math.max(0, currentPage - 3),
+                Math.min(
+                  Math.ceil(totalTickets / pageSize) || 1,
+                  currentPage + 2
+                )
+              )}
 
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage >= Math.ceil(totalTickets / pageSize)}
-                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-              >
-                <span className="sr-only">下一頁</span>
-                <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </nav>
-          </div>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage >= Math.ceil(totalTickets / pageSize)}
+              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+            >
+              <span className="sr-only">下一頁</span>
+              <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </nav>
         </div>
       </div>
 
