@@ -90,7 +90,7 @@ model Report {
   id           String         @id @default(uuid())
   title        String
   description  String
-  locationId   Int?
+  locationId   String?
   status       String         @default("UNCONFIRMED")
   priority     String         @default("MEDIUM")
   createdAt    DateTime       @default(now())
@@ -223,9 +223,10 @@ model Category {
 
 // New Location model
 model Location {
-  id      Int      @id @default(autoincrement())
-  name    String   @unique
-  reports Report[]
+  id         String   @id @default(uuid())
+  externalId Int?     @unique // 新增：用於儲存來自外部系統的原始數字 ID
+  name       String   @unique
+  reports    Report[]
 }
 
 model TicketReview {

@@ -38,7 +38,9 @@ import { locationService, Location } from '@/services/locationService'; // Impor
 import SaveViewModal from '@/components/SaveViewModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
 import ViewSelectorModal from '@/components/ViewSelectorModal'; // New import
-import MultiSelectFilterModal, { MultiSelectOption } from '@/components/MultiSelectFilterModal'; // Import MultiSelectOption
+import MultiSelectFilterModal, {
+  MultiSelectOption,
+} from '@/components/MultiSelectFilterModal'; // Import MultiSelectOption
 
 const SortIcon = ({
   field,
@@ -67,7 +69,7 @@ export default function Reports() {
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
-  const [locationFilter, setLocationFilter] = useState<number[]>([]);
+  const [locationFilter, setLocationFilter] = useState<string[]>([]);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -176,7 +178,7 @@ export default function Reports() {
         categoryIds?: string[];
         priority?: string[];
         search?: string;
-        locationIds?: number[];
+        locationIds?: string[];
         sortField?: string;
         sortOrder?: 'asc' | 'desc';
       } = {};
@@ -541,7 +543,7 @@ export default function Reports() {
         isOpen={isLocationModalOpen}
         onClose={() => setIsLocationModalOpen(false)}
         onConfirm={(selectedIds) => {
-          setLocationFilter(selectedIds as number[]); // Cast to number[]
+          setLocationFilter(selectedIds as string[]); // Cast to string[]
           setIsLocationModalOpen(false);
           setPage(1); // Reset page when filter changes
           setIsFilterModified(true); // Set filter modified when location changes

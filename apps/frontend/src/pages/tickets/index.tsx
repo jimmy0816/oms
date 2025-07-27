@@ -44,7 +44,7 @@ export default function TicketsPage() {
     status: [] as string[],
     priority: [] as string[],
     search: '',
-    locationIds: [] as number[], // Added locationIds to filters
+    locationIds: [] as string[], // Added locationIds to filters
   });
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false); // Added state for location modal
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
@@ -270,7 +270,7 @@ export default function TicketsPage() {
   );
 
   const clearFilters = () => {
-    setFilters({ status: [], priority: [], search: '', locationIds: [] });
+    setFilters({ status: [], priority: [], search: '', locationIds: [] as string[] });
     setSelectedViewId(null);
     setCurrentPage(1);
     setIsFilterModified(false);
@@ -282,7 +282,7 @@ export default function TicketsPage() {
         status: filters.status,
         priority: filters.priority,
         search: filters.search,
-        locationIds: filters.locationIds,
+        locationIds: filters.locationIds as string[],
         sortField,
         sortOrder,
       };
@@ -771,7 +771,7 @@ export default function TicketsPage() {
         isOpen={isLocationModalOpen}
         onClose={() => setIsLocationModalOpen(false)}
         onConfirm={(selectedIds) => {
-          setFilters((prev) => ({ ...prev, locationIds: selectedIds as number[] })); // Cast to number[]
+          setFilters((prev) => ({ ...prev, locationIds: selectedIds as string[] })); // Cast to string[]
           setIsLocationModalOpen(false);
           setCurrentPage(1); // Reset page when filter changes
         }}

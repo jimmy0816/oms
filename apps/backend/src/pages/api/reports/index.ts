@@ -44,7 +44,7 @@ interface Report {
 interface CreateReportRequest {
   title: string;
   description: string;
-  locationId?: number;
+  locationId?: string; // Changed to string
   priority?: string;
   categoryId?: string; // This will now be categoryId
   contactPhone?: string;
@@ -93,7 +93,7 @@ async function getReports(
   const assigneeId = req.query.assigneeId as string | undefined;
   const creatorId = req.query.creatorId as string | undefined;
   const search = req.query.search as string | undefined;
-  const locationIds = req.query.locationIds as string | undefined;
+  const locationIds = req.query.locationIds as string | string[] | undefined;
   const sortField = req.query.sortField as string | undefined;
   const sortOrder = req.query.sortOrder as 'asc' | 'desc' | undefined;
 
@@ -130,11 +130,12 @@ async function getReports(
 
   // Build filter conditions
   const where: any = {};
+  const andClauses = [];
 
   if (status) {
     const parsedStatus = Array.isArray(status) ? status : status.split(',');
     if (parsedStatus.length > 0) {
-      where.status = { in: parsedStatus };
+      andClauses.push({ status: { in: parsedStatus } });
     }
   }
 
@@ -143,17 +144,17 @@ async function getReports(
       ? priority
       : priority.split(',');
     if (parsedPriority.length > 0) {
-      where.priority = { in: parsedPriority };
+      andClauses.push({ priority: { in: parsedPriority } });
     }
   }
 
-  if (assigneeId) where.assigneeId = assigneeId;
-  if (creatorId) where.creatorId = creatorId;
+  if (assigneeId) andClauses.push({ assigneeId });
+  if (creatorId) andClauses.push({ creatorId });
 
   if (locationIds) {
-    const parsedLocationIds = locationIds.split(',').map(Number);
+    const parsedLocationIds = Array.isArray(locationIds) ? locationIds : locationIds.split(',');
     if (parsedLocationIds.length > 0) {
-      where.locationId = { in: parsedLocationIds };
+      andClauses.push({ locationId: { in: parsedLocationIds } });
     }
   }
 
@@ -181,19 +182,25 @@ async function getReports(
           collectThirdLevelIds(targetCategory);
         }
       });
-      where.categoryId = { in: thirdLevelCategoryIds };
+      andClauses.push({ categoryId: { in: thirdLevelCategoryIds } });
     } else {
-      where.categoryId = { in: [] }; // Effectively returns no reports
+      andClauses.push({ categoryId: { in: [] } }); // Effectively returns no reports
     }
   }
 
   // 處理搜尋關鍵字
   if (search) {
-    where.OR = [
-      { title: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } },
-      { location: { name: { contains: search, mode: 'insensitive' } } },
-    ];
+    andClauses.push({
+      OR: [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { location: { name: { contains: search, mode: 'insensitive' } } },
+      ],
+    });
+  }
+
+  if (andClauses.length > 0) {
+    where.AND = andClauses;
   }
 
   // Get reports with pagination
