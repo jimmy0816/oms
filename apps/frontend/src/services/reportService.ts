@@ -226,6 +226,8 @@ export const reportService = {
       priority?: string;
       search?: string;
       locationIds?: number[];
+      sortField?: string;
+      sortOrder?: 'asc' | 'desc';
     } = {}
   ): Promise<PaginatedResponse<Report>> {
     try {
@@ -242,6 +244,8 @@ export const reportService = {
       if (filters.locationIds && filters.locationIds.length > 0) {
         queryParams.append('locationIds', filters.locationIds.join(','));
       }
+      if (filters.sortField) queryParams.append('sortField', filters.sortField);
+      if (filters.sortOrder) queryParams.append('sortOrder', filters.sortOrder);
 
       const response = await fetch(
         `${API_URL}/api/reports?${queryParams.toString()}`,

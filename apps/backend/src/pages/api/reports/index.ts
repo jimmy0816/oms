@@ -94,8 +94,39 @@ async function getReports(
   const creatorId = req.query.creatorId as string | undefined;
   const search = req.query.search as string | undefined;
   const locationIds = req.query.locationIds as string | undefined;
+  const sortField = req.query.sortField as string | undefined;
+  const sortOrder = req.query.sortOrder as 'asc' | 'desc' | undefined;
 
   const skip = (page - 1) * pageSize;
+
+  const orderByClause: any = {};
+
+  switch (sortField) {
+    case 'title':
+      orderByClause.title = sortOrder || 'asc';
+      break;
+    case 'status':
+      orderByClause.status = sortOrder || 'asc';
+      break;
+    case 'category':
+      orderByClause.category = { name: sortOrder || 'asc' }; // Assuming category is a direct field
+      break;
+    case 'priority':
+      orderByClause.priority = sortOrder || 'asc';
+      break;
+    case 'location':
+      orderByClause.location = { name: sortOrder || 'asc' };
+      break;
+    case 'createdAt':
+      orderByClause.createdAt = sortOrder || 'asc';
+      break;
+    case 'creator':
+      orderByClause.creator = { name: sortOrder || 'asc' };
+      break;
+    default:
+      orderByClause.createdAt = 'desc'; // Default sort
+      break;
+  }
 
   // Build filter conditions
   const where: any = {};
@@ -151,7 +182,7 @@ async function getReports(
       where,
       skip,
       take: pageSize,
-      orderBy: { createdAt: 'desc' },
+      orderBy: orderByClause,
       include: {
         location: true, // Include location data
         creator: {
