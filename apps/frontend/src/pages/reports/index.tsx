@@ -38,6 +38,9 @@ import LocationFilterModal from '@/components/LocationFilterModal';
 import SaveViewModal from '@/components/SaveViewModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
 import ViewSelectorModal from '@/components/ViewSelectorModal'; // New import
+import MultiSelectFilterModal, {
+  MultiSelectOption,
+} from '@/components/MultiSelectFilterModal';
 
 const SortIcon = ({
   field,
@@ -63,11 +66,14 @@ const SortIcon = ({
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
   const [locationFilter, setLocationFilter] = useState<number[]>([]);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isPriorityModalOpen, setIsPriorityModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -166,17 +172,17 @@ export default function Reports() {
 
       // 構建過濾條件
       const filters: {
-        status?: string;
-        category?: string;
-        priority?: string;
+        status?: string[];
+        categoryIds?: string[];
+        priority?: string[];
         search?: string;
         locationIds?: number[];
         sortField?: string;
         sortOrder?: 'asc' | 'desc';
       } = {};
-      if (statusFilter) filters.status = statusFilter;
-      if (categoryFilter) filters.category = categoryFilter;
-      if (priorityFilter) filters.priority = priorityFilter;
+      if (statusFilter.length > 0) filters.status = statusFilter;
+      if (categoryFilter.length > 0) filters.categoryIds = categoryFilter;
+      if (priorityFilter.length > 0) filters.priority = priorityFilter;
       if (searchTerm) filters.search = searchTerm;
       if (locationFilter.length > 0) filters.locationIds = locationFilter;
       if (sortField) filters.sortField = sortField;
@@ -236,9 +242,9 @@ export default function Reports() {
   // 清除過濾條件
   const clearFilters = () => {
     setSearchTerm('');
-    setStatusFilter('');
-    setCategoryFilter('');
-    setPriorityFilter('');
+    setStatusFilter([]);
+    setCategoryFilter([]);
+    setPriorityFilter([]);
     setLocationFilter([]);
     setSelectedViewId(null); // Clear selected view
     setPage(1);
@@ -298,9 +304,9 @@ export default function Reports() {
       const viewToApply = savedViews.find((view) => view.id === viewId);
       if (viewToApply) {
         setSearchTerm(viewToApply.filters.searchTerm || '');
-        setStatusFilter(viewToApply.filters.statusFilter || '');
-        setCategoryFilter(viewToApply.filters.categoryFilter || '');
-        setPriorityFilter(viewToApply.filters.priorityFilter || '');
+        setStatusFilter(viewToApply.filters.statusFilter || []);
+        setCategoryFilter(viewToApply.filters.categoryFilter || []);
+        setPriorityFilter(viewToApply.filters.priorityFilter || []);
         setLocationFilter(viewToApply.filters.locationFilter || []);
         setSelectedViewId(viewId);
         setPage(1);
@@ -460,23 +466,15 @@ export default function Reports() {
             >
               狀態
             </label>
-            <select
-              id="status-filter"
-              className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setIsFilterModified(true);
-              }}
+            <button
+              type="button"
+              onClick={() => setIsStatusModalOpen(true)}
+              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
             >
-              <option value="">全部狀態</option>
-              <option value={ReportStatus.UNCONFIRMED}>未確認</option>
-              <option value={ReportStatus.PROCESSING}>處理中</option>
-              <option value={ReportStatus.REJECTED}>不處理</option>
-              <option value={ReportStatus.PENDING_REVIEW}>待審核</option>
-              <option value={ReportStatus.REVIEWED}>已歸檔</option>
-              <option value={ReportStatus.RETURNED}>已退回</option>
-            </select>
+              {statusFilter.length > 0
+                ? `已選 ${statusFilter.length} 個狀態`
+                : '選擇狀態...'}
+            </button>
           </div>
 
           {/* 類別篩選 */}
@@ -487,24 +485,15 @@ export default function Reports() {
             >
               類別
             </label>
-            <select
-              id="category-filter"
-              className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-              value={categoryFilter}
-              onChange={(e) => {
-                setCategoryFilter(e.target.value);
-                setIsFilterModified(true);
-              }}
+            <button
+              type="button"
+              onClick={() => setIsCategoryModalOpen(true)}
+              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
             >
-              <option value="">全部類別</option>
-              {categories
-                .filter((cat) => cat.level === 1)
-                .map((cat1) => (
-                  <option key={cat1.id} value={cat1.id}>
-                    {cat1.name}
-                  </option>
-                ))}
-            </select>
+              {categoryFilter.length > 0
+                ? `已選 ${categoryFilter.length} 個類別`
+                : '選擇類別...'}
+            </button>
           </div>
 
           {/* 優先級篩選 */}
@@ -515,21 +504,15 @@ export default function Reports() {
             >
               優先級
             </label>
-            <select
-              id="priority-filter"
-              className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-              value={priorityFilter}
-              onChange={(e) => {
-                setPriorityFilter(e.target.value);
-                setIsFilterModified(true);
-              }}
+            <button
+              type="button"
+              onClick={() => setIsPriorityModalOpen(true)}
+              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
             >
-              <option value="">全部優先級</option>
-              <option value={ReportPriority.LOW}>低</option>
-              <option value={ReportPriority.MEDIUM}>中</option>
-              <option value={ReportPriority.HIGH}>高</option>
-              <option value={ReportPriority.URGENT}>緊急</option>
-            </select>
+              {priorityFilter.length > 0
+                ? `已選 ${priorityFilter.length} 個優先級`
+                : '選擇優先級...'}
+            </button>
           </div>
 
           {/* 地點篩選 */}
@@ -564,6 +547,59 @@ export default function Reports() {
           setIsFilterModified(true); // Set filter modified when location changes
         }}
         initialSelectedLocationIds={locationFilter}
+      />
+
+      {/* Status Filter Modal */}
+      <MultiSelectFilterModal
+        isOpen={isStatusModalOpen}
+        onClose={() => setIsStatusModalOpen(false)}
+        onConfirm={(selectedIds) => {
+          setStatusFilter(selectedIds as string[]);
+          setIsStatusModalOpen(false);
+          setPage(1);
+          setIsFilterModified(true);
+        }}
+        initialSelectedIds={statusFilter}
+        options={Object.values(ReportStatus).map((status) => ({
+          id: status,
+          name: getStatusName(status),
+        }))}
+        title="選擇狀態"
+      />
+
+      {/* Category Filter Modal */}
+      <MultiSelectFilterModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        onConfirm={(selectedIds) => {
+          setCategoryFilter(selectedIds as string[]);
+          setIsCategoryModalOpen(false);
+          setPage(1);
+          setIsFilterModified(true);
+        }}
+        initialSelectedIds={categoryFilter}
+        options={categories
+          .filter((cat) => cat.level === 1)
+          .map((cat) => ({ id: cat.id.toString(), name: cat.name }))}
+        title="選擇類別"
+      />
+
+      {/* Priority Filter Modal */}
+      <MultiSelectFilterModal
+        isOpen={isPriorityModalOpen}
+        onClose={() => setIsPriorityModalOpen(false)}
+        onConfirm={(selectedIds) => {
+          setPriorityFilter(selectedIds as string[]);
+          setIsPriorityModalOpen(false);
+          setPage(1);
+          setIsFilterModified(true);
+        }}
+        initialSelectedIds={priorityFilter}
+        options={Object.values(ReportPriority).map((priority) => ({
+          id: priority,
+          name: getPriorityText(priority as ReportPriority),
+        }))}
+        title="選擇優先級"
       />
 
       {/* Save View Modal */}

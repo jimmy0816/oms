@@ -87,9 +87,9 @@ async function getReports(
 ) {
   const page = Number(req.query.page) || 1;
   const pageSize = Number(req.query.pageSize) || 10;
-  const status = req.query.status as string | undefined;
-  const priority = req.query.priority as string | undefined;
-  const categoryFilterId = req.query.category as string | undefined; // Rename to avoid conflict
+  const status = req.query.status as string | string[] | undefined;
+  const priority = req.query.priority as string | string[] | undefined;
+  const categoryFilterId = req.query.categoryIds as string | string[] | undefined; // Changed to categoryIds for multi-select
   const assigneeId = req.query.assigneeId as string | undefined;
   const creatorId = req.query.creatorId as string | undefined;
   const search = req.query.search as string | undefined;
@@ -130,8 +130,23 @@ async function getReports(
 
   // Build filter conditions
   const where: any = {};
-  if (status) where.status = status;
-  if (priority) where.priority = priority;
+
+  if (status) {
+    const parsedStatus = Array.isArray(status) ? status : status.split(',');
+    if (parsedStatus.length > 0) {
+      where.status = { in: parsedStatus };
+    }
+  }
+
+  if (priority) {
+    const parsedPriority = Array.isArray(priority)
+      ? priority
+      : priority.split(',');
+    if (parsedPriority.length > 0) {
+      where.priority = { in: parsedPriority };
+    }
+  }
+
   if (assigneeId) where.assigneeId = assigneeId;
   if (creatorId) where.creatorId = creatorId;
 
@@ -142,27 +157,32 @@ async function getReports(
     }
   }
 
-  // Handle category filtering by top-level category
+  // Handle category filtering by top-level category (now supports multiple categoryIds)
   if (categoryFilterId) {
-    const allCategories = await categoryService.getAllCategories();
-    const targetCategory = allCategories.find(
-      (cat) => cat.id === categoryFilterId
-    );
+    const parsedCategoryIds = Array.isArray(categoryFilterId)
+      ? categoryFilterId
+      : categoryFilterId.split(',');
 
-    if (targetCategory) {
+    if (parsedCategoryIds.length > 0) {
+      const allCategories = await categoryService.getAllCategories();
       const thirdLevelCategoryIds: string[] = [];
-      const collectThirdLevelIds = (category: Category) => {
-        if (category.level === 3) {
-          thirdLevelCategoryIds.push(category.id);
+
+      parsedCategoryIds.forEach((filterId) => {
+        const targetCategory = allCategories.find((cat) => cat.id === filterId);
+        if (targetCategory) {
+          const collectThirdLevelIds = (category: Category) => {
+            if (category.level === 3) {
+              thirdLevelCategoryIds.push(category.id);
+            }
+            if (category.children) {
+              category.children.forEach(collectThirdLevelIds);
+            }
+          };
+          collectThirdLevelIds(targetCategory);
         }
-        if (category.children) {
-          category.children.forEach(collectThirdLevelIds);
-        }
-      };
-      collectThirdLevelIds(targetCategory);
+      });
       where.categoryId = { in: thirdLevelCategoryIds };
     } else {
-      // If the category ID is not found, return no reports or handle as an error
       where.categoryId = { in: [] }; // Effectively returns no reports
     }
   }

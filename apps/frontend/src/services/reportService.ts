@@ -221,9 +221,9 @@ export const reportService = {
     page = 1,
     pageSize = 10,
     filters: {
-      status?: string;
-      category?: string;
-      priority?: string;
+      status?: string[];
+      categoryIds?: string[];
+      priority?: string[];
       search?: string;
       locationIds?: number[];
       sortField?: string;
@@ -237,9 +237,15 @@ export const reportService = {
         pageSize: pageSize.toString(),
       });
 
-      if (filters.status) queryParams.append('status', filters.status);
-      if (filters.category) queryParams.append('category', filters.category);
-      if (filters.priority) queryParams.append('priority', filters.priority);
+      if (filters.status && filters.status.length > 0) {
+        queryParams.append('status', filters.status.join(','));
+      }
+      if (filters.categoryIds && filters.categoryIds.length > 0) {
+        queryParams.append('categoryIds', filters.categoryIds.join(','));
+      }
+      if (filters.priority && filters.priority.length > 0) {
+        queryParams.append('priority', filters.priority.join(','));
+      }
       if (filters.search) queryParams.append('search', filters.search);
       if (filters.locationIds && filters.locationIds.length > 0) {
         queryParams.append('locationIds', filters.locationIds.join(','));
