@@ -120,7 +120,13 @@ export const ticketService = {
       // 將其他過濾條件添加到查詢參數中
       for (const key in filters) {
         if (key !== 'locationIds' && filters[key]) {
-          queryParams.append(key, filters[key].toString());
+          if (Array.isArray(filters[key])) {
+            if (filters[key].length > 0) {
+              queryParams.append(key, filters[key].join(','));
+            }
+          } else {
+            queryParams.append(key, filters[key].toString());
+          }
         }
       }
 

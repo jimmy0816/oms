@@ -26,12 +26,13 @@ import {
   getPriorityColor,
 } from '@/services/ticketService';
 import { savedViewService } from '@/services/savedViewService';
-import LocationFilterModal from '@/components/LocationFilterModal'; // Added import
+import LocationFilterModal from '@/components/LocationFilterModal';
 import SaveViewModal from '@/components/SaveViewModal';
 import ViewSelectorModal from '@/components/ViewSelectorModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
+import MultiSelectFilterModal from '@/components/MultiSelectFilterModal';
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<TicketWithDetails[]>([]);
@@ -40,12 +41,14 @@ export default function TicketsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [filters, setFilters] = useState({
-    status: '',
-    priority: '',
+    status: [] as string[],
+    priority: [] as string[],
     search: '',
     locationIds: [] as number[], // Added locationIds to filters
   });
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false); // Added state for location modal
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isPriorityModalOpen, setIsPriorityModalOpen] = useState(false);
   const { user } = useAuth();
   const { showToast } = useToast();
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
@@ -119,8 +122,8 @@ export default function TicketsPage() {
     try {
       setLoading(true);
       const apiFilters: Record<string, any> = {}; // Changed to 'any' to allow number[]
-      if (filters.status) apiFilters.status = filters.status;
-      if (filters.priority) apiFilters.priority = filters.priority;
+      if (filters.status.length > 0) apiFilters.status = filters.status;
+      if (filters.priority.length > 0) apiFilters.priority = filters.priority;
       if (filters.search) apiFilters.search = filters.search;
       if (filters.locationIds.length > 0)
         apiFilters.locationIds = filters.locationIds;
@@ -201,8 +204,8 @@ export default function TicketsPage() {
       const viewToApply = savedViews.find((view) => view.id === viewId);
       if (viewToApply) {
         setFilters({
-          status: viewToApply.filters.status || '',
-          priority: viewToApply.filters.priority || '',
+          status: viewToApply.filters.status || [],
+          priority: viewToApply.filters.priority || [],
           search: viewToApply.filters.search || '',
           locationIds: viewToApply.filters.locationIds || [],
         });
@@ -237,9 +240,10 @@ export default function TicketsPage() {
   };
 
   const handleFilterChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const { name, value } = e.target;
-      setFilters((prev) => ({ ...prev, [name]: value }));
+    (filterName: string, selectedIds: string[]) => {
+      setFilters((prev) => ({ ...prev, [filterName]: selectedIds }));
+      setIsFilterModified(true);
+      setCurrentPage(1);
     },
     []
   );
@@ -247,12 +251,13 @@ export default function TicketsPage() {
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setFilters((prev) => ({ ...prev, search: e.target.value }));
+      setIsFilterModified(true);
     },
     []
   );
 
   const clearFilters = () => {
-    setFilters({ status: '', priority: '', search: '', locationIds: [] });
+    setFilters({ status: [], priority: [], search: '', locationIds: [] });
     setSelectedViewId(null);
     setCurrentPage(1);
     setIsFilterModified(false);
@@ -310,8 +315,10 @@ export default function TicketsPage() {
 
     const filtersSame =
       (currentView.filters.search || '') === filters.search &&
-      (currentView.filters.status || '') === filters.status &&
-      (currentView.filters.priority || '') === filters.priority &&
+      (currentView.filters.status || []).sort().join(',') ===
+        filters.status.sort().join(',') &&
+      (currentView.filters.priority || []).sort().join(',') ===
+        filters.priority.sort().join(',') &&
       (currentView.filters.locationIds || []).sort().join(',') ===
         filters.locationIds.sort().join(',');
 
@@ -413,20 +420,15 @@ export default function TicketsPage() {
             >
               狀態
             </label>
-            <select
-              id="status-filter"
-              name="status"
-              value={filters.status}
-              onChange={handleFilterChange}
-              className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+            <button
+              type="button"
+              onClick={() => setIsStatusModalOpen(true)}
+              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
             >
-              <option value="">所有狀態</option>
-              {Object.values(TicketStatus).map((status) => (
-                <option key={status} value={status}>
-                  {getStatusText(status)}
-                </option>
-              ))}
-            </select>
+              {filters.status.length > 0
+                ? `已選 ${filters.status.length} 個狀態`
+                : '選擇狀態...'}
+            </button>
           </div>
 
           {/* 優先級篩選 */}
@@ -437,20 +439,15 @@ export default function TicketsPage() {
             >
               優先級
             </label>
-            <select
-              id="priority-filter"
-              name="priority"
-              value={filters.priority}
-              onChange={handleFilterChange}
-              className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+            <button
+              type="button"
+              onClick={() => setIsPriorityModalOpen(true)}
+              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
             >
-              <option value="">所有優先級</option>
-              {Object.values(TicketPriority).map((priority) => (
-                <option key={priority} value={priority}>
-                  {getPriorityText(priority)}
-                </option>
-              ))}
-            </select>
+              {filters.priority.length > 0
+                ? `已選 ${filters.priority.length} 個優先級`
+                : '選擇優先級...'}
+            </button>
           </div>
 
           {/* 地點篩選 */}
@@ -766,6 +763,38 @@ export default function TicketsPage() {
           setCurrentPage(1); // Reset page when filter changes
         }}
         initialSelectedLocationIds={filters.locationIds}
+      />
+
+      {/* Status Filter Modal */}
+      <MultiSelectFilterModal
+        isOpen={isStatusModalOpen}
+        onClose={() => setIsStatusModalOpen(false)}
+        onConfirm={(selectedIds) => {
+          handleFilterChange('status', selectedIds as string[]);
+          setIsStatusModalOpen(false);
+        }}
+        initialSelectedIds={filters.status}
+        options={Object.values(TicketStatus).map((status) => ({
+          id: status,
+          name: getStatusText(status),
+        }))}
+        title="選擇狀態"
+      />
+
+      {/* Priority Filter Modal */}
+      <MultiSelectFilterModal
+        isOpen={isPriorityModalOpen}
+        onClose={() => setIsPriorityModalOpen(false)}
+        onConfirm={(selectedIds) => {
+          handleFilterChange('priority', selectedIds as string[]);
+          setIsPriorityModalOpen(false);
+        }}
+        initialSelectedIds={filters.priority}
+        options={Object.values(TicketPriority).map((priority) => ({
+          id: priority,
+          name: getPriorityText(priority),
+        }))}
+        title="選擇優先級"
       />
     </>
   );

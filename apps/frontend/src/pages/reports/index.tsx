@@ -38,9 +38,7 @@ import LocationFilterModal from '@/components/LocationFilterModal';
 import SaveViewModal from '@/components/SaveViewModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
 import ViewSelectorModal from '@/components/ViewSelectorModal'; // New import
-import MultiSelectFilterModal, {
-  MultiSelectOption,
-} from '@/components/MultiSelectFilterModal';
+import MultiSelectFilterModal from '@/components/MultiSelectFilterModal';
 
 const SortIcon = ({
   field,

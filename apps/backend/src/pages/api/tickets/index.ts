@@ -44,8 +44,8 @@ async function getTickets(
 ) {
   const page = Number(req.query.page) || 1;
   const pageSize = Number(req.query.pageSize) || 10;
-  const status = req.query.status as string | undefined;
-  const priority = req.query.priority as string | undefined;
+  const status = req.query.status as string | string[] | undefined;
+  const priority = req.query.priority as string | string[] | undefined;
   const assigneeId = req.query.assigneeId as string | undefined;
   const creatorId = req.query.creatorId as string | undefined;
   const search = req.query.search as string | undefined;
@@ -69,8 +69,20 @@ async function getTickets(
   const where: any = {};
   const andClauses = [];
 
-  if (status) andClauses.push({ status });
-  if (priority) andClauses.push({ priority });
+  if (status) {
+    const parsedStatus = Array.isArray(status) ? status : status.split(',');
+    if (parsedStatus.length > 0) {
+      andClauses.push({ status: { in: parsedStatus } });
+    }
+  }
+  if (priority) {
+    const parsedPriority = Array.isArray(priority)
+      ? priority
+      : priority.split(',');
+    if (parsedPriority.length > 0) {
+      andClauses.push({ priority: { in: parsedPriority } });
+    }
+  }
   if (assigneeId) andClauses.push({ assigneeId });
   if (creatorId) andClauses.push({ creatorId });
 
