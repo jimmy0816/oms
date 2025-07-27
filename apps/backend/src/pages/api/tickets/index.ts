@@ -50,8 +50,21 @@ async function getTickets(
   const creatorId = req.query.creatorId as string | undefined;
   const search = req.query.search as string | undefined;
   const locationIds = req.query.locationIds as string | string[] | undefined;
+  const sortField = req.query.sortField as string | undefined;
+  const sortOrder = req.query.sortOrder as 'asc' | 'desc' | undefined;
 
   const skip = (page - 1) * pageSize;
+
+  const orderByClause: any = {};
+  if (sortField && sortOrder) {
+    if (sortField === 'creator' || sortField === 'assignee') {
+      orderByClause[sortField] = { name: sortOrder };
+    } else {
+      orderByClause[sortField] = sortOrder;
+    }
+  } else {
+    orderByClause.createdAt = 'desc';
+  }
 
   const where: any = {};
   const andClauses = [];
@@ -135,7 +148,7 @@ async function getTickets(
       where,
       skip,
       take: pageSize,
-      orderBy: { createdAt: 'desc' },
+      orderBy: orderByClause,
       include: {
         creator: { select: { id: true, name: true, email: true } },
         assignee: { select: { id: true, name: true, email: true } },

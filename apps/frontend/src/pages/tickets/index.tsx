@@ -58,6 +58,17 @@ export default function TicketsPage() {
   const [currentPath, setCurrentPath] = useState('');
   const isInitialLoad = useRef(true);
 
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const [field, order] = e.target.value.split('-');
+    setSortField(field);
+    setSortOrder(order);
+    setIsFilterModified(true);
+    setCurrentPage(1); // Reset to first page when sorting changes
+  };
+
   const handleDelete = async (ticketId: string, ticketTitle: string) => {
     if (
       window.confirm(`您確定要刪除工單「${ticketTitle}」嗎？此操作無法復原。`)
@@ -113,6 +124,10 @@ export default function TicketsPage() {
       if (filters.search) apiFilters.search = filters.search;
       if (filters.locationIds.length > 0)
         apiFilters.locationIds = filters.locationIds;
+      if (sortField && sortOrder) {
+        apiFilters.sortField = sortField;
+        apiFilters.sortOrder = sortOrder;
+      }
 
       const ticketsData = await ticketService.getAllTickets(
         currentPage,
@@ -158,6 +173,8 @@ export default function TicketsPage() {
     filters.priority,
     filters.search,
     filters.locationIds,
+    sortField,
+    sortOrder,
   ]);
 
   const loadSavedViews = useCallback(async () => {
@@ -189,6 +206,8 @@ export default function TicketsPage() {
           search: viewToApply.filters.search || '',
           locationIds: viewToApply.filters.locationIds || [],
         });
+        setSortField(viewToApply.filters.sortField || 'createdAt');
+        setSortOrder(viewToApply.filters.sortOrder || 'desc');
         setSelectedViewId(viewId);
         setCurrentPage(1);
         setIsFilterModified(false);
@@ -246,6 +265,8 @@ export default function TicketsPage() {
         priority: filters.priority,
         search: filters.search,
         locationIds: filters.locationIds,
+        sortField,
+        sortOrder,
       };
 
       if (selectedViewId) {
@@ -449,6 +470,38 @@ export default function TicketsPage() {
                 ? `已選 ${filters.locationIds.length} 個地點`
                 : '選擇地點...'}
             </button>
+          </div>
+        </div>
+
+        {/* Sort Dropdown */}
+        <div className="flex justify-end mt-4">
+          <div className="w-full md:w-auto">
+            <label
+              htmlFor="sort-by"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              排序依據
+            </label>
+            <select
+              id="sort-by"
+              name="sort-by"
+              className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+              value={`${sortField}-${sortOrder}`}
+              onChange={handleSortChange}
+            >
+              <option value="createdAt-desc">建立時間 (最新到最舊)</option>
+              <option value="createdAt-asc">建立時間 (最舊到最新)</option>
+              <option value="title-asc">標題 (A-Z)</option>
+              <option value="title-desc">標題 (Z-A)</option>
+              <option value="status-asc">狀態 (A-Z)</option>
+              <option value="status-desc">狀態 (Z-A)</option>
+              <option value="priority-desc">緊急程度 (最高到最低)</option>
+              <option value="priority-asc">緊急程度 (最低到最高)</option>
+              <option value="creator-asc">建立者 (A-Z)</option>
+              <option value="creator-desc">建立者 (Z-A)</option>
+              <option value="assignee-asc">負責人 (A-Z)</option>
+              <option value="assignee-desc">負責人 (Z-A)</option>
+            </select>
           </div>
         </div>
       </div>
