@@ -305,11 +305,24 @@ export default function Reports() {
     (viewId: string) => {
       const viewToApply = savedViews.find((view) => view.id === viewId);
       if (viewToApply) {
+        const newStatusFilter = Array.isArray(viewToApply.filters.statusFilter)
+          ? viewToApply.filters.statusFilter
+          : viewToApply.filters.statusFilter ? [viewToApply.filters.statusFilter] : [];
+        const newCategoryFilter = Array.isArray(viewToApply.filters.categoryFilter)
+          ? viewToApply.filters.categoryFilter
+          : viewToApply.filters.categoryFilter ? [viewToApply.filters.categoryFilter] : [];
+        const newPriorityFilter = Array.isArray(viewToApply.filters.priorityFilter)
+          ? viewToApply.filters.priorityFilter
+          : viewToApply.filters.priorityFilter ? [viewToApply.filters.priorityFilter] : [];
+        const newLocationFilter = Array.isArray(viewToApply.filters.locationFilter)
+          ? viewToApply.filters.locationFilter
+          : viewToApply.filters.locationFilter ? [viewToApply.filters.locationFilter] : [];
+
         setSearchTerm(viewToApply.filters.searchTerm || '');
-        setStatusFilter(viewToApply.filters.statusFilter || []);
-        setCategoryFilter(viewToApply.filters.categoryFilter || []);
-        setPriorityFilter(viewToApply.filters.priorityFilter || []);
-        setLocationFilter(viewToApply.filters.locationFilter || []);
+        setStatusFilter(newStatusFilter);
+        setCategoryFilter(newCategoryFilter);
+        setPriorityFilter(newPriorityFilter);
+        setLocationFilter(newLocationFilter);
         setSelectedViewId(viewId);
         setPage(1);
         setSortField(viewToApply.filters.sortField || null);

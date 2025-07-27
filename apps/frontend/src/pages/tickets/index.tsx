@@ -216,11 +216,21 @@ export default function TicketsPage() {
     (viewId: string) => {
       const viewToApply = savedViews.find((view) => view.id === viewId);
       if (viewToApply) {
+        const newStatus = Array.isArray(viewToApply.filters.status)
+          ? viewToApply.filters.status
+          : viewToApply.filters.status ? [viewToApply.filters.status] : [];
+        const newPriority = Array.isArray(viewToApply.filters.priority)
+          ? viewToApply.filters.priority
+          : viewToApply.filters.priority ? [viewToApply.filters.priority] : [];
+        const newLocationIds = Array.isArray(viewToApply.filters.locationIds)
+          ? viewToApply.filters.locationIds
+          : viewToApply.filters.locationIds ? [viewToApply.filters.locationIds] : [];
+
         setFilters({
-          status: viewToApply.filters.status || [],
-          priority: viewToApply.filters.priority || [],
+          status: newStatus,
+          priority: newPriority,
           search: viewToApply.filters.search || '',
-          locationIds: viewToApply.filters.locationIds || [],
+          locationIds: newLocationIds,
         });
         setSortField(viewToApply.filters.sortField || 'createdAt');
         setSortOrder(viewToApply.filters.sortOrder || 'desc');

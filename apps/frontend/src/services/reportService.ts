@@ -238,13 +238,28 @@ export const reportService = {
       });
 
       if (filters.status && filters.status.length > 0) {
-        queryParams.append('status', filters.status.join(','));
+        queryParams.append(
+          'status',
+          Array.isArray(filters.status)
+            ? filters.status.join(',')
+            : filters.status
+        );
       }
       if (filters.categoryIds && filters.categoryIds.length > 0) {
-        queryParams.append('categoryIds', filters.categoryIds.join(','));
+        queryParams.append(
+          'categoryIds',
+          Array.isArray(filters.categoryIds)
+            ? filters.categoryIds.join(',')
+            : filters.categoryIds
+        );
       }
       if (filters.priority && filters.priority.length > 0) {
-        queryParams.append('priority', filters.priority.join(','));
+        queryParams.append(
+          'priority',
+          Array.isArray(filters.priority)
+            ? filters.priority.join(',')
+            : filters.priority
+        );
       }
       if (filters.search) queryParams.append('search', filters.search);
       if (filters.locationIds && filters.locationIds.length > 0) {
