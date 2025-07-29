@@ -212,7 +212,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="mt-auto pt-4 border-t border-gray-100 hidden md:block">
           {user ? (
             <div className="flex flex-col">
-              <div className="flex items-center gap-3 px-3 py-2">
+              <Link href="/user/profile" className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-md">
                 <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
                   <UserIcon className="h-4 w-4 text-gray-600" />
                 </div>
@@ -225,7 +225,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {getRoleName(user.role as UserRole)}
                   </p>
                 </div>
-              </div>
+              </Link>
               <button
                 onClick={logout}
                 className="mt-2 w-full text-left text-sm text-red-600 hover:text-red-700 px-3 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2"
@@ -293,9 +293,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             )}
             {user ? (
               <button
-                onClick={logout}
+                onClick={() => router.push('/user/profile')}
                 className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center md:hidden"
-                title="登出"
+                title="個人資訊"
               >
                 <UserIcon className="h-4 w-4 text-gray-600" />
               </button>

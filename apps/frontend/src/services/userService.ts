@@ -3,6 +3,17 @@ import { User, UserRole } from 'shared-types';
 // API 基礎 URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+const getAuthHeaders = (): HeadersInit => {
+  if (typeof window === 'undefined')
+    return { 'Content-Type': 'application/json' };
+  const token = localStorage.getItem('auth_token');
+  const headeres: HeadersInit = { 'Content-Type': 'application/json' };
+  if (token) {
+    headeres.Authorization = `Bearer ${token}`;
+  }
+  return headeres;
+};
+
 /**
  * 用戶管理服務
  * 通過 API 與後端通信
@@ -211,11 +222,14 @@ export const userService = {
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
-      
+
       const data = await response.json();
       // Transform the enhanced role format to the simple format if needed
       if (data.roles && Array.isArray(data.roles)) {
-        return data.roles.map(role => ({ role: role.name, count: role.count }));
+        return data.roles.map((role) => ({
+          role: role.name,
+          count: role.count,
+        }));
       }
       return data;
     } catch (error) {
@@ -223,19 +237,27 @@ export const userService = {
       return Object.values(UserRole).map((role) => ({ role, count: 0 }));
     }
   },
-  
+
   /**
    * 獲取角色詳細資訊，包含權限和描述
    * @returns 角色詳細資訊
    */
-  async getRoleDetails(): Promise<{id: string, name: string, description: string, count: number, permissions: string[]}[]> {
+  async getRoleDetails(): Promise<
+    {
+      id: string;
+      name: string;
+      description: string;
+      count: number;
+      permissions: string[];
+    }[]
+  > {
     try {
       const response = await fetch(`${API_BASE_URL}/api/users/roles`);
-      
+
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
-      
+
       const data = await response.json();
       return data.roles || [];
     } catch (error) {
@@ -243,7 +265,7 @@ export const userService = {
       return [];
     }
   },
-  
+
   /**
    * 更新用戶的多個角色
    * @param id 用戶 ID
@@ -259,23 +281,52 @@ export const userService = {
         },
         body: JSON.stringify({ roleIds }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Error: ${response.status}`);
       }
-      
+
       const updatedUser = await response.json();
-      
+
       // 確保日期格式正確
       return {
         ...updatedUser,
         createdAt: new Date(updatedUser.createdAt),
-        updatedAt: new Date(updatedUser.updatedAt)
+        updatedAt: new Date(updatedUser.updatedAt),
       };
     } catch (error) {
       console.error(`Error updating roles for user with ID ${id}:`, error);
       throw new Error('更新用戶角色失敗');
+    }
+  },
+
+  /**
+   * 更改用戶密碼
+   * @param currentPassword 當前密碼
+   * @param newPassword 新密碼
+   */
+  async changePassword(
+    currentPassword: string,
+    newPassword: string
+  ): Promise<void> {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/users/change-password`,
+        {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ currentPassword, newPassword }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '更改密碼失敗');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      throw error; // Re-throw to be caught by the component
     }
   },
 };
