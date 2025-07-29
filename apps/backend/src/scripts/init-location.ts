@@ -2,6 +2,10 @@ import { prisma } from '@/lib/prisma';
 import { locations } from '@/data/locations';
 
 export async function seedLocations() {
+  console.log('Clearing existing locations...');
+  await prisma.location.deleteMany({});
+  console.log('Existing locations cleared.');
+
   console.log(`Start seeding locations ...`);
 
   let createdCount = 0;
