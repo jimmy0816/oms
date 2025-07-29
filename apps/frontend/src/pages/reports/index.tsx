@@ -307,16 +307,30 @@ export default function Reports() {
       if (viewToApply) {
         const newStatusFilter = Array.isArray(viewToApply.filters.statusFilter)
           ? viewToApply.filters.statusFilter
-          : viewToApply.filters.statusFilter ? [viewToApply.filters.statusFilter] : [];
-        const newCategoryFilter = Array.isArray(viewToApply.filters.categoryFilter)
+          : viewToApply.filters.statusFilter
+          ? [viewToApply.filters.statusFilter]
+          : [];
+        const newCategoryFilter = Array.isArray(
+          viewToApply.filters.categoryFilter
+        )
           ? viewToApply.filters.categoryFilter
-          : viewToApply.filters.categoryFilter ? [viewToApply.filters.categoryFilter] : [];
-        const newPriorityFilter = Array.isArray(viewToApply.filters.priorityFilter)
+          : viewToApply.filters.categoryFilter
+          ? [viewToApply.filters.categoryFilter]
+          : [];
+        const newPriorityFilter = Array.isArray(
+          viewToApply.filters.priorityFilter
+        )
           ? viewToApply.filters.priorityFilter
-          : viewToApply.filters.priorityFilter ? [viewToApply.filters.priorityFilter] : [];
-        const newLocationFilter = Array.isArray(viewToApply.filters.locationFilter)
+          : viewToApply.filters.priorityFilter
+          ? [viewToApply.filters.priorityFilter]
+          : [];
+        const newLocationFilter = Array.isArray(
+          viewToApply.filters.locationFilter
+        )
           ? viewToApply.filters.locationFilter
-          : viewToApply.filters.locationFilter ? [viewToApply.filters.locationFilter] : [];
+          : viewToApply.filters.locationFilter
+          ? [viewToApply.filters.locationFilter]
+          : [];
 
         setSearchTerm(viewToApply.filters.searchTerm || '');
         setStatusFilter(newStatusFilter);
@@ -700,7 +714,7 @@ export default function Reports() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4 cursor-pointer"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48 cursor-pointer"
                       onClick={() => handleSort('title')}
                     >
                       <div className="flex items-center space-x-1">
@@ -742,7 +756,7 @@ export default function Reports() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 cursor-pointer"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20 cursor-pointer"
                       onClick={() => handleSort('priority')}
                     >
                       <div className="flex items-center space-x-1">

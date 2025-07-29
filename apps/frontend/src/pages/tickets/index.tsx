@@ -10,6 +10,10 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronDownIcon,
+  ExclamationCircleIcon,
+  Bars3Icon,
+  BarsArrowDownIcon,
+  BarsArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import {
   TicketPriority,
@@ -17,6 +21,7 @@ import {
   UserRole,
   TicketWithDetails,
   SavedView,
+  Permission,
 } from 'shared-types';
 import {
   ticketService,
@@ -33,6 +38,27 @@ import ManageViewsModal from '@/components/ManageViewsModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import MultiSelectFilterModal from '@/components/MultiSelectFilterModal';
+
+const SortIcon = ({
+  field,
+  sortField,
+  sortOrder,
+}: {
+  field: string;
+  sortField: string | null;
+  sortOrder: 'asc' | 'desc' | null;
+}) => {
+  // When column is not being sorted, show both up and down arrows in gray
+  if (sortField !== field) {
+    return <Bars3Icon className="h3 w-3 text-gray-400" />;
+  }
+  // When column is sorted ascending, show black up arrow
+  if (sortOrder === 'asc') {
+    return <BarsArrowUpIcon className="h-3 w-3 text-black" />;
+  }
+  // When column is sorted descending, show black down arrow
+  return <BarsArrowDownIcon className="h-3 w-3 text-black" />;
+};
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<TicketWithDetails[]>([]);
@@ -65,12 +91,12 @@ export default function TicketsPage() {
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
 
-  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const [field, order] = e.target.value.split('-');
+  const handleSort = (field: string) => {
+    const isAsc = sortField === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
     setSortField(field);
-    setSortOrder(order);
     setIsFilterModified(true);
-    setCurrentPage(1); // Reset to first page when sorting changes
+    setCurrentPage(1); // Reset page to 1 when sorting changes
   };
 
   const handleDelete = async (ticketId: string, ticketTitle: string) => {
@@ -218,13 +244,19 @@ export default function TicketsPage() {
       if (viewToApply) {
         const newStatus = Array.isArray(viewToApply.filters.status)
           ? viewToApply.filters.status
-          : viewToApply.filters.status ? [viewToApply.filters.status] : [];
+          : viewToApply.filters.status
+          ? [viewToApply.filters.status]
+          : [];
         const newPriority = Array.isArray(viewToApply.filters.priority)
           ? viewToApply.filters.priority
-          : viewToApply.filters.priority ? [viewToApply.filters.priority] : [];
+          : viewToApply.filters.priority
+          ? [viewToApply.filters.priority]
+          : [];
         const newLocationIds = Array.isArray(viewToApply.filters.locationIds)
           ? viewToApply.filters.locationIds
-          : viewToApply.filters.locationIds ? [viewToApply.filters.locationIds] : [];
+          : viewToApply.filters.locationIds
+          ? [viewToApply.filters.locationIds]
+          : [];
 
         setFilters({
           status: newStatus,
@@ -253,12 +285,14 @@ export default function TicketsPage() {
     }
   }, [savedViews, handleApplyView]);
 
-  const formatDate = (date: Date) => {
-    const dateObj = date instanceof Date ? date : new Date(date);
-    return dateObj.toLocaleDateString('zh-TW', {
+  const formatDate = (date: Date | string) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleString('zh-TW', {
       year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
@@ -280,7 +314,12 @@ export default function TicketsPage() {
   );
 
   const clearFilters = () => {
-    setFilters({ status: [], priority: [], search: '', locationIds: [] as string[] });
+    setFilters({
+      status: [],
+      priority: [],
+      search: '',
+      locationIds: [] as string[],
+    });
     setSelectedViewId(null);
     setCurrentPage(1);
     setIsFilterModified(false);
@@ -492,241 +531,330 @@ export default function TicketsPage() {
             </button>
           </div>
         </div>
-
-        {/* Sort Dropdown */}
-        <div className="flex justify-end mt-4">
-          <div className="w-full md:w-auto">
-            <label
-              htmlFor="sort-by"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              排序依據
-            </label>
-            <select
-              id="sort-by"
-              name="sort-by"
-              className="block w-full py-2 px-3 pr-8 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-              value={`${sortField}-${sortOrder}`}
-              onChange={handleSortChange}
-            >
-              <option value="createdAt-desc">建立時間 (最新到最舊)</option>
-              <option value="createdAt-asc">建立時間 (最舊到最新)</option>
-              <option value="title-asc">標題 (A-Z)</option>
-              <option value="title-desc">標題 (Z-A)</option>
-              <option value="status-asc">狀態 (A-Z)</option>
-              <option value="status-desc">狀態 (Z-A)</option>
-              <option value="priority-desc">緊急程度 (最高到最低)</option>
-              <option value="priority-asc">緊急程度 (最低到最高)</option>
-              <option value="creator-asc">建立者 (A-Z)</option>
-              <option value="creator-desc">建立者 (Z-A)</option>
-              <option value="assignee-asc">負責人 (A-Z)</option>
-              <option value="assignee-desc">負責人 (Z-A)</option>
-            </select>
-          </div>
-        </div>
       </div>
 
       {/* Tickets List */}
-      <div className="">
+      <div className="bg-white shadow-sm rounded-lg overflow-hidden w-full border border-gray-200">
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
-        ) : (
-          <ul className="space-y-4">
-            {tickets.length > 0 ? (
-              tickets.map((ticket) => (
-                <li
-                  key={ticket.id}
-                  className="bg-white shadow-md rounded-lg border border-gray-200 hover:shadow-lg transition-shadow duration-200"
-                >
-                  <Link href={`/tickets/${ticket.id}`} className="block p-6">
-                    {/* Card Header */}
-                    <div className="flex justify-between items-start mb-4">
-                      <h2 className="text-lg font-bold text-gray-800 hover:text-blue-600 w-3/4">
-                        {ticket.title}
-                      </h2>
-                      <div className="flex items-center space-x-2 flex-shrink-0">
+        ) : totalTickets > 0 ? (
+          <div>
+            <div className="overflow-x-auto w-full">
+              <table className="w-full divide-y divide-gray-200 table-fixed min-w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12"
+                    >
+                      ID
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-48"
+                      onClick={() => handleSort('title')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>標題</span>
+                        <SortIcon
+                          field="title"
+                          sortField={sortField}
+                          sortOrder={sortOrder as 'asc' | 'desc'}
+                        />
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20"
+                      onClick={() => handleSort('status')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>狀態</span>
+                        <SortIcon
+                          field="status"
+                          sortField={sortField}
+                          sortOrder={sortOrder as 'asc' | 'desc'}
+                        />
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20"
+                      onClick={() => handleSort('priority')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>優先級</span>
+                        <SortIcon
+                          field="priority"
+                          sortField={sortField}
+                          sortOrder={sortOrder as 'asc' | 'desc'}
+                        />
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20"
+                      onClick={() => handleSort('location')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>地點</span>
+                        <SortIcon
+                          field="location"
+                          sortField={sortField}
+                          sortOrder={sortOrder as 'asc' | 'desc'}
+                        />
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32"
+                      onClick={() => handleSort('createdAt')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>建立時間</span>
+                        <SortIcon
+                          field="createdAt"
+                          sortField={sortField}
+                          sortOrder={sortOrder as 'asc' | 'desc'}
+                        />
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20"
+                      onClick={() => handleSort('creator')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>建立者</span>
+                        <SortIcon
+                          field="creator"
+                          sortField={sortField}
+                          sortOrder={sortOrder as 'asc' | 'desc'}
+                        />
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20"
+                      onClick={() => handleSort('assignee')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>負責人</span>
+                        <SortIcon
+                          field="assignee"
+                          sortField={sortField}
+                          sortOrder={sortOrder as 'asc' | 'desc'}
+                        />
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
+                    >
+                      操作
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {tickets.map((ticket) => (
+                    <tr
+                      key={ticket.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() =>
+                        (window.location.href = `/tickets/${ticket.id}`)
+                      }
+                    >
+                      <td
+                        className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 truncate overflow-hidden"
+                        title={ticket.id}
+                      >
+                        #{ticket.id.substring(0, 8)}...
+                      </td>
+                      <td className="px-2 py-3 whitespace-normal">
+                        <div className="text-sm font-medium text-gray-900">
+                          {ticket.title}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {ticket.description}
+                        </div>
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap">
                         <span
-                          className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
                             ticket.status
                           )}`}
                         >
                           {getStatusText(ticket.status)}
                         </span>
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap">
                         <span
-                          className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityColor(
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
                             ticket.priority
                           )}`}
                         >
                           {getPriorityText(ticket.priority)}
                         </span>
-                      </div>
-                    </div>
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                        {(() => {
+                          const locations = [
+                            ...new Set(
+                              ticket.reports
+                                .map((r) => r.report.location?.name)
+                                .filter(Boolean)
+                            ),
+                          ] as string[];
 
-                    {/* Card Body */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-sm">
-                      <div>
-                        <p className="text-gray-500 font-medium">
-                          地點 (關聯 {ticket.reports.length} 個通報)
-                        </p>
-                        <div className="text-gray-800">
-                          {(() => {
-                            const locations = [
-                              ...new Set(
-                                ticket.reports
-                                  .map((r) => r.report.location?.name)
-                                  .filter(Boolean)
-                              ),
-                            ] as string[];
+                          if (locations.length === 0) {
+                            return '無';
+                          }
 
-                            if (locations.length === 0) {
-                              return '無';
-                            }
+                          const displayLocations = locations.slice(0, 2);
+                          const remainingCount =
+                            locations.length - displayLocations.length;
 
-                            const displayLocations = locations.slice(0, 2);
-                            const remainingCount =
-                              locations.length - displayLocations.length;
-
-                            return (
-                              <>
-                                {displayLocations.map((loc) => (
-                                  <span key={loc} className="block">
-                                    {loc}
-                                  </span>
-                                ))}
-                                {remainingCount > 0 && (
-                                  <span className="text-xs text-gray-500">
-                                    ...及其他 {remainingCount} 個地點
-                                  </span>
-                                )}
-                              </>
-                            );
-                          })()}
+                          return (
+                            <>
+                              {displayLocations.map((loc) => (
+                                <span key={loc} className="block">
+                                  {loc}
+                                </span>
+                              ))}
+                              {remainingCount > 0 && (
+                                <span className="text-xs text-gray-500">
+                                  ...及其他 {remainingCount} 個地點
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                        {formatDate(ticket.createdAt)}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                        {ticket.creator?.name || '未知'}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                        {ticket.assignee?.name || '未指派'}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex items-center space-x-2">
+                          {user?.permissions?.includes(
+                            Permission.EDIT_TICKETS
+                          ) && (
+                            <Link
+                              href={`/tickets/${ticket.id}/edit`}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="編輯"
+                              onClick={(e) => e.stopPropagation()} // 阻止行點擊事件
+                            >
+                              <PencilIcon className="h-5 w-5" />
+                            </Link>
+                          )}
+                          {user?.permissions?.includes(
+                            Permission.DELETE_TICKETS
+                          ) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation(); // 阻止行點擊事件
+                                handleDelete(ticket.id, ticket.title);
+                              }}
+                              className="text-red-600 hover:text-red-900"
+                              title="刪除"
+                            >
+                              <TrashIcon className="h-5 w-5" />
+                            </button>
+                          )}
                         </div>
-                      </div>
-                      <div>
-                        <p className="text-gray-500 font-medium">建立者</p>
-                        <p className="text-gray-800">{ticket.creator.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500 font-medium">負責人</p>
-                        <p className="text-gray-800">
-                          {ticket.assignee ? ticket.assignee.name : '未指派'}
-                        </p>
-                      </div>
-                    </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-                    {/* Card Footer */}
-                    <div className="flex justify-between items-center border-t border-gray-200 pt-4 mt-4">
-                      <div className="text-xs text-gray-500">
-                        <p>工單ID: #{ticket.id.substring(0, 8)}...</p>
-                        <p className="mt-1">
-                          建立於:{' '}
-                          <time dateTime={ticket.createdAt.toString()}>
-                            {formatDate(ticket.createdAt)}
-                          </time>
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Link
-                          href={`/tickets/${ticket.id}/edit`}
-                          className="text-blue-600 hover:text-blue-800 transition-colors"
-                          title="編輯"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <PencilIcon className="h-5 w-5" />
-                        </Link>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            handleDelete(ticket.id, ticket.title);
-                          }}
-                          className="text-red-600 hover:text-red-800 transition-colors"
-                          title="刪除"
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </div>
-                  </Link>
-                </li>
-              ))
-            ) : (
-              <li className="px-4 py-12 text-center text-gray-500 bg-gray-50 rounded-lg">
-                <FunnelIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">
-                  沒有符合條件的工單
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  請嘗試調整篩選條件或建立新工單。
-                </p>
-              </li>
-            )}
-          </ul>
-        )}
-        {/* Pagination */}
-        <div className="flex justify-between items-center mt-4 p-4">
-          <p className="text-sm text-gray-700">
-            顯示{' '}
-            <span className="font-medium">
-              {totalTickets > 0 ? (currentPage - 1) * pageSize + 1 : 0}
-            </span>{' '}
-            到{' '}
-            <span className="font-medium">
-              {Math.min(currentPage * pageSize, totalTickets)}
-            </span>{' '}
-            筆，共 <span className="font-medium">{totalTickets}</span> 筆
-          </p>
+            {/* Pagination */}
+            <div className="flex justify-between items-center mt-4 p-4">
+              <p className="text-sm text-gray-700">
+                顯示{' '}
+                <span className="font-medium">
+                  {totalTickets > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+                </span>{' '}
+                到{' '}
+                <span className="font-medium">
+                  {Math.min(currentPage * pageSize, totalTickets)}
+                </span>{' '}
+                筆，共 <span className="font-medium">{totalTickets}</span> 筆
+              </p>
 
-          <nav
-            className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-            aria-label="Pagination"
-          >
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-            >
-              <span className="sr-only">上一頁</span>
-              <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
-            </button>
-
-            {Array.from({
-              length: Math.ceil(totalTickets / pageSize) || 1,
-            })
-              .map((_, i) => (
+              <nav
+                className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                aria-label="Pagination"
+              >
                 <button
-                  key={i}
-                  onClick={() => handlePageChange(i + 1)}
-                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
-                    currentPage === i + 1
-                      ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                 >
-                  {i + 1}
+                  <span className="sr-only">上一頁</span>
+                  <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
                 </button>
-              ))
-              .slice(
-                Math.max(0, currentPage - 3),
-                Math.min(
-                  Math.ceil(totalTickets / pageSize) || 1,
-                  currentPage + 2
-                )
-              )}
 
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage >= Math.ceil(totalTickets / pageSize)}
-              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-            >
-              <span className="sr-only">下一頁</span>
-              <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
-            </button>
-          </nav>
-        </div>
+                {Array.from({
+                  length: Math.ceil(totalTickets / pageSize) || 1,
+                })
+                  .map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handlePageChange(i + 1)}
+                      className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
+                        currentPage === i + 1
+                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))
+                  .slice(
+                    Math.max(0, currentPage - 3),
+                    Math.min(
+                      Math.ceil(totalTickets / pageSize) || 1,
+                      currentPage + 2
+                    )
+                  )}
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage >= Math.ceil(totalTickets / pageSize)}
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                >
+                  <span className="sr-only">下一頁</span>
+                  <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </nav>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <FunnelIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">
+              沒有符合條件的工單
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              請嘗試調整篩選條件或建立新工單。
+            </p>
+            <div className="mt-6">
+              <Link href="/tickets/new" className="btn-primary">
+                建立工單
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modals */}
@@ -781,7 +909,10 @@ export default function TicketsPage() {
         isOpen={isLocationModalOpen}
         onClose={() => setIsLocationModalOpen(false)}
         onConfirm={(selectedIds) => {
-          setFilters((prev) => ({ ...prev, locationIds: selectedIds as string[] })); // Cast to string[]
+          setFilters((prev) => ({
+            ...prev,
+            locationIds: selectedIds as string[],
+          })); // Cast to string[]
           setIsLocationModalOpen(false);
           setCurrentPage(1); // Reset page when filter changes
         }}
