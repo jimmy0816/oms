@@ -209,8 +209,9 @@ export default function NewReport() {
                   onCategorySelect={(categoryId, categoryPath) => {
                     setSelectedCategoryId(categoryId);
                     if (categoryPath) {
-                      const mainCategory = categoryPath.split(' > ')[0];
-                      setValue('title', mainCategory);
+                      const categories = categoryPath.split(' > ');
+                      const level3Category = categories[categories.length - 1];
+                      setValue('title', level3Category);
                     }
                   }}
                   selectedCategoryId={selectedCategoryId}
