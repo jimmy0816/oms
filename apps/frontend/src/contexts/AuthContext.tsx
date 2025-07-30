@@ -9,16 +9,14 @@ import React, {
 import { useRouter } from 'next/router';
 import authService, { User } from '@/services/authService';
 import { notificationService } from '@/services/notificationService';
-import { Notification } from 'shared-types';
+import { Notification, Permission } from 'shared-types'; // Import Permission
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  isLoggedIn: () => boolean;
-  hasRole: (role: string) => boolean;
-  isAdmin: () => boolean;
+  hasPermission: (permission: Permission) => boolean; // New permission checker
   notifications: Notification[];
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
@@ -27,40 +25,44 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const router = useRouter();
 
   const fetchNotifications = useCallback(async () => {
-    const fetchedNotifications = await notificationService.getNotifications();
-    setNotifications(fetchedNotifications);
+    if (!authService.isLoggedIn()) return;
+    try {
+      const fetchedNotifications = await notificationService.getNotifications();
+      setNotifications(fetchedNotifications);
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+      setNotifications([]); // Clear notifications on error
+    }
   }, []);
 
-  useEffect(() => {
-    const initAuth = async () => {
-      const currentUser = authService.getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
-        await fetchNotifications();
-      }
-      setLoading(false);
-    };
+  const initAuth = useCallback(async () => {
+    const currentUser = authService.getCurrentUser();
+    if (currentUser) {
+      setUser(currentUser);
+      await fetchNotifications();
+    }
+    setLoading(false);
+  }, [fetchNotifications]);
 
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       initAuth();
     }
-  }, [fetchNotifications]);
+  }, [initAuth]);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
       const response = await authService.login({ email, password });
       setUser(response.user);
-      await fetchNotifications(); // Fetch notifications after login
+      await fetchNotifications();
     } finally {
       setLoading(false);
     }
@@ -69,38 +71,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const logout = () => {
     authService.logout();
     setUser(null);
-    setNotifications([]); // Clear notifications on logout
+    setNotifications([]);
     router.push('/login');
   };
 
   const markNotificationAsRead = async (id: string) => {
-    const updatedNotification = await notificationService.markAsRead(id);
-    if (updatedNotification) {
+    try {
+      await notificationService.markAsRead(id);
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
     }
   };
 
   const markAllNotificationsAsRead = async () => {
-    const result = await notificationService.markAllAsRead();
-    if (result) {
+    try {
+      await notificationService.markAllAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
     }
   };
 
-  const isLoggedIn = () => authService.isLoggedIn();
-  const hasRole = (role: string) => authService.hasRole(role);
-  const isAdmin = () => authService.isAdmin();
+  // --- New Permission-Based Checker ---
+  const hasPermission = (permission: Permission): boolean => {
+    if (!user || !user.permissions) {
+      return false;
+    }
+    return user.permissions.includes(permission);
+  };
 
   const value = {
     user,
     loading,
     login,
     logout,
-    isLoggedIn,
-    hasRole,
-    isAdmin,
+    hasPermission, // Use the new function
     notifications,
     fetchNotifications,
     markNotificationAsRead,

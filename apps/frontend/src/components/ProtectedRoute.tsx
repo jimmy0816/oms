@@ -1,52 +1,44 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useAuth } from '../contexts/AuthContext';
-import { UserRole } from 'shared-types';
+import { useAuth } from '@/contexts/AuthContext';
+import { Permission } from 'shared-types';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: UserRole[];
+  requiredPermission: Permission;
 }
 
 /**
- * 受保護的路由組件
- * 用於限制未登入用戶訪問特定頁面
- * 可選擇性地要求特定角色
+ * 新的受保護路由組件
+ * 根據用戶是否擁有特定權限來限制頁面訪問
  */
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  requiredRole,
+  requiredPermission,
 }) => {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, hasPermission } = useAuth();
 
   useEffect(() => {
-    // 確保只在客戶端執行且加載完成
     if (typeof window !== 'undefined' && !loading) {
-      // 如果未登入，重定向到登入頁面
       if (!user) {
         router.push('/login');
         return;
       }
 
-      // 如果需要特定角色但用戶沒有該角色，重定向到首頁
-      if (requiredRole && !requiredRole.includes(user.role as UserRole)) {
+      if (!hasPermission(requiredPermission)) {
+        // 可以導向到一個 403 (Forbidden) 頁面或首頁
         router.push('/');
       }
     }
-  }, [loading, user, requiredRole, router]);
+  }, [loading, user, requiredPermission, hasPermission, router]);
 
-  // 在加載狀態或未通過驗證時顯示加載中
-  if (
-    loading ||
-    !user ||
-    (requiredRole && !requiredRole.includes(user.role as UserRole))
-  ) {
+  if (loading || !user || !hasPermission(requiredPermission)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">載入中...</p>
+          <p className="mt-4 text-gray-600">權限驗證中...</p>
         </div>
       </div>
     );

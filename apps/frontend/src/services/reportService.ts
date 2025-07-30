@@ -1,3 +1,4 @@
+import apiClient from '@/lib/apiClient';
 import {
   PaginatedResponse,
   ReportStatus,
@@ -14,18 +15,7 @@ import {
   QuestionMarkCircleIcon,
 } from '@heroicons/react/24/outline';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const getAuthHeaders = (): HeadersInit => {
-  if (typeof window === 'undefined')
-    return { 'Content-Type': 'application/json' };
-  const token = localStorage.getItem('auth_token');
-  const headeres: HeadersInit = { 'Content-Type': 'application/json' };
-  if (token) {
-    headeres.Authorization = `Bearer ${token}`;
-  }
-  return headeres;
-};
 
 // Report 類型定義
 export interface Report {
@@ -231,67 +221,30 @@ export const reportService = {
     } = {}
   ): Promise<PaginatedResponse<Report>> {
     try {
-      // 構建查詢參數
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        pageSize: pageSize.toString(),
+      const params: Record<string, any> = { page, pageSize };
+
+      // 動態、自動化地處理所有過濾條件
+      Object.keys(filters).forEach(key => {
+        const value = filters[key as keyof typeof filters];
+        if (value !== undefined && value !== null && value !== '') {
+          if (Array.isArray(value) && value.length > 0) {
+            params[key] = value.join(',');
+          } else if (!Array.isArray(value)) {
+            params[key] = value;
+          }
+        }
       });
 
-      if (filters.status && filters.status.length > 0) {
-        queryParams.append(
-          'status',
-          Array.isArray(filters.status)
-            ? filters.status.join(',')
-            : filters.status
-        );
-      }
-      if (filters.categoryIds && filters.categoryIds.length > 0) {
-        queryParams.append(
-          'categoryIds',
-          Array.isArray(filters.categoryIds)
-            ? filters.categoryIds.join(',')
-            : filters.categoryIds
-        );
-      }
-      if (filters.priority && filters.priority.length > 0) {
-        queryParams.append(
-          'priority',
-          Array.isArray(filters.priority)
-            ? filters.priority.join(',')
-            : filters.priority
-        );
-      }
-      if (filters.search) queryParams.append('search', filters.search);
-      if (filters.locationIds && filters.locationIds.length > 0) {
-        queryParams.append('locationIds', filters.locationIds.join(','));
-      }
-      if (filters.sortField) queryParams.append('sortField', filters.sortField);
-      if (filters.sortOrder) queryParams.append('sortOrder', filters.sortOrder);
-
-      const response = await fetch(
-        `${API_URL}/api/reports?${queryParams.toString()}`,
-        {
-          headers: getAuthHeaders(),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '獲取通報失敗');
-      }
-
-      const result = await response.json();
-
+      const paginatedResponse = await apiClient.get<PaginatedResponse<Report>>('/api/reports', params);
+      
       // 處理日期格式
-      if (result.success && result.data.items) {
-        result.data.items = result.data.items.map((report: any) => ({
-          ...report,
-          createdAt: new Date(report.createdAt),
-          updatedAt: new Date(report.updatedAt),
-        }));
-      }
+      paginatedResponse.items = paginatedResponse.items.map((report: any) => ({
+        ...report,
+        createdAt: new Date(report.createdAt),
+        updatedAt: new Date(report.updatedAt),
+      }));
 
-      return result.data;
+      return paginatedResponse;
     } catch (error) {
       console.error('獲取通報列表失敗:', error);
       throw error;
@@ -303,61 +256,24 @@ export const reportService = {
    */
   async getReportById(id: string): Promise<Report> {
     try {
-      const response = await fetch(`${API_URL}/api/reports/${id}`, {
-        headers: getAuthHeaders(),
-      });
+      const report = await apiClient.get<Report>(`/api/reports/${id}`);
+      
+      // 遞歸處理日期格式
+      const parseDates = (obj: any): any => {
+        if (!obj || typeof obj !== 'object') return obj;
+        if (Array.isArray(obj)) return obj.map(parseDates);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '獲取通報詳情失敗');
-      }
-
-      const result = await response.json();
-
-      console.log('result.data', result.data);
-
-      // 處理日期格式
-      if (result.success && result.data) {
-        const report = {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt),
-        };
-
-        // 處理評論中的日期
-        if (report.comments) {
-          report.comments = report.comments.map((comment: any) => ({
-            ...comment,
-            createdAt: new Date(comment.createdAt),
-            updatedAt: new Date(comment.updatedAt),
-          }));
-        }
-
-        if (report.activityLogs) {
-          report.activityLogs = report.activityLogs.map((activityLog: any) => ({
-            ...activityLog,
-            createdAt: new Date(activityLog.createdAt),
-            updatedAt: new Date(activityLog.updatedAt),
-          }));
-        }
-
-        if (report.tickets) {
-          for (const reportTickets of report.tickets) {
-            reportTickets.ticket.activityLogs =
-              reportTickets.ticket.activityLogs.map((activityLog: any) => ({
-                ...activityLog,
-                createdAt: new Date(activityLog.createdAt),
-                updatedAt: new Date(activityLog.updatedAt),
-              }));
+        return Object.entries(obj).reduce((acc, [key, value]) => {
+          if ((key === 'createdAt' || key === 'updatedAt') && typeof value === 'string') {
+            acc[key] = new Date(value);
+          } else {
+            acc[key] = parseDates(value);
           }
-        }
+          return acc;
+        }, {} as any);
+      };
 
-        console.log(report);
-
-        return report;
-      }
-
-      throw new Error('獲取通報詳情失敗');
+      return parseDates(report);
     } catch (error) {
       console.error(`獲取通報 ${id} 詳情失敗:`, error);
       throw error;
@@ -369,30 +285,12 @@ export const reportService = {
    */
   async createReport(reportData: CreateReportRequest): Promise<Report> {
     try {
-      const response = await fetch(`${API_URL}/api/reports`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(reportData),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '創建通報失敗');
-      }
-
-      const result = await response.json();
-
-      // 處理日期格式
-      if (result.success && result.data) {
-        return {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt),
-        };
-      }
-
-      throw new Error('創建通報失敗');
+      const report = await apiClient.post<Report>('/api/reports', reportData);
+      return {
+        ...report,
+        createdAt: new Date(report.createdAt),
+        updatedAt: new Date(report.updatedAt),
+      };
     } catch (error) {
       console.error('創建通報失敗:', error);
       throw error;
@@ -407,29 +305,12 @@ export const reportService = {
     reportData: Partial<UpdateReportRequest>
   ): Promise<Report> {
     try {
-      const response = await fetch(`${API_URL}/api/reports/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(reportData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '更新通報失敗');
-      }
-
-      const result = await response.json();
-
-      // 處理日期格式
-      if (result.success && result.data) {
-        return {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt),
-        };
-      }
-
-      throw new Error('更新通報失敗');
+      const report = await apiClient.put<Report>(`/api/reports/${id}`, reportData);
+      return {
+        ...report,
+        createdAt: new Date(report.createdAt),
+        updatedAt: new Date(report.updatedAt),
+      };
     } catch (error) {
       console.error(`更新通報 ${id} 失敗:`, error);
       throw error;
@@ -439,20 +320,9 @@ export const reportService = {
   /**
    * 刪除通報
    */
-  async deleteReport(id: string): Promise<boolean> {
+  async deleteReport(id: string): Promise<void> {
     try {
-      const response = await fetch(`${API_URL}/api/reports/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '刪除通報失敗');
-      }
-
-      const result = await response.json();
-      return result.success;
+      await apiClient.delete<void>(`/api/reports/${id}`);
     } catch (error) {
       console.error(`刪除通報 ${id} 失敗:`, error);
       throw error;
@@ -468,29 +338,12 @@ export const reportService = {
     userId: string
   ): Promise<any> {
     try {
-      const response = await fetch(`${API_URL}/api/reports/comments`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ reportId, content, userId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '添加評論失敗');
-      }
-
-      const result = await response.json();
-
-      // 處理日期格式
-      if (result.success && result.data) {
-        return {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt),
-        };
-      }
-
-      throw new Error('添加評論失敗');
+      const comment = await apiClient.post<any>('/api/reports/comments', { reportId, content, userId });
+      return {
+        ...comment,
+        createdAt: new Date(comment.createdAt),
+        updatedAt: new Date(comment.updatedAt),
+      };
     } catch (error) {
       console.error('添加評論失敗:', error);
       throw error;
@@ -513,34 +366,17 @@ export const reportService = {
     userId: string
   ): Promise<any> {
     try {
-      const response = await fetch(`${API_URL}/api/activitylogs`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          content,
-          userId,
-          parentId: reportId,
-          parentType: 'REPORT',
-        }),
+      const activityLog = await apiClient.post<any>('/api/activitylogs', {
+        content,
+        userId,
+        parentId: reportId,
+        parentType: 'REPORT',
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '添加活動日誌失敗');
-      }
-
-      const result = await response.json();
-
-      // 處理日期格式
-      if (result.success && result.data) {
-        return {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt),
-        };
-      }
-
-      throw new Error('添加活動日誌失敗');
+      return {
+        ...activityLog,
+        createdAt: new Date(activityLog.createdAt),
+        updatedAt: new Date(activityLog.updatedAt),
+      };
     } catch (error) {
       console.error('添加活動日誌失敗:', error);
       throw error;

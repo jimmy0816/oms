@@ -1,31 +1,33 @@
 import React from 'react';
-import { UserRole, Permission } from 'shared-types';
-import { hasPermission, hasAnyPermission } from '../utils/permissions';
+import { useAuth } from '@/contexts/AuthContext';
+import { Permission } from 'shared-types';
 
 interface PermissionGuardProps {
-  permission: Permission | Permission[];
-  userRole: UserRole | string;
+  required: Permission | Permission[];
   fallback?: React.ReactNode;
   children: React.ReactNode;
 }
 
 /**
- * 權限守衛組件
- * 用於根據用戶角色和所需權限來控制內容的顯示
+ * 新的權限守衛組件
+ * 根據當前用戶的權限來決定是否渲染子組件
  */
 export const PermissionGuard: React.FC<PermissionGuardProps> = ({
-  permission,
-  userRole,
+  required,
   fallback = null,
-  children
+  children,
 }) => {
-  if (!userRole) return fallback;
-  
-  const permissions = Array.isArray(permission) ? permission : [permission];
-  const hasAccess = hasAnyPermission(userRole, permissions);
-  
-  return hasAccess ? <>{children}</> : <>{fallback}</>;
+  const { hasPermission } = useAuth();
+
+  const requiredPermissions = Array.isArray(required) ? required : [required];
+
+  // 檢查使用者是否擁有所有必要的權限
+  const hasRequiredPermissions = requiredPermissions.every((p) =>
+    hasPermission(p)
+  );
+
+  return hasRequiredPermissions ? <>{children}</> : <>{fallback}</>;
 };
 
-// 保留默認導出以保持兼容性
 export default PermissionGuard;
+

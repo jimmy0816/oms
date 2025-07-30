@@ -1,3 +1,4 @@
+import Cookies from 'js-cookie';
 // Fix the import path to resolve the module not found error
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -61,10 +62,11 @@ const authService = {
         permissions: data.data.user.permissions || [],
       };
 
-      // 保存令牌到本地存儲
+      // 保存令牌到本地存儲和 Cookie
       if (typeof window !== 'undefined') {
         localStorage.setItem('auth_token', data.data.token);
         localStorage.setItem('user_info', JSON.stringify(user));
+        Cookies.set('token', data.data.token, { expires: 7, path: '/' }); // 設置 cookie，有效期 7 天
       }
 
       return {
@@ -84,6 +86,7 @@ const authService = {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_info');
+      Cookies.remove('token', { path: '/' }); // 移除 cookie
       // 可以在這裡添加重定向到登入頁面的邏輯
       window.location.href = '/login';
     }
@@ -120,7 +123,8 @@ const authService = {
    */
   getToken(): string | null {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token');
+      // 改為從 Cookie 讀取 token，使其與 middleware 的驗證標準一致
+      return Cookies.get('token') || null;
     }
     return null;
   },

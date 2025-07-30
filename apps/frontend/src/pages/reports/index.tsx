@@ -1,3 +1,5 @@
+import ProtectedRoute from '@/components/ProtectedRoute';
+import PermissionGuard from '@/components/PermissionGuard';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -29,6 +31,7 @@ import {
   ReportStatus,
   Category,
   ReportPriority,
+  Permission,
 } from 'shared-types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -63,7 +66,15 @@ const SortIcon = ({
   return <BarsArrowDownIcon className="h-3 w-3 text-black" />;
 };
 
-export default function Reports() {
+export default function ReportsPage() {
+  return (
+    <ProtectedRoute requiredPermission={Permission.VIEW_REPORTS}>
+      <Reports />
+    </ProtectedRoute>
+  );
+}
+
+function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -413,7 +424,7 @@ export default function Reports() {
                 >
                   清除篩選
                 </button>
-                {user?.permissions?.includes('create_reports') && (
+                <PermissionGuard required={Permission.CREATE_REPORTS}>
                   <Link
                     href="/reports/new"
                     className="btn-primary px-4 py-2 text-sm font-medium rounded-md flex items-center"
@@ -421,7 +432,7 @@ export default function Reports() {
                     <PlusIcon className="h-4 w-4 mr-1" />
                     <span>建立通報</span>
                   </Link>
-                )}
+                </PermissionGuard>
               </div>
             </div>
           </div>
@@ -882,7 +893,7 @@ export default function Reports() {
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center space-x-2">
-                          {user?.permissions?.includes('review_reports') && (
+                          <PermissionGuard required={Permission.EDIT_REPORTS}>
                             <Link
                               href={`/reports/${report.id}/edit`}
                               className="text-blue-600 hover:text-blue-900"
@@ -891,8 +902,8 @@ export default function Reports() {
                             >
                               <PencilIcon className="h-5 w-5" />
                             </Link>
-                          )}
-                          {user?.permissions?.includes('review_reports') && (
+                          </PermissionGuard>
+                          <PermissionGuard required={Permission.DELETE_REPORTS}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation(); // 阻止行點擊事件
@@ -903,7 +914,7 @@ export default function Reports() {
                             >
                               <TrashIcon className="h-5 w-5" />
                             </button>
-                          )}
+                          </PermissionGuard>
                         </div>
                       </td>
                     </tr>
