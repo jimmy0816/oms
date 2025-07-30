@@ -1,17 +1,7 @@
 import { Notification } from 'shared-types';
+import apiClient from '@/lib/apiClient';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const getAuthHeaders = (): HeadersInit => {
-  if (typeof window === 'undefined')
-    return { 'Content-Type': 'application/json' };
-  const token = localStorage.getItem('auth_token');
-  const headeres: HeadersInit = { 'Content-Type': 'application/json' };
-  if (token) {
-    headeres.Authorization = `Bearer ${token}`;
-  }
-  return headeres;
-};
 
 /**
  * Notification management service
@@ -25,13 +15,7 @@ export const notificationService = {
    */
   async getNotifications(): Promise<Notification[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/notifications`, {
-        headers: getAuthHeaders(),
-      });
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-      const notifications = await response.json();
+      const notifications = await apiClient.get<Notification[]>('/api/notifications');
       return notifications.map((n: any) => ({
         ...n,
         createdAt: new Date(n.createdAt),
@@ -49,17 +33,10 @@ export const notificationService = {
    */
   async markAsRead(id: string): Promise<Notification | null> {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/notifications/${id}/read`,
-        {
-          method: 'POST',
-          headers: getAuthHeaders(),
-        }
+      const updatedNotification = await apiClient.post<Notification>(
+        `/api/notifications/${id}/read`,
+        {}
       );
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-      const updatedNotification = await response.json();
       return {
         ...updatedNotification,
         createdAt: new Date(updatedNotification.createdAt),
@@ -76,17 +53,10 @@ export const notificationService = {
    */
   async markAllAsRead(): Promise<{ message: string } | null> {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/notifications/read-all`,
-        {
-          method: 'POST',
-          headers: getAuthHeaders(),
-        }
+      return await apiClient.post<{ message: string }>(
+        '/api/notifications/read-all',
+        {}
       );
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-      return response.json();
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
       return null;

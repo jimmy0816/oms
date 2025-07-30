@@ -1,18 +1,7 @@
 import { User, UserRole } from 'shared-types';
+import apiClient from '@/lib/apiClient';
 
-// API 基礎 URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const getAuthHeaders = (): HeadersInit => {
-  if (typeof window === 'undefined')
-    return { 'Content-Type': 'application/json' };
-  const token = localStorage.getItem('auth_token');
-  const headeres: HeadersInit = { 'Content-Type': 'application/json' };
-  if (token) {
-    headeres.Authorization = `Bearer ${token}`;
-  }
-  return headeres;
-};
 
 /**
  * 用戶管理服務
@@ -25,14 +14,7 @@ export const userService = {
    */
   async getAllUsers(): Promise<User[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users`);
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      const users = await response.json();
-
+      const users = await apiClient.get<User[]>('/api/users');
       // 確保日期格式正確
       return users.map((user: any) => ({
         ...user,
@@ -52,26 +34,19 @@ export const userService = {
    */
   async getUserById(id: string): Promise<User | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/${id}`);
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      const user = await response.json();
-
+      const user = await apiClient.get<User>(`/api/users/${id}`);
       // 確保日期格式正確
       return {
         ...user,
         createdAt: new Date(user.createdAt),
         updatedAt: new Date(user.updatedAt),
       };
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message.includes('404')) {
+        return null;
+      }
       console.error(`Error fetching user with ID ${id}:`, error);
-      return null;
+      throw error;
     }
   },
 
@@ -84,21 +59,7 @@ export const userService = {
     userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<User> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Error: ${response.status}`);
-      }
-
-      const newUser = await response.json();
-
+      const newUser = await apiClient.post<User>('/api/users', userData);
       // 確保日期格式正確
       return {
         ...newUser,
@@ -122,21 +83,7 @@ export const userService = {
     userData: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>
   ): Promise<User> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Error: ${response.status}`);
-      }
-
-      const updatedUser = await response.json();
-
+      const updatedUser = await apiClient.put<User>(`/api/users/${id}`, userData);
       // 確保日期格式正確
       return {
         ...updatedUser,
@@ -156,19 +103,12 @@ export const userService = {
    */
   async deleteUser(id: string): Promise<boolean> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          return false;
-        }
-        throw new Error(`Error: ${response.status}`);
-      }
-
+      await apiClient.delete<void>(`/api/users/${id}`);
       return true;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message.includes('404')) {
+        return false;
+      }
       console.error(`Error deleting user with ID ${id}:`, error);
       return false;
     }
@@ -191,14 +131,7 @@ export const userService = {
    */
   async getUsersByRole(role: UserRole): Promise<User[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users?role=${role}`);
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      const users = await response.json();
-
+      const users = await apiClient.get<User[]>('/api/users', { role });
       // 確保日期格式正確
       return users.map((user: any) => ({
         ...user,
@@ -217,13 +150,7 @@ export const userService = {
    */
   async getAllRoles(): Promise<{ role: UserRole; count: number }[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/roles`);
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ roles: { name: UserRole; count: number }[] }>('/api/users/roles');
       // Transform the enhanced role format to the simple format if needed
       if (data.roles && Array.isArray(data.roles)) {
         return data.roles.map((role) => ({
@@ -231,7 +158,7 @@ export const userService = {
           count: role.count,
         }));
       }
-      return data;
+      return []; // Return empty array if data.roles is not as expected
     } catch (error) {
       console.error('Error fetching roles:', error);
       return Object.values(UserRole).map((role) => ({ role, count: 0 }));
@@ -252,13 +179,7 @@ export const userService = {
     }[]
   > {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/roles`);
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ roles: any[] }>('/api/users/roles');
       return data.roles || [];
     } catch (error) {
       console.error('Error fetching role details:', error);
@@ -274,21 +195,7 @@ export const userService = {
    */
   async updateUserRoles(id: string, roleIds: string[]): Promise<User> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/${id}/roles`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ roleIds }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Error: ${response.status}`);
-      }
-
-      const updatedUser = await response.json();
-
+      const updatedUser = await apiClient.put<User>(`/api/users/${id}/roles`, { roleIds });
       // 確保日期格式正確
       return {
         ...updatedUser,
@@ -311,19 +218,10 @@ export const userService = {
     newPassword: string
   ): Promise<void> {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/users/change-password`,
-        {
-          method: 'PUT',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ currentPassword, newPassword }),
-        }
+      await apiClient.put<void>(
+        '/api/users/change-password',
+        { currentPassword, newPassword }
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '更改密碼失敗');
-      }
     } catch (error) {
       console.error('Error changing password:', error);
       throw error; // Re-throw to be caught by the component

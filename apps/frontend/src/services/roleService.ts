@@ -1,11 +1,7 @@
 import { UserRole, Permission } from 'shared-types';
+import apiClient from '@/lib/apiClient';
 
-// 獲取 API URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-// 取得 token
-const getAuthToken = () =>
-  typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
 
 // 獲取角色顯示名稱
 export const getRoleName = (role: UserRole): string => {
@@ -30,23 +26,10 @@ export const getRoleName = (role: UserRole): string => {
 export const roleService = {
   async getAllRoles(): Promise<UserRole[]> {
     try {
-      // 從後端 API 獲取角色數據
-      const response = await fetch(`${API_URL}/api/roles/list`, {
-        credentials: 'include',
-        headers: {
-          Authorization: getAuthToken() ? `Bearer ${getAuthToken()}` : '',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`API 錯誤: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ roles: UserRole[] }>('/api/roles/list');
       return data.roles || [];
     } catch (error) {
       console.error('Error fetching roles:', error);
-      // 如果出錯，返回空數組
       return [];
     }
   },
@@ -56,23 +39,10 @@ export const roleService = {
    */
   async getAllRolePermissions(): Promise<Record<string, Permission[]>> {
     try {
-      // 從後端 API 獲取權限數據
-      const response = await fetch(`${API_URL}/api/roles`, {
-        credentials: 'include',
-        headers: {
-          Authorization: getAuthToken() ? `Bearer ${getAuthToken()}` : '',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`API 錯誤: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ rolePermissions: Record<string, Permission[]> }>('/api/roles');
       return data.rolePermissions || {};
     } catch (error) {
       console.error('Error fetching role permissions:', error);
-      // 如果出錯，返回空對象
       return {};
     }
   },
@@ -84,23 +54,10 @@ export const roleService = {
    */
   async getRolePermissions(role: UserRole): Promise<Permission[]> {
     try {
-      // 從後端 API 獲取特定角色的權限
-      const response = await fetch(`${API_URL}/api/roles/${role}`, {
-        credentials: 'include',
-        headers: {
-          Authorization: getAuthToken() ? `Bearer ${getAuthToken()}` : '',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`API 錯誤: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ permissions: Permission[] }>(`/api/roles/${role}`);
       return data.permissions || [];
     } catch (error) {
       console.error(`Error fetching permissions for role ${role}:`, error);
-      // 如果出錯，返回空數組
       return [];
     }
   },
@@ -116,23 +73,7 @@ export const roleService = {
     permissions: Permission[]
   ): Promise<{ success: boolean; message: string }> {
     try {
-      // 將更新的權限發送到後端 API
-      const response = await fetch(`${API_URL}/api/roles/${role}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: getAuthToken() ? `Bearer ${getAuthToken()}` : '',
-        },
-        body: JSON.stringify({ permissions }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(`API 錯誤: ${response.status}`);
-      }
-
-      const result = await response.json();
-
+      await apiClient.put(`/api/roles/${role}`, { permissions });
       return {
         success: true,
         message: `成功更新 ${role} 角色的權限`,
@@ -155,20 +96,7 @@ export const roleService = {
     role: UserRole
   ): Promise<{ success: boolean; message: string }> {
     try {
-      // 將重置請求發送到後端 API
-      const response = await fetch(`${API_URL}/api/roles/${role}/reset`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: getAuthToken() ? `Bearer ${getAuthToken()}` : '',
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(`API 錯誤: ${response.status}`);
-      }
-      const result = await response.json();
+      await apiClient.post(`/api/roles/${role}/reset`, {});
       return {
         success: true,
         message: `成功重置 ${role} 角色的權限`,

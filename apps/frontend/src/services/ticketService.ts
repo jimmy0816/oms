@@ -1,3 +1,4 @@
+import apiClient from '@/lib/apiClient';
 import {
   Ticket,
   TicketStatus,
@@ -6,18 +7,7 @@ import {
   CreateTicketRequest,
 } from 'shared-types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const getAuthHeaders = (): HeadersInit => {
-  if (typeof window === 'undefined')
-    return { 'Content-Type': 'application/json' };
-  const token = localStorage.getItem('auth_token');
-  const headeres: HeadersInit = { 'Content-Type': 'application/json' };
-  if (token) {
-    headeres.Authorization = `Bearer ${token}`;
-  }
-  return headeres;
-};
 
 // 取得狀態文字說明
 export const getStatusText = (status: TicketStatus) => {
@@ -106,54 +96,30 @@ export const ticketService = {
     filters: Record<string, any> = {} // Changed to 'any' to allow number[]
   ): Promise<PaginatedResponse<Ticket>> {
     try {
-      // 構建查詢參數
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        pageSize: pageSize.toString(),
-      });
+      const params: Record<string, any> = { page, pageSize };
 
-      // 處理 locationIds 陣列，將其轉換為逗號分隔的字串
-      if (filters.locationIds && filters.locationIds.length > 0) {
-        queryParams.append('locationIds', filters.locationIds.join(','));
-      }
-
-      // 將其他過濾條件添加到查詢參數中
-      for (const key in filters) {
-        if (key !== 'locationIds' && filters[key]) {
-          if (Array.isArray(filters[key])) {
-            if (filters[key].length > 0) {
-              queryParams.append(key, filters[key].join(','));
-            }
-          } else {
-            queryParams.append(key, filters[key].toString());
+      // 動態、自動化地處理所有過濾條件
+      Object.keys(filters).forEach(key => {
+        const value = filters[key as keyof typeof filters];
+        if (value !== undefined && value !== null && value !== '') {
+          if (Array.isArray(value) && value.length > 0) {
+            params[key] = value.join(',');
+          } else if (!Array.isArray(value)) {
+            params[key] = value;
           }
         }
-      }
+      });
 
-      const response = await fetch(
-        `${API_URL}/api/tickets?${queryParams.toString()}`,
-        {
-          headers: getAuthHeaders(),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '獲取工單失敗');
-      }
-
-      const result = await response.json();
+      const paginatedResponse = await apiClient.get<PaginatedResponse<Ticket>>('/api/tickets', params);
 
       // 處理日期格式
-      if (result.success && result.data.items) {
-        result.data.items = result.data.items.map((ticket: any) => ({
-          ...ticket,
-          createdAt: new Date(ticket.createdAt),
-          updatedAt: new Date(ticket.updatedAt),
-        }));
-      }
+      paginatedResponse.items = paginatedResponse.items.map((ticket: any) => ({
+        ...ticket,
+        createdAt: new Date(ticket.createdAt),
+        updatedAt: new Date(ticket.updatedAt),
+      }));
 
-      return result.data;
+      return paginatedResponse;
     } catch (error) {
       console.error('獲取工單列表失敗:', error);
       throw error;
@@ -165,46 +131,24 @@ export const ticketService = {
    */
   async getTicketById(id: string): Promise<Ticket> {
     try {
-      const response = await fetch(`${API_URL}/api/tickets/${id}`, {
-        headers: getAuthHeaders(),
-      });
+      const ticket = await apiClient.get<Ticket>(`/api/tickets/${id}`);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '獲取工單詳情失敗');
-      }
+      // 遞歸處理日期格式
+      const parseDates = (obj: any): any => {
+        if (!obj || typeof obj !== 'object') return obj;
+        if (Array.isArray(obj)) return obj.map(parseDates);
 
-      const result = await response.json();
+        return Object.entries(obj).reduce((acc, [key, value]) => {
+          if ((key === 'createdAt' || key === 'updatedAt') && typeof value === 'string') {
+            acc[key] = new Date(value);
+          } else {
+            acc[key] = parseDates(value);
+          }
+          return acc;
+        }, {} as any);
+      };
 
-      // 處理日期格式
-      if (result.success && result.data) {
-        const ticket = {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt),
-        };
-
-        // 處理評論中的日期
-        if (ticket.comments) {
-          ticket.comments = ticket.comments.map((comment: any) => ({
-            ...comment,
-            createdAt: new Date(comment.createdAt),
-            updatedAt: new Date(comment.updatedAt),
-          }));
-        }
-
-        if (ticket.activityLogs) {
-          ticket.activityLogs = ticket.activityLogs.map((activityLog: any) => ({
-            ...activityLog,
-            createdAt: new Date(activityLog.createdAt),
-            updatedAt: new Date(activityLog.updatedAt),
-          }));
-        }
-
-        return ticket;
-      }
-
-      throw new Error('獲取工單詳情失敗');
+      return parseDates(ticket);
     } catch (error) {
       console.error(`獲取工單 ${id} 詳情失敗:`, error);
       throw error;
@@ -216,29 +160,12 @@ export const ticketService = {
    */
   async createTicket(ticketData: CreateTicketRequest): Promise<Ticket> {
     try {
-      const response = await fetch(`${API_URL}/api/tickets`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(ticketData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '創建工單失敗');
-      }
-
-      const result = await response.json();
-
-      // 處理日期格式
-      if (result.success && result.data) {
-        return {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt),
-        };
-      }
-
-      throw new Error('創建工單失敗');
+      const ticket = await apiClient.post<Ticket>('/api/tickets', ticketData);
+      return {
+        ...ticket,
+        createdAt: new Date(ticket.createdAt),
+        updatedAt: new Date(ticket.updatedAt),
+      };
     } catch (error) {
       console.error('創建工單失敗:', error);
       throw error;
@@ -250,29 +177,12 @@ export const ticketService = {
    */
   async updateTicket(id: string, ticketData: Partial<Ticket>): Promise<Ticket> {
     try {
-      const response = await fetch(`${API_URL}/api/tickets/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(ticketData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '更新工單失敗');
-      }
-
-      const result = await response.json();
-
-      // 處理日期格式
-      if (result.success && result.data) {
-        return {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt),
-        };
-      }
-
-      throw new Error('更新工單失敗');
+      const ticket = await apiClient.put<Ticket>(`/api/tickets/${id}`, ticketData);
+      return {
+        ...ticket,
+        createdAt: new Date(ticket.createdAt),
+        updatedAt: new Date(ticket.updatedAt),
+      };
     } catch (error) {
       console.error(`更新工單 ${id} 失敗:`, error);
       throw error;
@@ -282,22 +192,9 @@ export const ticketService = {
   /**
    * 刪除工單
    */
-  async deleteTicket(id: string): Promise<boolean> {
+  async deleteTicket(id: string): Promise<void> {
     try {
-      const response = await fetch(`${API_URL}/api/tickets/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-
-      console.log('delete ticket', response);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '刪除工單失敗');
-      }
-
-      const result = await response.json();
-      return result.success;
+      await apiClient.delete<void>(`/api/tickets/${id}`);
     } catch (error) {
       console.error(`刪除工單 ${id} 失敗:`, error);
       throw error;
@@ -313,29 +210,12 @@ export const ticketService = {
     userId: string
   ): Promise<any> {
     try {
-      const response = await fetch(`${API_URL}/api/tickets/comments`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ ticketId, content, userId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '添加評論失敗');
-      }
-
-      const result = await response.json();
-
-      // 處理日期格式
-      if (result.success && result.data) {
-        return {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt),
-        };
-      }
-
-      throw new Error('添加評論失敗');
+      const comment = await apiClient.post<any>('/api/tickets/comments', { ticketId, content, userId });
+      return {
+        ...comment,
+        createdAt: new Date(comment.createdAt),
+        updatedAt: new Date(comment.updatedAt),
+      };
     } catch (error) {
       console.error('添加評論失敗:', error);
       throw error;
@@ -358,34 +238,17 @@ export const ticketService = {
     userId: string
   ): Promise<any> {
     try {
-      const response = await fetch(`${API_URL}/api/activitylogs`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          content,
-          userId,
-          parentId: ticketId,
-          parentType: 'TICKET',
-        }),
+      const activityLog = await apiClient.post<any>('/api/activitylogs', {
+        content,
+        userId,
+        parentId: ticketId,
+        parentType: 'TICKET',
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '添加活動日誌失敗');
-      }
-
-      const result = await response.json();
-
-      // 處理日期格式
-      if (result.success && result.data) {
-        return {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt),
-        };
-      }
-
-      throw new Error('添加活動日誌失敗');
+      return {
+        ...activityLog,
+        createdAt: new Date(activityLog.createdAt),
+        updatedAt: new Date(activityLog.updatedAt),
+      };
     } catch (error) {
       console.error('添加活動日誌失敗:', error);
       throw error;
@@ -397,31 +260,13 @@ export const ticketService = {
    */
   async claimTicket(ticketId: string, userId: string): Promise<Ticket> {
     try {
-      const response = await fetch(`${API_URL}/api/tickets/${ticketId}`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ action: 'claim' }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '認領工單失敗');
-      }
-
-      const result = await response.json();
-
-      // 處理日期格式
-      if (result.success && result.data) {
-        await this.addActivityLog(ticketId, '認領工單', userId);
-
-        return {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt),
-        };
-      }
-
-      throw new Error('認領工單失敗');
+      const ticket = await apiClient.patch<Ticket>(`/api/tickets/${ticketId}`, { action: 'claim' });
+      await this.addActivityLog(ticketId, '認領工單', userId);
+      return {
+        ...ticket,
+        createdAt: new Date(ticket.createdAt),
+        updatedAt: new Date(ticket.updatedAt),
+      };
     } catch (error) {
       console.error('認領工單失敗:', error);
       throw error;
@@ -433,31 +278,13 @@ export const ticketService = {
    */
   async abandonTicket(ticketId: string, userId: string): Promise<Ticket> {
     try {
-      const response = await fetch(`${API_URL}/api/tickets/${ticketId}`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ action: 'abandon' }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '放棄工單失敗');
-      }
-
-      const result = await response.json();
-
-      // 處理日期格式
-      if (result.success && result.data) {
-        await this.addActivityLog(ticketId, '放棄工單', userId);
-
-        return {
-          ...result.data,
-          createdAt: new Date(result.data.createdAt),
-          updatedAt: new Date(result.data.updatedAt),
-        };
-      }
-
-      throw new Error('放棄工單失敗');
+      const ticket = await apiClient.patch<Ticket>(`/api/tickets/${ticketId}`, { action: 'abandon' });
+      await this.addActivityLog(ticketId, '放棄工單', userId);
+      return {
+        ...ticket,
+        createdAt: new Date(ticket.createdAt),
+        updatedAt: new Date(ticket.updatedAt),
+      };
     } catch (error) {
       console.error('放棄工單失敗:', error);
       throw error;
@@ -473,18 +300,7 @@ export const ticketService = {
     attachments: any[]
   ): Promise<any> {
     try {
-      const response = await fetch(`${API_URL}/api/tickets/${ticketId}/reviews`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ content, attachments }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '提交審核失敗');
-      }
-
-      return await response.json();
+      return await apiClient.post<any>(`/api/tickets/${ticketId}/reviews`, { content, attachments });
     } catch (error) {
       console.error('提交審核失敗:', error);
       throw error;

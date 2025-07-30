@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { UserRole, Permission } from 'shared-types';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { roleService, getRoleName } from '@/services/roleService';
-
+import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 
 /**
  * 角色權限管理頁面
  */
-const RolesManagementPage: React.FC = () => {
+const RolesManagement: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [rolePermissions, setRolePermissions] = useState<Permission[]>([]);
   const [allPermissions] = useState<Permission[]>(Object.values(Permission));
@@ -146,11 +146,7 @@ const RolesManagementPage: React.FC = () => {
   };
 
   return (
-    <PermissionGuard
-      permission={Permission.MANAGE_ROLES}
-      userRole={user?.role}
-      fallback={<div className="p-4 text-red-500">您沒有權限訪問此頁面</div>}
-    >
+    <PermissionGuard required={Permission.MANAGE_ROLES}>
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">角色權限管理</h1>
 
@@ -357,4 +353,10 @@ const RolesManagementPage: React.FC = () => {
   );
 };
 
-export default RolesManagementPage;
+export default function RolesManagementPage() {
+  return (
+    <ProtectedRoute requiredPermission={Permission.MANAGE_ROLES}>
+      <RolesManagement />
+    </ProtectedRoute>
+  );
+}

@@ -277,18 +277,12 @@ function UsersPage() {
         <title>用戶管理 | 通報系統後台</title>
       </Head>
 
-      <PermissionGuard
-        permission={Permission.VIEW_USERS}
-        userRole={currentUser?.role || 'USER'}
-      >
+      <PermissionGuard required={Permission.VIEW_USERS}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-semibold text-gray-900">用戶管理</h1>
 
-            <PermissionGuard
-              permission={Permission.CREATE_USERS}
-              userRole={currentUser?.role || 'USER'}
-            >
+            <PermissionGuard required={Permission.CREATE_USERS}>
               <button
                 onClick={openAddModal}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -446,10 +440,7 @@ function UsersPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
                           {/* 使用當前登入用戶的角色來檢查權限 */}
-                          <PermissionGuard
-                            permission={Permission.EDIT_USERS}
-                            userRole={currentUser?.role}
-                          >
+                          <PermissionGuard required={Permission.EDIT_USERS}>
                             <button
                               onClick={() => handleEditUser(user)}
                               className="text-blue-600 hover:text-blue-900 mr-3"
@@ -458,10 +449,7 @@ function UsersPage() {
                             </button>
                           </PermissionGuard>
 
-                          <PermissionGuard
-                            permission={Permission.DELETE_USERS}
-                            userRole={currentUser?.role}
-                          >
+                          <PermissionGuard required={Permission.DELETE_USERS}>
                             <button
                               onClick={() => openDeleteModal(user)}
                               className="text-red-600 hover:text-red-900"
@@ -692,7 +680,7 @@ function UsersPage() {
 // 使用 ProtectedRoute 包裝 UsersPage 組件，確保只有管理員和經理可以訪問
 export default function AdminUsersPage() {
   return (
-    <ProtectedRoute requiredRole={[UserRole.MANAGER, UserRole.ADMIN]}>
+    <ProtectedRoute requiredPermission={Permission.VIEW_USERS}>
       <UsersPage />
     </ProtectedRoute>
   );

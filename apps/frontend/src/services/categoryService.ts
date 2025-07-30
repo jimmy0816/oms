@@ -1,17 +1,7 @@
 import { Category } from 'shared-types';
+import apiClient from '@/lib/apiClient';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const getAuthHeaders = (): HeadersInit => {
-  if (typeof window === 'undefined')
-    return { 'Content-Type': 'application/json' };
-  const token = localStorage.getItem('auth_token');
-  const headeres: HeadersInit = { 'Content-Type': 'application/json' };
-  if (token) {
-    headeres.Authorization = `Bearer ${token}`;
-  }
-  return headeres;
-};
 
 export const getCategoryPath = (
   categoryId?: string | null,
@@ -47,17 +37,7 @@ export const categoryService = {
    */
   async getAllCategories(): Promise<Category[]> {
     try {
-      const response = await fetch(`${API_URL}/api/categories`, {
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch categories');
-      }
-
-      const result = await response.json();
-      return result.data;
+      return await apiClient.get<Category[]>('/api/categories');
     } catch (error) {
       console.error('Error fetching categories:', error);
       throw error;

@@ -44,8 +44,7 @@ const LoginPage: React.FC = () => {
       // 使用 AuthContext 的 login 方法
       await login(email, password);
       
-      // 登入成功後重定向到首頁
-      router.push('/');
+      
     } catch (err) {
       showToast(err instanceof Error ? err.message : '登入失敗，請檢查您的憑證', 'error');
     } finally {

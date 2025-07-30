@@ -32,7 +32,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const router = useRouter();
 
   const fetchNotifications = useCallback(async () => {
-    if (!authService.isLoggedIn()) return;
+    // 只有在用戶已登入時才嘗試獲取通知
+    if (!authService.isLoggedIn()) {
+      setNotifications([]); // 確保未登入時清空通知
+      return;
+    }
     try {
       const fetchedNotifications = await notificationService.getNotifications();
       setNotifications(fetchedNotifications);
@@ -47,6 +51,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (currentUser) {
       setUser(currentUser);
       await fetchNotifications();
+    } else {
+      // 明確地將 user 設置為 null，並清空通知
+      setUser(null);
+      setNotifications([]);
     }
     setLoading(false);
   }, [fetchNotifications]);
@@ -54,8 +62,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     if (typeof window !== 'undefined') {
       initAuth();
+
+      // 監聽路由變化，在每次路由變化時重新檢查認證狀態
+      const handleRouteChange = () => {
+        initAuth();
+      };
+
+      router.events.on('routeChangeComplete', handleRouteChange);
+
+      return () => {
+        router.events.off('routeChangeComplete', handleRouteChange);
+      };
     }
-  }, [initAuth]);
+  }, [initAuth, router.events]);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
@@ -63,6 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await authService.login({ email, password });
       setUser(response.user);
       await fetchNotifications();
+      router.replace('/'); // 登入成功後，使用 replace 導向首頁
     } finally {
       setLoading(false);
     }

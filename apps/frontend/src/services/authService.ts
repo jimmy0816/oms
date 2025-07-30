@@ -49,7 +49,7 @@ const authService = {
       }
 
       const data = await response.json();
-      
+
       if (!data.success || !data.data) {
         throw new Error('登入響應格式錯誤');
       }
@@ -98,6 +98,11 @@ const authService = {
    */
   getCurrentUser(): User | null {
     if (typeof window === 'undefined') {
+      return null;
+    }
+
+    // 首先檢查 Cookie 中是否有 token。如果沒有，則認為未登入。
+    if (!this.getToken()) {
       return null;
     }
     

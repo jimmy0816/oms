@@ -1,6 +1,6 @@
-import axios from 'axios';
+import apiClient from '@/lib/apiClient';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 
 export interface Location {
   id: number;
@@ -9,7 +9,11 @@ export interface Location {
 
 export const locationService = {
   async getAllLocations(): Promise<Location[]> {
-    const response = await axios.get(`${API_URL}/api/locations`);
-    return response.data.data;
+    try {
+      return await apiClient.get<Location[]>('/api/locations');
+    } catch (error) {
+      console.error('Error fetching locations:', error);
+      throw error;
+    }
   },
 };

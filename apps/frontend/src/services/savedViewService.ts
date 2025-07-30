@@ -1,26 +1,11 @@
-import axios from 'axios';
+import apiClient from '@/lib/apiClient';
 import { SavedView } from 'shared-types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const getAuthHeaders = (): HeadersInit => {
-  if (typeof window === 'undefined')
-    return { 'Content-Type': 'application/json' };
-  const token = localStorage.getItem('auth_token');
-  const headers: HeadersInit = { 'Content-Type': 'application/json' };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  return headers;
-};
 
 export const savedViewService = {
   async getAllSavedViews(viewType: 'REPORT' | 'TICKET'): Promise<SavedView[]> {
-    const response = await axios.get(`${API_URL}/api/saved-views`, {
-      headers: getAuthHeaders(),
-      params: { viewType },
-    });
-    return response.data.data;
+    return apiClient.get<SavedView[]>('/api/saved-views', { viewType });
   },
 
   async createSavedView(
@@ -29,48 +14,22 @@ export const savedViewService = {
     viewType: 'REPORT' | 'TICKET',
     isDefault: boolean = false
   ): Promise<SavedView> {
-    const response = await axios.post(
-      `${API_URL}/api/saved-views`,
-      { name, filters, viewType, isDefault },
-      {
-        headers: getAuthHeaders(),
-      }
-    );
-    return response.data.data;
+    return apiClient.post<SavedView>('/api/saved-views', { name, filters, viewType, isDefault });
   },
 
   async getSavedViewById(id: string): Promise<SavedView> {
-    const response = await axios.get(`${API_URL}/api/saved-views/${id}`, {
-      headers: getAuthHeaders(),
-    });
-    return response.data.data;
+    return apiClient.get<SavedView>(`/api/saved-views/${id}`);
   },
 
   async updateSavedView(id: string, name: string, filters: any, isDefault?: boolean): Promise<SavedView> {
-    const response = await axios.put(
-      `${API_URL}/api/saved-views/${id}`,
-      { name, filters, isDefault },
-      {
-        headers: getAuthHeaders(),
-      }
-    );
-    return response.data.data;
+    return apiClient.put<SavedView>(`/api/saved-views/${id}`, { name, filters, isDefault });
   },
 
   async deleteSavedView(id: string): Promise<void> {
-    await axios.delete(`${API_URL}/api/saved-views/${id}`, {
-      headers: getAuthHeaders(),
-    });
+    await apiClient.delete<void>(`/api/saved-views/${id}`);
   },
 
   async setDefaultSavedView(id: string, viewType: 'REPORT' | 'TICKET'): Promise<SavedView> {
-    const response = await axios.put(
-      `${API_URL}/api/saved-views/${id}/set-default`,
-      { viewType },
-      {
-        headers: getAuthHeaders(),
-      }
-    );
-    return response.data.data;
+    return apiClient.put<SavedView>(`/api/saved-views/${id}/set-default`, { viewType });
   },
 };
