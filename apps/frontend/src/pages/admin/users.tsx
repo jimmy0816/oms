@@ -13,11 +13,10 @@ interface User extends BaseUser {
 }
 import { userService } from '@/services/userService';
 import { PermissionGuard } from '@/components/PermissionGuard';
-import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 
-function UsersPage() {
+export default function UsersPage() {
   const { user: currentUser } = useAuth();
   const { showToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
@@ -674,14 +673,5 @@ function UsersPage() {
         </div>
       )}
     </>
-  );
-}
-
-// 使用 ProtectedRoute 包裝 UsersPage 組件，確保只有管理員和經理可以訪問
-export default function AdminUsersPage() {
-  return (
-    <ProtectedRoute requiredPermission={Permission.VIEW_USERS}>
-      <UsersPage />
-    </ProtectedRoute>
   );
 }

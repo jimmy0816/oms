@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { UserRole, Permission } from 'shared-types';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { roleService, getRoleName } from '@/services/roleService';
-import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 
 /**
  * 角色權限管理頁面
  */
-const RolesManagement: React.FC = () => {
+export default function RolesManagement() {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [rolePermissions, setRolePermissions] = useState<Permission[]>([]);
   const [allPermissions] = useState<Permission[]>(Object.values(Permission));
@@ -350,13 +349,5 @@ const RolesManagement: React.FC = () => {
         </div>
       </div>
     </PermissionGuard>
-  );
-};
-
-export default function RolesManagementPage() {
-  return (
-    <ProtectedRoute requiredPermission={Permission.MANAGE_ROLES}>
-      <RolesManagement />
-    </ProtectedRoute>
   );
 }

@@ -1,4 +1,3 @@
-import ProtectedRoute from '@/components/ProtectedRoute';
 import PermissionGuard from '@/components/PermissionGuard';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
@@ -66,15 +65,7 @@ const SortIcon = ({
   return <BarsArrowDownIcon className="h-3 w-3 text-black" />;
 };
 
-export default function ReportsPage() {
-  return (
-    <ProtectedRoute requiredPermission={Permission.VIEW_REPORTS}>
-      <Reports />
-    </ProtectedRoute>
-  );
-}
-
-function Reports() {
+export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
