@@ -17,7 +17,7 @@ import {
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 import { getRoleName } from '@/services/roleService';
-import { UserRole } from 'shared-types';
+import { Permission, UserRole } from 'shared-types';
 
 interface NavigationItem {
   name: string;
@@ -32,7 +32,7 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const router = useRouter();
-  const { user, logout, notifications } = useAuth();
+  const { user, logout, notifications, hasPermission } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>(
     {}
@@ -44,22 +44,56 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const baseNavigation: NavigationItem[] = [];
 
     if (user) {
+      // 儀表板 - 登入後總是可見
       baseNavigation.push({ name: '儀表板', href: '/', icon: HomeIcon });
 
-      baseNavigation.push(
-        { name: '工單管理', href: '/tickets', icon: ClipboardDocumentListIcon },
-        { name: '通報管理', href: '/reports', icon: DocumentTextIcon }
-      );
+      // 工單管理
+      if (
+        hasPermission(Permission.VIEW_TICKETS) ||
+        hasPermission(Permission.VIEW_ALL_TICKETS)
+      ) {
+        baseNavigation.push({
+          name: '工單管理',
+          href: '/tickets',
+          icon: ClipboardDocumentListIcon,
+        });
+      }
 
-      if (user.role === UserRole.ADMIN || user.role === UserRole.MANAGER) {
+      // 通報管理
+      if (
+        hasPermission(Permission.VIEW_REPORTS) ||
+        hasPermission(Permission.VIEW_ALL_REPORTS)
+      ) {
+        baseNavigation.push({
+          name: '通報管理',
+          href: '/reports',
+          icon: DocumentTextIcon,
+        });
+      }
+
+      // 系統管理 (父級菜單)
+      const adminChildren: NavigationItem[] = [];
+      if (hasPermission(Permission.VIEW_USERS)) {
+        adminChildren.push({
+          name: '用戶管理',
+          href: '/admin/users',
+          icon: UserIcon,
+        });
+      }
+      if (hasPermission(Permission.MANAGE_ROLES)) {
+        adminChildren.push({
+          name: '角色權限',
+          href: '/admin/roles',
+          icon: ShieldCheckIcon,
+        });
+      }
+
+      if (adminChildren.length > 0) {
         baseNavigation.push({
           name: '系統管理',
           href: '#',
           icon: Cog6ToothIcon,
-          children: [
-            { name: '用戶管理', href: '/admin/users', icon: UserIcon },
-            { name: '角色權限', href: '/admin/roles', icon: ShieldCheckIcon },
-          ],
+          children: adminChildren,
         });
       }
     }
@@ -212,7 +246,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="mt-auto pt-4 border-t border-gray-100 hidden md:block">
           {user ? (
             <div className="flex flex-col">
-              <Link href="/user/profile" className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-md">
+              <Link
+                href="/user/profile"
+                className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-md"
+              >
                 <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
                   <UserIcon className="h-4 w-4 text-gray-600" />
                 </div>

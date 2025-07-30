@@ -83,12 +83,13 @@ const authService = {
    * 登出用戶
    */
   logout(): void {
+    console.log('authService logout called');
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_info');
       Cookies.remove('token', { path: '/' }); // 移除 cookie
       // 可以在這裡添加重定向到登入頁面的邏輯
-      window.location.href = '/login';
+      // window.location.href = '/login';
     }
   },
 
@@ -105,7 +106,7 @@ const authService = {
     if (!this.getToken()) {
       return null;
     }
-    
+
     const userJson = localStorage.getItem('user_info');
     if (!userJson) return null;
 

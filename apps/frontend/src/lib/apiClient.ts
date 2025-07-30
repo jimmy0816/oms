@@ -39,7 +39,9 @@ const apiClient = {
   async get<T>(path: string, params?: Record<string, any>): Promise<T> {
     const url = new URL(`${API_URL}${path}`);
     if (params) {
-      Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+      Object.keys(params).forEach((key) =>
+        url.searchParams.append(key, params[key])
+      );
     }
 
     const token = authService.getToken();

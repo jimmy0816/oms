@@ -14,7 +14,7 @@ import { Notification, Permission } from 'shared-types'; // Import Permission
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, returnUrl?: string) => Promise<void>;
   logout: () => void;
   hasPermission: (permission: Permission) => boolean; // New permission checker
   notifications: Notification[];
@@ -76,13 +76,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [initAuth, router.events]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, returnUrl?: string) => {
     setLoading(true);
     try {
       const response = await authService.login({ email, password });
       setUser(response.user);
       await fetchNotifications();
-      router.replace('/'); // 登入成功後，使用 replace 導向首頁
+      if (returnUrl) {
+        router.replace(returnUrl); // 登入成功後，導向到 returnUrl
+      } else {
+        router.replace('/'); // 否則導向首頁
+      }
     } finally {
       setLoading(false);
     }

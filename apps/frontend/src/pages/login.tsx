@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 
 /**
@@ -8,19 +8,20 @@ import { useToast } from '@/contexts/ToastContext';
  */
 const LoginPage: React.FC = () => {
   const router = useRouter();
-  const { login, user } = useAuth();
+  const { login, user, logout } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
-  
+
   // If user is already logged in, redirect to dashboard
-  useEffect(() => {
-    if (user) {
-      router.push('/');
-    }
-  }, [user, router]);
+  // useEffect(() => {
+  //   console.log('login page user', user);
+  //   if (user) {
+  //     router.push('/');
+  //   }
+  // }, [user, router]);
 
   // 檢查登入狀態，但不自動重定向
   // 移除自動重定向以解決登入頁面無法訪問的問題
@@ -42,11 +43,13 @@ const LoginPage: React.FC = () => {
       }
 
       // 使用 AuthContext 的 login 方法
-      await login(email, password);
-      
-      
+      const { returnUrl } = router.query;
+      await login(email, password, returnUrl as string);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : '登入失敗，請檢查您的憑證', 'error');
+      showToast(
+        err instanceof Error ? err.message : '登入失敗，請檢查您的憑證',
+        'error'
+      );
     } finally {
       setLoading(false);
     }
@@ -72,19 +75,26 @@ const LoginPage: React.FC = () => {
               />
             </svg>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">系統登入</h2>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            系統登入
+          </h2>
         </div>
-        
+
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <div
+            className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+            role="alert"
+          >
             <span className="block sm:inline">{error}</span>
           </div>
         )}
-        
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="email" className="sr-only">電子郵件</label>
+              <label htmlFor="email" className="sr-only">
+                電子郵件
+              </label>
               <input
                 id="email"
                 name="email"
@@ -99,7 +109,9 @@ const LoginPage: React.FC = () => {
               />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">密碼</label>
+              <label htmlFor="password" className="sr-only">
+                密碼
+              </label>
               <input
                 id="password"
                 name="password"
