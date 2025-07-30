@@ -547,9 +547,17 @@ export default function TicketsPage() {
                   <tr>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20 cursor-pointer"
+                      onClick={() => handleSort('id')}
                     >
-                      ID
+                      <div className="flex items-center space-x-1">
+                        <span>ID</span>
+                        <SortIcon
+                          field="id"
+                          sortField={sortField}
+                          sortOrder={sortOrder as 'asc' | 'desc'}
+                        />
+                      </div>
                     </th>
                     <th
                       scope="col"

@@ -103,6 +103,9 @@ async function getReports(
   const orderByClause: any = {};
 
   switch (sortField) {
+    case 'id':
+      orderByClause.id = sortOrder || 'asc';
+      break;
     case 'title':
       orderByClause.title = sortOrder || 'asc';
       break;
