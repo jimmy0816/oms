@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import TicketReviewForm from '@/components/TicketReviewForm';
 import TicketReviewDetailModal from '@/components/TicketReviewDetailModal';
+import PermissionGuard from '@/components/PermissionGuard';
 
 export default function TicketDetail() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function TicketDetail() {
   const [ticket, setTicket] = useState<any>(null);
   const [newCommentContent, setNewCommentContent] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { showToast } = useToast();
   const [isReviewFormOpen, setIsReviewFormOpen] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -164,7 +165,10 @@ export default function TicketDetail() {
     };
   };
 
-  const handleReviewSubmit = async (content: string, attachments: FileInfo[]) => {
+  const handleReviewSubmit = async (
+    content: string,
+    attachments: FileInfo[]
+  ) => {
     if (!ticket?.id) return;
     setIsSubmittingReview(true);
     try {
@@ -223,6 +227,9 @@ export default function TicketDetail() {
 
         <div className="bg-white shadow-md rounded-lg overflow-hidden">
           <div className="p-6 border-b border-gray-200">
+            <div className="text-sm text-gray-600 flex flex-wrap items-center justify-between gap-4 mb-4">
+              #{ticket.id}
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
                 <span
@@ -239,24 +246,27 @@ export default function TicketDetail() {
                 >
                   {getPriorityText(ticket.priority)}
                 </span>
-                <span className="text-sm text-gray-600">
-                  #{ticket.id.substring(0, 8)}
-                </span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-4 gap-x-8 text-sm">
               <div>
                 <h3 className="font-medium text-gray-500">處理人</h3>
-                <p className="mt-1 text-gray-800">{ticket.assignee?.name || '尚未指派'}</p>
+                <p className="mt-1 text-gray-800">
+                  {ticket.assignee?.name || '尚未指派'}
+                </p>
               </div>
               <div>
                 <h3 className="font-medium text-gray-500">創建時間</h3>
-                <p className="mt-1 text-gray-800">{formatDate(ticket.createdAt)}</p>
+                <p className="mt-1 text-gray-800">
+                  {formatDate(ticket.createdAt)}
+                </p>
               </div>
               <div>
                 <h3 className="font-medium text-gray-500">更新時間</h3>
-                <p className="mt-1 text-gray-800">{formatDate(ticket.updatedAt)}</p>
+                <p className="mt-1 text-gray-800">
+                  {formatDate(ticket.updatedAt)}
+                </p>
               </div>
               <div>
                 <h3 className="font-medium text-gray-500">指派角色</h3>
@@ -269,8 +279,7 @@ export default function TicketDetail() {
             <div className="mt-6 flex flex-wrap gap-3">
               {ticket.assigneeId == null &&
                 ticket.status === TicketStatus.PENDING &&
-                user &&
-                user.permissions?.includes(Permission.CLAIM_TICKETS) &&
+                hasPermission(Permission.CLAIM_TICKETS) &&
                 (user.role === ticket.role?.name ||
                   (user.additionalRoles &&
                     user.additionalRoles.includes(ticket.role?.name))) && (
@@ -280,8 +289,7 @@ export default function TicketDetail() {
                 )}
               {(ticket.status === TicketStatus.IN_PROGRESS ||
                 ticket.status === TicketStatus.VERIFICATION_FAILED) &&
-                user &&
-                user.permissions?.includes(Permission.COMPLETE_TICKETS) &&
+                hasPermission(Permission.COMPLETE_TICKETS) &&
                 user.id === ticket.assigneeId && (
                   <>
                     <button
@@ -305,13 +313,15 @@ export default function TicketDetail() {
                   </>
                 )}
               {ticket.status === TicketStatus.COMPLETED &&
-                user &&
-                user.permissions?.includes(Permission.VERIFY_TICKETS) && (
+                hasPermission(Permission.VERIFY_TICKETS) && (
                   <>
                     <button
                       className="btn-primary"
                       onClick={() =>
-                        updateTicketStatus(TicketStatus.VERIFIED, '工單驗收通過')
+                        updateTicketStatus(
+                          TicketStatus.VERIFIED,
+                          '工單驗收通過'
+                        )
                       }
                     >
                       驗收通過
@@ -333,42 +343,48 @@ export default function TicketDetail() {
           </div>
 
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">工單內容</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              工單內容
+            </h3>
             <div className="max-w-none whitespace-pre-line text-gray-800 leading-relaxed">
               <p>{ticket.description}</p>
             </div>
           </div>
 
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">相關通報</h3>
-            {ticket.reports && ticket.reports.length > 0 ? (
-              <ul className="divide-y divide-gray-200">
-                {ticket.reports.map((ticketReport: any) => (
-                  <li
-                    key={ticketReport.report.id}
-                    className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-blue-700 text-base break-words">
-                        {ticketReport.report.title}
-                      </p>
-                      <p className="text-gray-600 text-sm mt-0.5 break-all">
-                        通報 #{ticketReport.report.id}
-                      </p>
-                    </div>
-                    <Link
-                      href={`/reports/${ticketReport.report.id}`}
-                      className="text-blue-600 hover:underline text-sm mt-2 sm:mt-0 sm:ml-4 flex-shrink-0"
+          <PermissionGuard required={Permission.VIEW_REPORTS}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                相關通報
+              </h3>
+              {ticket.reports && ticket.reports.length > 0 ? (
+                <ul className="divide-y divide-gray-200">
+                  {ticket.reports.map((ticketReport: any) => (
+                    <li
+                      key={ticketReport.report.id}
+                      className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between"
                     >
-                      查看
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-gray-600 text-sm">目前尚無相關通報</div>
-            )}
-          </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-blue-700 text-base break-words">
+                          {ticketReport.report.title}
+                        </p>
+                        <p className="text-gray-600 text-sm mt-0.5 break-all">
+                          通報 #{ticketReport.report.id}
+                        </p>
+                      </div>
+                      <Link
+                        href={`/reports/${ticketReport.report.id}`}
+                        className="text-blue-600 hover:underline text-sm mt-2 sm:mt-0 sm:ml-4 flex-shrink-0"
+                      >
+                        查看
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-gray-600 text-sm">目前尚無相關通報</div>
+              )}
+            </div>
+          </PermissionGuard>
 
           {ticket.attachments && ticket.attachments.length > 0 && (
             <div className="p-6 border-b border-gray-200">
@@ -437,7 +453,9 @@ export default function TicketDetail() {
           )}
 
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">處理歷程</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              處理歷程
+            </h3>
             {ticket.activityLogs && ticket.activityLogs.length > 0 ? (
               <ul className="divide-y divide-gray-200">
                 {(showAllActivityLogs
@@ -475,23 +493,45 @@ export default function TicketDetail() {
           </div>
 
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">審核記錄</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              審核記錄
+            </h3>
             {ticket.ticketReviews && ticket.ticketReviews.length > 0 ? (
               <ul className="divide-y divide-gray-200">
                 {ticket.ticketReviews.map((review: any) => (
-                  <li key={review.id} className="py-3 flex justify-between items-center">
+                  <li
+                    key={review.id}
+                    className="py-3 flex justify-between items-center"
+                  >
                     <div>
                       <p className="text-sm text-gray-800">
-                        <span className="font-medium">{review.creator.name}</span> 提交了審核
+                        <span className="font-medium">
+                          {review.creator.name}
+                        </span>{' '}
+                        提交了審核
                       </p>
                       <p className="text-gray-500 text-xs mt-1">
                         {formatDate(review.createdAt)}
                       </p>
                     </div>
-                    <button onClick={() => setSelectedReview(review)} className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1">
+                    <button
+                      onClick={() => setSelectedReview(review)}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
+                    >
                       查看詳情
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                        className="w-4 h-4"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+                        />
                       </svg>
                     </button>
                   </li>
@@ -525,7 +565,9 @@ export default function TicketDetail() {
                   </div>
                 ))
               ) : (
-                <p className="text-center text-gray-600 text-sm py-4">尚無留言</p>
+                <p className="text-center text-gray-600 text-sm py-4">
+                  尚無留言
+                </p>
               )}
             </div>
 

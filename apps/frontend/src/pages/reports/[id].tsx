@@ -27,10 +27,16 @@ import {
   getStatusColor as getTicketStatusColor,
   getPriorityColor as getTicketPriorityColor,
 } from '@/services/ticketService';
-import { ReportStatus, ReportPriority, Category } from 'shared-types';
+import {
+  ReportStatus,
+  ReportPriority,
+  Category,
+  Permission,
+} from 'shared-types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { categoryService, getCategoryPath } from '@/services/categoryService';
+import PermissionGuard from '@/components/PermissionGuard';
 
 export default function ReportDetail() {
   const router = useRouter();
@@ -39,34 +45,13 @@ export default function ReportDetail() {
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<Report | null>(null);
   const [processing, setProcessing] = useState(false);
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [newCommentContent, setNewCommentContent] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [openTicketId, setOpenTicketId] = useState<string | null>(null);
   const { showToast } = useToast();
   const [currentPath, setCurrentPath] = useState('');
-
-  // 根據用戶角色設置權限
-  const [userPermissions, setUserPermissions] = useState({
-    canProcess: false, // process_reports 權限
-    canClose: false, // close_reports 權限
-    canReview: false, // review_reports 權限
-    canEdit: false,
-    canDelete: false,
-  });
-
-  // 模擬用戶角色與權限
-  useEffect(() => {
-    if (!user) return;
-    setUserPermissions({
-      canProcess: user.permissions?.includes('process_reports'),
-      canClose: user.permissions?.includes('process_reports'),
-      canReview: user.permissions?.includes('review_reports'),
-      canEdit: user.permissions?.includes('review_reports'),
-      canDelete: user.permissions?.includes('review_reports'),
-    });
-  }, [user]);
 
   // 從API獲取通報資料
   const fetchReport = useCallback(async () => {
@@ -284,18 +269,18 @@ export default function ReportDetail() {
                     {report.title}
                   </h1>
                   <div className="flex items-center gap-2">
-                    {userPermissions.canEdit && (
+                    {hasPermission(Permission.EDIT_REPORTS) && (
                       <Link
                         href={`/reports/${report.id}/edit`}
-                        className="btn-icon"
+                        className="btn-icon text-blue-600 hover:text-blue-900"
                       >
                         <PencilIcon className="h-5 w-5" />
                       </Link>
                     )}
-                    {userPermissions.canDelete && (
+                    {hasPermission(Permission.DELETE_REPORTS) && (
                       <button
                         onClick={handleDelete}
-                        className="btn-icon-danger"
+                        className="btn-icon-danger text-red-600 hover:text-red-900"
                         disabled={processing}
                       >
                         <TrashIcon className="h-5 w-5" />
@@ -326,7 +311,7 @@ export default function ReportDetail() {
               </div>
 
               {/* 狀態處理按鈕區塊 */}
-              {userPermissions.canProcess &&
+              {hasPermission(Permission.PROCESS_REPORTS) &&
                 report.status === ReportStatus.UNCONFIRMED && (
                   <div className="flex gap-2">
                     <button
@@ -355,7 +340,7 @@ export default function ReportDetail() {
                     </button>
                   </div>
                 )}
-              {userPermissions.canClose &&
+              {hasPermission(Permission.PROCESS_REPORTS) &&
                 (report.status === ReportStatus.PROCESSING ||
                   report.status === ReportStatus.RETURNED) && (
                   <div className="flex gap-2">
@@ -373,7 +358,7 @@ export default function ReportDetail() {
                     </button>
                   </div>
                 )}
-              {userPermissions.canReview &&
+              {hasPermission(Permission.REVIEW_REPORTS) &&
                 report.status === ReportStatus.PENDING_REVIEW && (
                   <div className="flex gap-2">
                     <button
@@ -533,145 +518,152 @@ export default function ReportDetail() {
               </div>
 
               {/* 相關工單（主內容區） */}
-              <div className="p-6 mt-6 bg-white rounded-lg shadow-lg border border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900 mb-4 items-center">
-                  相關工單
-                </h3>
-                {report.tickets && report.tickets.length > 0 ? (
-                  <ul className="space-y-3">
-                    {report.tickets.map((reportTicket) => (
-                      <li
-                        key={reportTicket.ticket.id}
-                        className="bg-white border rounded-lg shadow-sm"
-                      >
-                        <div
-                          className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 p-4 cursor-pointer"
-                          onClick={() =>
-                            setOpenTicketId(
-                              openTicketId === reportTicket.ticket.id
-                                ? null
-                                : reportTicket.ticket.id
-                            )
-                          }
+              <PermissionGuard required={Permission.VIEW_TICKETS}>
+                <div className="p-6 mt-6 bg-white rounded-lg shadow-lg border border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 items-center">
+                    相關工單
+                  </h3>
+                  {report.tickets && report.tickets.length > 0 ? (
+                    <ul className="space-y-3">
+                      {report.tickets.map((reportTicket) => (
+                        <li
+                          key={reportTicket.ticket.id}
+                          className="bg-white border rounded-lg shadow-sm"
                         >
-                          <div>
-                            <Link
-                              href={`/tickets/${reportTicket.ticket.id}`}
-                              className="text-blue-600 hover:underline font-semibold text-lg"
-                            >
-                              {reportTicket.ticket.title}
-                            </Link>
-                            <p className="text-gray-500 text-sm">
-                              工單 #{reportTicket.ticket.id}
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                            <span
-                              className={`px-2 py-1 text-xs font-medium rounded-full ${getTicketStatusColor(
-                                reportTicket.ticket.status
-                              )}`}
-                            >
-                              {getTicketStatusText(reportTicket.ticket.status)}
-                            </span>
-                            <span
-                              className={`px-2 py-1 text-xs font-medium rounded-full ${getTicketPriorityColor(
-                                reportTicket.ticket.priority
-                              )}`}
-                            >
-                              {getTicketPriorityText(
-                                reportTicket.ticket.priority
-                              )}
-                            </span>
-                            <ChevronDownIcon
-                              className={`h-6 w-6 text-gray-400 transition-transform ${
+                          <div
+                            className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 p-4 cursor-pointer"
+                            onClick={() =>
+                              setOpenTicketId(
                                 openTicketId === reportTicket.ticket.id
-                                  ? 'transform rotate-180'
-                                  : ''
-                              }`}
-                            />
-                          </div>
-                        </div>
-                        {openTicketId === reportTicket.ticket.id && (
-                          <div className="p-4 border-t border-gray-200">
-                            <div className="flow-root">
-                              <p className="text-sm font-medium text-gray-700 mb-2">
-                                工單歷程:
+                                  ? null
+                                  : reportTicket.ticket.id
+                              )
+                            }
+                          >
+                            <div>
+                              <Link
+                                href={`/tickets/${reportTicket.ticket.id}`}
+                                className="text-blue-600 hover:underline font-semibold text-lg"
+                              >
+                                {reportTicket.ticket.title}
+                              </Link>
+                              <p className="text-gray-500 text-sm">
+                                工單 #{reportTicket.ticket.id}
                               </p>
-                              <ul className="-mb-8">
-                                {reportTicket.ticket.activityLogs &&
-                                reportTicket.ticket.activityLogs.length > 0 ? (
-                                  reportTicket.ticket.activityLogs.map(
-                                    (log: any, logIdx: number) => (
-                                      <li key={log.id}>
-                                        <div className="relative pb-8">
-                                          {logIdx !==
-                                          reportTicket.ticket.activityLogs
-                                            .length -
-                                            1 ? (
-                                            <span
-                                              className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                                              aria-hidden="true"
-                                            ></span>
-                                          ) : null}
-                                          <div className="relative flex space-x-3">
-                                            <div>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                              <span
+                                className={`px-2 py-1 text-xs font-medium rounded-full ${getTicketStatusColor(
+                                  reportTicket.ticket.status
+                                )}`}
+                              >
+                                {getTicketStatusText(
+                                  reportTicket.ticket.status
+                                )}
+                              </span>
+                              <span
+                                className={`px-2 py-1 text-xs font-medium rounded-full ${getTicketPriorityColor(
+                                  reportTicket.ticket.priority
+                                )}`}
+                              >
+                                {getTicketPriorityText(
+                                  reportTicket.ticket.priority
+                                )}
+                              </span>
+                              <ChevronDownIcon
+                                className={`h-6 w-6 text-gray-400 transition-transform ${
+                                  openTicketId === reportTicket.ticket.id
+                                    ? 'transform rotate-180'
+                                    : ''
+                                }`}
+                              />
+                            </div>
+                          </div>
+                          {openTicketId === reportTicket.ticket.id && (
+                            <div className="p-4 border-t border-gray-200">
+                              <div className="flow-root">
+                                <p className="text-sm font-medium text-gray-700 mb-2">
+                                  工單歷程:
+                                </p>
+                                <ul className="-mb-8">
+                                  {reportTicket.ticket.activityLogs &&
+                                  reportTicket.ticket.activityLogs.length >
+                                    0 ? (
+                                    reportTicket.ticket.activityLogs.map(
+                                      (log: any, logIdx: number) => (
+                                        <li key={log.id}>
+                                          <div className="relative pb-8">
+                                            {logIdx !==
+                                            reportTicket.ticket.activityLogs
+                                              .length -
+                                              1 ? (
                                               <span
-                                                className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white bg-gray-100 text-gray-800`}
-                                              >
-                                                <ClockIcon className="h-5 w-5" />
-                                              </span>
-                                            </div>
-                                            <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                                className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
+                                                aria-hidden="true"
+                                              ></span>
+                                            ) : null}
+                                            <div className="relative flex space-x-3">
                                               <div>
-                                                <p className="text-sm text-gray-700">
-                                                  <span className="font-semibold text-gray-700">
-                                                    {log.user?.name || '系統'}
-                                                  </span>
-                                                  <span className="mx-2 text-gray-400">
-                                                    |
-                                                  </span>
-                                                  <span className="text-xs text-gray-400">
-                                                    {formatDate(log.createdAt)}
-                                                  </span>
-                                                </p>
-                                                {log.content && (
-                                                  <div className="mt-1 text-sm text-gray-900 bg-gray-50 rounded px-3 py-2 border border-gray-100">
-                                                    {log.content}
-                                                  </div>
-                                                )}
+                                                <span
+                                                  className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white bg-gray-100 text-gray-800`}
+                                                >
+                                                  <ClockIcon className="h-5 w-5" />
+                                                </span>
+                                              </div>
+                                              <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                                <div>
+                                                  <p className="text-sm text-gray-700">
+                                                    <span className="font-semibold text-gray-700">
+                                                      {log.user?.name || '系統'}
+                                                    </span>
+                                                    <span className="mx-2 text-gray-400">
+                                                      |
+                                                    </span>
+                                                    <span className="text-xs text-gray-400">
+                                                      {formatDate(
+                                                        log.createdAt
+                                                      )}
+                                                    </span>
+                                                  </p>
+                                                  {log.content && (
+                                                    <div className="mt-1 text-sm text-gray-900 bg-gray-50 rounded px-3 py-2 border border-gray-100">
+                                                      {log.content}
+                                                    </div>
+                                                  )}
+                                                </div>
                                               </div>
                                             </div>
                                           </div>
-                                        </div>
-                                      </li>
+                                        </li>
+                                      )
                                     )
-                                  )
-                                ) : (
-                                  <li>
-                                    <div className="text-gray-400 text-sm">
-                                      尚無工單歷程
-                                    </div>
-                                  </li>
-                                )}
-                              </ul>
+                                  ) : (
+                                    <li>
+                                      <div className="text-gray-400 text-sm">
+                                        尚無工單歷程
+                                      </div>
+                                    </li>
+                                  )}
+                                </ul>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-gray-500 mb-4">目前尚無相關工單</div>
-                )}
-                <Link
-                  href={`/tickets/new?reportId=${
-                    report.id
-                  }&returnUrl=${encodeURIComponent(currentPath)}`}
-                  className="btn-primary w-full block text-center mt-6"
-                >
-                  新增工單
-                </Link>
-              </div>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-gray-500 mb-4">目前尚無相關工單</div>
+                  )}
+                  <Link
+                    href={`/tickets/new?reportId=${
+                      report.id
+                    }&returnUrl=${encodeURIComponent(currentPath)}`}
+                    className="btn-primary w-full block text-center mt-6"
+                  >
+                    新增工單
+                  </Link>
+                </div>
+              </PermissionGuard>
 
               {/* 留言功能區塊 */}
               <div className="p-6 mt-6 bg-white rounded-lg shadow-sm">

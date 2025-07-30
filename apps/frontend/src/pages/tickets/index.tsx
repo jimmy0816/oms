@@ -10,7 +10,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronDownIcon,
-  ExclamationCircleIcon,
   Bars3Icon,
   BarsArrowDownIcon,
   BarsArrowUpIcon,
@@ -38,6 +37,7 @@ import ManageViewsModal from '@/components/ManageViewsModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import MultiSelectFilterModal from '@/components/MultiSelectFilterModal';
+import PermissionGuard from '@/components/PermissionGuard';
 
 const SortIcon = ({
   field,
@@ -410,13 +410,15 @@ export default function TicketsPage() {
           >
             清除篩選
           </button>
-          <Link
-            href={`/tickets/new?returnUrl=${encodeURIComponent(currentPath)}`}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            新增工單
-          </Link>
+          <PermissionGuard required={Permission.CREATE_TICKETS}>
+            <Link
+              href={`/tickets/new?returnUrl=${encodeURIComponent(currentPath)}`}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+            >
+              <PlusIcon className="h-5 w-5 mr-2" />
+              新增工單
+            </Link>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -754,9 +756,7 @@ export default function TicketsPage() {
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center space-x-2">
-                          {user?.permissions?.includes(
-                            Permission.EDIT_TICKETS
-                          ) && (
+                          <PermissionGuard required={Permission.EDIT_TICKETS}>
                             <Link
                               href={`/tickets/${ticket.id}/edit`}
                               className="text-blue-600 hover:text-blue-900"
@@ -765,10 +765,8 @@ export default function TicketsPage() {
                             >
                               <PencilIcon className="h-5 w-5" />
                             </Link>
-                          )}
-                          {user?.permissions?.includes(
-                            Permission.DELETE_TICKETS
-                          ) && (
+                          </PermissionGuard>
+                          <PermissionGuard required={Permission.DELETE_TICKETS}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation(); // 阻止行點擊事件
@@ -779,7 +777,7 @@ export default function TicketsPage() {
                             >
                               <TrashIcon className="h-5 w-5" />
                             </button>
-                          )}
+                          </PermissionGuard>
                         </div>
                       </td>
                     </tr>

@@ -15,16 +15,11 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
-  // If user is already logged in, redirect to dashboard
-  // useEffect(() => {
-  //   console.log('login page user', user);
-  //   if (user) {
-  //     router.push('/');
-  //   }
-  // }, [user, router]);
-
-  // 檢查登入狀態，但不自動重定向
-  // 移除自動重定向以解決登入頁面無法訪問的問題
+  useEffect(() => {
+    if (user) {
+      router.push('/');
+    }
+  }, [user]);
 
   /**
    * 處理登入表單提交
