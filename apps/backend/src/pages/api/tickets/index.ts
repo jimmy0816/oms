@@ -1,3 +1,4 @@
+import { IdService } from '@/services/idService';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import {
@@ -382,6 +383,7 @@ async function createTicket(
   } = req.body as any;
 
   const creatorId = req.user.id;
+  const newId = await IdService.generateId('W');
 
   if (!title || !description) {
     return res.status(400).json({
@@ -392,6 +394,7 @@ async function createTicket(
 
   const ticket = await prisma.ticket.create({
     data: {
+      id: newId,
       title,
       description,
       priority,

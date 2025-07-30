@@ -1,3 +1,4 @@
+import { IdService } from '@/services/idService';
 import { NextApiRequest, NextApiResponse } from 'next';
 import {
   ApiResponse,
@@ -261,6 +262,7 @@ async function createReport(
   } = req.body as CreateReportRequest;
 
   const creatorId = req.user.id;
+  const newId = await IdService.generateId('R');
 
   if (!title) {
     return res.status(400).json({
@@ -272,6 +274,7 @@ async function createReport(
   // 1. 先建立 report
   const report = await prisma.report.create({
     data: {
+      id: newId,
       title,
       description,
       locationId,

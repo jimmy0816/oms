@@ -547,7 +547,7 @@ export default function TicketsPage() {
                   <tr>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
                     >
                       ID
                     </th>
@@ -667,10 +667,10 @@ export default function TicketsPage() {
                       }
                     >
                       <td
-                        className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 truncate overflow-hidden"
+                        className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden"
                         title={ticket.id}
                       >
-                        #{ticket.id.substring(0, 8)}...
+                        #{ticket.id}
                       </td>
                       <td className="px-2 py-3 whitespace-normal">
                         <div className="text-sm font-medium text-gray-900">
@@ -719,7 +719,10 @@ export default function TicketsPage() {
                           return (
                             <>
                               {displayLocations.map((loc) => (
-                                <span key={loc} className="block">
+                                <span
+                                  key={loc}
+                                  className="block text-ellipsis overflow-hidden"
+                                >
                                   {loc}
                                 </span>
                               ))}
