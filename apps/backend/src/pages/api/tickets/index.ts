@@ -8,12 +8,12 @@ import {
   TicketStatus,
   TicketPriority,
   Permission,
-  UserRole,
 } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { ActivityLogService } from '@/services/activityLogService';
 import { notificationService } from '@/services/notificationService';
-import { Prisma } from 'prisma-client';
+import { Prisma } from '@prisma/client'; // Corrected import path
+
 
 export default async function handler(
   req: NextApiRequest,
@@ -59,7 +59,7 @@ async function getTickets(
 
   // --- Start of location sort specific logic ---
   if (sortField === 'location') {
-    const rawWhereClausesSql: Prisma.Sql[] = [];
+    const rawWhereClausesSql: Prisma.Sql[] = []; // Changed type back to Prisma.Sql[]
 
     if (status) {
       const parsedStatus = Array.isArray(status) ? status : status.split(',');
@@ -96,7 +96,7 @@ async function getTickets(
         rawWhereClausesSql.push(Prisma.sql`EXISTS (
           SELECT 1
           FROM "ReportTicket" rt_filter
-          JOIN "Report" r_filter ON rt_filter."reportId" = r_filter.id
+          JOIN "Report" r_filter ON rt_filter."reportId" = r.id
           WHERE rt_filter."ticketId" = t.id AND r_filter."locationId" IN (${Prisma.join(
             parsedLocationIds
           )})
@@ -239,10 +239,12 @@ async function getTickets(
   if (sortField && sortOrder) {
     if (sortField === 'creator' || sortField === 'assignee') {
       orderByClause[sortField] = { name: sortOrder };
-    } else {
+    }
+    else {
       orderByClause[sortField] = sortOrder;
     }
-  } else {
+  }
+  else {
     orderByClause.createdAt = 'desc';
   }
 
@@ -270,7 +272,8 @@ async function getTickets(
     let parsedLocationIds: string[] = [];
     if (Array.isArray(locationIds)) {
       parsedLocationIds = locationIds;
-    } else if (typeof locationIds === 'string') {
+    }
+    else if (typeof locationIds === 'string') {
       parsedLocationIds = locationIds.split(',');
     }
 
