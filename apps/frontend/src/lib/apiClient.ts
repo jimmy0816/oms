@@ -95,6 +95,23 @@ const apiClient = {
 
     return handleResponse(response);
   },
+  async patch<T>(path: string, body: any): Promise<T> {
+    const token = authService.getToken();
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_URL}${path}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    return handleResponse(response);
+  },
 
   async delete<T>(path: string): Promise<T> {
     const token = authService.getToken();
