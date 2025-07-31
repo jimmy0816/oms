@@ -579,7 +579,12 @@ async function deleteTicket(
         where: { ticketId: id },
       });
 
-      // 6. 最後，刪除工單本身
+      // 6. 刪除相關的 TicketReview
+      await tx.ticketReview.deleteMany({
+        where: { ticketId: id },
+      });
+
+      // 7. 最後，刪除工單本身
       const deletedTicket = await tx.ticket.delete({
         where: { id },
       });
