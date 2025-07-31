@@ -31,7 +31,7 @@ const ReportMultiSelect: React.FC<ReportMultiSelectProps> = ({
 
   const options = reports.map((report) => ({
     value: report.id,
-    label: `#${report.id.substring(0, 8)} - ${report.title}`,
+    label: `#${report.id} - ${report.title}`,
   }));
 
   const selectedOptions = options.filter((option) =>

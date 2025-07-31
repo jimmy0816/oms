@@ -549,7 +549,7 @@ export default function TicketsPage() {
                   <tr>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20 cursor-pointer"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32"
                       onClick={() => handleSort('id')}
                     >
                       <div className="flex items-center space-x-1">
@@ -677,12 +677,12 @@ export default function TicketsPage() {
                       }
                     >
                       <td
-                        className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden"
+                        className="px-2 py-3 whitespace-nowrap text-sm text-gray-500"
                         title={ticket.id}
                       >
                         #{ticket.id}
                       </td>
-                      <td className="px-2 py-3 whitespace-normal">
+                      <td className="px-2 py-3 whitespace-nowrap text-ellipsis overflow-hidden">
                         <div className="text-sm font-medium text-gray-900">
                           {ticket.title}
                         </div>

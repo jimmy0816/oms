@@ -201,144 +201,183 @@ const defaultCategories: CategoryLevel1[] = [
   },
   {
     id: '3',
-    name: '我覺得空間隔音不好',
+    name: '我發現大樓/分館有公告/問題',
     children: [
       {
         id: '3.1',
-        name: '隔壁 / 公共區 / 街上',
+        name: '同分館小樹屋空間 & 公共區',
         children: [
-          { id: '3.1.1', name: '公共區的聲音打擾了' },
-          { id: '3.1.2', name: '隔壁活動的聲音打擾了' },
-          { id: '3.1.3', name: '樓上、樓下的聲音打擾了' },
-          { id: '3.1.4', name: '路上交通工具的聲音打擾了' },
+          { id: '3.1.1', name: '全部/部分空間冷氣保養' },
+          { id: '3.1.2', name: '全部/部分空間有傢俱設備保養清洗' },
+          { id: '3.1.3', name: '全部/部分空間有改裝修繕工程' },
+        ],
+      },
+      {
+        id: '3.2',
+        name: '大樓其他鄰居 & 公共區',
+        children: [
+          { id: '3.2.1', name: '大樓鄰居裝潢 樓層在正負2層樓內' },
+          { id: '3.2.2', name: '大樓鄰居裝潢 樓層超過正負兩層樓' },
+          { id: '3.2.3', name: '鄰居反應用戶噪音問題' },
+          { id: '3.2.4', name: '鄰居反應公共區域髒亂問題' },
+        ],
+      },
+      {
+        id: '3.3',
+        name: '大樓公共設施',
+        children: [
+          { id: '3.3.1', name: '台電修繕停電' },
+          { id: '3.3.2', name: '清洗水塔停水' },
+          { id: '3.3.3', name: '大樓消防檢查作業' },
+          { id: '3.3.4', name: '大樓病媒防治消毒' },
+          { id: '3.3.5', name: '大樓電梯例行保養' },
+          { id: '3.3.6', name: '大樓公共廁所封閉無法使用' },
+          { id: '3.3.7', name: '大樓垃圾回收處理' },
+          { id: '3.3.8', name: '其他問題' },
         ],
       },
     ],
   },
   {
     id: '4',
-    name: '我發現東西不足',
+    name: '我遺失了東西、撿到了別人的東西',
     children: [
       {
         id: '4.1',
-        name: '白板筆 / 白板擦',
+        name: '遺失物',
         children: [
-          { id: '4.1.1', name: '白板筆沒水' },
-          { id: '4.1.2', name: '白板筆數量缺少' },
-          { id: '4.1.3', name: '白板筆顏色缺少' },
-          { id: '4.1.4', name: '白板擦沒了' },
-          { id: '4.1.5', name: '白板擦無法使用' },
-        ],
-      },
-      {
-        id: '4.2',
-        name: '衛生紙',
-        children: [{ id: '4.2.1', name: '衛生紙沒了' }],
-      },
-      {
-        id: '4.3',
-        name: '洗手液',
-        children: [{ id: '4.3.1', name: '洗手液沒了' }],
-      },
-      {
-        id: '4.4',
-        name: '酒精',
-        children: [
-          { id: '4.4.1', name: '找不到酒精瓶' },
-          { id: '4.4.2', name: '酒精瓶內沒酒精' },
-        ],
-      },
-      {
-        id: '4.5',
-        name: '備品櫃內物品',
-        children: [
-          { id: '4.5.1', name: '電池沒了' },
-          { id: '4.5.2', name: '燈泡沒了' },
-          { id: '4.5.3', name: '白板筆沒了' },
+          { id: '4.1.1', name: '我拾獲別人的東西' },
+          { id: '4.1.2', name: '我遺失了東西，如果有撿到請聯繫我' },
         ],
       },
     ],
   },
   {
     id: '5',
-    name: '我發現牆壁漏水、滲水問題',
+    name: '我發現東西不足',
     children: [
       {
         id: '5.1',
-        name: '天花板',
+        name: '白板筆 / 白板擦',
         children: [
-          { id: '5.1.1', name: '天花板滲水' },
-          { id: '5.1.2', name: '天花板漏水' },
+          { id: '5.1.1', name: '白板筆沒水' },
+          { id: '5.1.2', name: '白板筆數量缺少' },
+          { id: '5.1.3', name: '白板筆顏色缺少' },
+          { id: '5.1.4', name: '白板擦沒了' },
+          { id: '5.1.5', name: '白板擦無法使用' },
         ],
       },
       {
         id: '5.2',
-        name: '牆面',
-        children: [
-          { id: '5.2.1', name: '牆面滲水' },
-          { id: '5.2.2', name: '牆面漏水' },
-        ],
+        name: '衛生紙',
+        children: [{ id: '5.2.1', name: '衛生紙沒了' }],
       },
       {
         id: '5.3',
-        name: '地板',
-        children: [
-          { id: '5.3.1', name: '地板滲水' },
-          { id: '5.3.2', name: '地板漏水' },
-          { id: '5.3.3', name: '地板積水' },
-        ],
+        name: '洗手液',
+        children: [{ id: '5.3.1', name: '洗手液沒了' }],
       },
       {
         id: '5.4',
-        name: '窗戶',
+        name: '酒精',
         children: [
-          { id: '5.4.1', name: '窗戶滲水' },
-          { id: '5.4.2', name: '窗戶漏水' },
+          { id: '5.4.1', name: '找不到酒精瓶' },
+          { id: '5.4.2', name: '酒精瓶內沒酒精' },
+        ],
+      },
+      {
+        id: '5.5',
+        name: '備品櫃內物品',
+        children: [
+          { id: '5.5.1', name: '電池沒了' },
+          { id: '5.5.2', name: '燈泡沒了' },
+          { id: '5.5.3', name: '白板筆沒了' },
         ],
       },
     ],
   },
   {
     id: '6',
-    name: '我遺失了東西、撿到了別人的東西',
+    name: '我發現資訊不一致、有錯誤',
     children: [
       {
         id: '6.1',
-        name: '遺失物',
+        name: '官網資訊',
         children: [
-          { id: '6.1.1', name: '我拾獲別人的東西' },
-          { id: '6.1.2', name: '我遺失了東西，如果有撿到請聯繫我' },
+          { id: '6.1.1', name: '官網資訊與現場不符' },
+          { id: '6.1.2', name: '官網照片與現場不符' },
         ],
+      },
+      {
+        id: '6.2',
+        name: '現場資訊',
+        children: [{ id: '6.2.1', name: '告示內容有錯誤' }],
       },
     ],
   },
   {
     id: '7',
-    name: '我發現資訊不一致、有錯誤',
+    name: '我發現牆壁漏水、滲水問題',
     children: [
       {
         id: '7.1',
-        name: '官網資訊',
+        name: '天花板',
         children: [
-          { id: '7.1.1', name: '官網資訊與現場不符' },
-          { id: '7.1.2', name: '官網照片與現場不符' },
+          { id: '7.1.1', name: '天花板滲水' },
+          { id: '7.1.2', name: '天花板漏水' },
         ],
       },
       {
         id: '7.2',
-        name: '現場資訊',
-        children: [{ id: '7.2.1', name: '告示內容有錯誤' }],
+        name: '牆面',
+        children: [
+          { id: '7.2.1', name: '牆面滲水' },
+          { id: '7.2.2', name: '牆面漏水' },
+        ],
+      },
+      {
+        id: '7.3',
+        name: '地板',
+        children: [
+          { id: '7.3.1', name: '地板滲水' },
+          { id: '7.3.2', name: '地板漏水' },
+          { id: '7.3.3', name: '地板積水' },
+        ],
+      },
+      {
+        id: '7.4',
+        name: '窗戶',
+        children: [
+          { id: '7.4.1', name: '窗戶滲水' },
+          { id: '7.4.2', name: '窗戶漏水' },
+        ],
       },
     ],
   },
   {
     id: '8',
-    name: '我找不到適合的回報、我有建議',
+    name: '我覺得空間隔音不好',
     children: [
       {
         id: '8.1',
+        name: '隔壁 / 公共區 / 街上',
+        children: [
+          { id: '8.1.1', name: '公共區的聲音打擾了' },
+          { id: '8.1.2', name: '隔壁活動的聲音打擾了' },
+          { id: '8.1.3', name: '樓上、樓下的聲音打擾了' },
+          { id: '8.1.4', name: '路上交通工具的聲音打擾了' },
+        ],
+      },
+    ],
+  },
+  {
+    id: '9',
+    name: '我找不到適合的回報、我有建議',
+    children: [
+      {
+        id: '9.1',
         name: '回報與建議',
-        children: [{ id: '8.1.1', name: '請填寫備注' }],
+        children: [{ id: '9.1.1', name: '請填寫備注' }],
       },
     ],
   },
@@ -350,49 +389,32 @@ export async function seedCategories() {
   console.log('Existing categories cleared.');
   console.log('Seeding categories...');
 
-  for (const level1 of defaultCategories) {
-    const existingCategoriesWithName = await prisma.category.findMany({
-      where: {
+  for (const [l1Index, level1] of defaultCategories.entries()) {
+    const createdLevel1 = await prisma.category.create({
+      data: {
         name: level1.name,
+        level: 1,
+        displayOrder: l1Index,
+        parentId: null,
       },
     });
 
-    let currentLevel1 = existingCategoriesWithName.find(
-      (cat) => cat.parentId === null || cat.parentId === ''
-    );
-
-    if (!currentLevel1) {
-      currentLevel1 = await prisma.category.create({
+    for (const [l2Index, level2] of level1.children.entries()) {
+      const createdLevel2 = await prisma.category.create({
         data: {
-          name: level1.name,
-          level: 1,
-          parentId: null,
-        },
-      });
-    }
-
-    for (const level2 of level1.children) {
-      const createdLevel2 = await prisma.category.upsert({
-        where: {
-          name_parentId: { name: level2.name, parentId: currentLevel1.id },
-        },
-        update: {},
-        create: {
           name: level2.name,
           level: 2,
-          parentId: currentLevel1.id,
+          displayOrder: l2Index,
+          parentId: createdLevel1.id,
         },
       });
 
-      for (const level3 of level2.children) {
-        await prisma.category.upsert({
-          where: {
-            name_parentId: { name: level3.name, parentId: createdLevel2.id },
-          },
-          update: {},
-          create: {
+      for (const [l3Index, level3] of level2.children.entries()) {
+        await prisma.category.create({
+          data: {
             name: level3.name,
             level: 3,
+            displayOrder: l3Index,
             parentId: createdLevel2.id,
           },
         });

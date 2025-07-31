@@ -108,6 +108,7 @@ async function getTickets(
       const searchPattern = `%${search}%`;
       rawWhereClausesSql.push(Prisma.sql`(
         t.title ILIKE ${searchPattern} OR
+        t.id ILIKE ${searchPattern} OR
         creator.name ILIKE ${searchPattern} OR
         assignee.name ILIKE ${searchPattern}
       )`);
@@ -295,6 +296,7 @@ async function getTickets(
   if (search) {
     andClauses.push({
       OR: [
+        { id: { contains: search, mode: 'insensitive' } },
         { title: { contains: search, mode: 'insensitive' } },
         { creator: { name: { contains: search, mode: 'insensitive' } } },
         { assignee: { name: { contains: search, mode: 'insensitive' } } },

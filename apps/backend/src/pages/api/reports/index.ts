@@ -196,6 +196,7 @@ async function getReports(
   if (search) {
     andClauses.push({
       OR: [
+        { id: { contains: search, mode: 'insensitive' } },
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
         { location: { name: { contains: search, mode: 'insensitive' } } },

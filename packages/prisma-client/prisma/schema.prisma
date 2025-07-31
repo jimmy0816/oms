@@ -207,12 +207,13 @@ model ActivityLog {
 
 // New Category model for hierarchical categories
 model Category {
-  id       String     @id @default(uuid())
-  name     String
-  level    Int // 1, 2, 3... indicates the hierarchy level
-  parentId String? // Self-referencing: ID of the parent category
-  parent   Category?  @relation("SubCategories", fields: [parentId], references: [id])
-  children Category[] @relation("SubCategories")
+  id           String     @id @default(uuid())
+  name         String
+  level        Int // 1, 2, 3... indicates the hierarchy level
+  displayOrder Int        @default(0)
+  parentId     String? // Self-referencing: ID of the parent category
+  parent       Category?  @relation("SubCategories", fields: [parentId], references: [id])
+  children     Category[] @relation("SubCategories")
 
   // Reports associated with this category (only for level 3 categories)
   reports Report[]

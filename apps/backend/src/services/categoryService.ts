@@ -5,6 +5,7 @@ interface CategoryNode {
   name: string;
   level: number;
   parentId: string | null;
+  displayOrder: number;
   children?: CategoryNode[];
 }
 
@@ -15,7 +16,7 @@ export const categoryService = {
    */
   async getAllCategories(): Promise<CategoryNode[]> {
     const categories = await prisma.category.findMany({
-      orderBy: { name: 'asc' }, // Order by name for consistent display
+      orderBy: { displayOrder: 'asc' }, // Order by displayOrder for consistent display
     });
 
     const categoryMap = new Map<string, CategoryNode>();
@@ -37,11 +38,12 @@ export const categoryService = {
       }
     });
 
-    // Sort children for consistent output
+    // Sort all levels for consistent output
+    rootCategories.sort((a, b) => a.displayOrder - b.displayOrder);
     rootCategories.forEach((root) => {
-      root.children?.sort((a, b) => a.name.localeCompare(b.name));
+      root.children?.sort((a, b) => a.displayOrder - b.displayOrder);
       root.children?.forEach((level2) => {
-        level2.children?.sort((a, b) => a.name.localeCompare(b.name));
+        level2.children?.sort((a, b) => a.displayOrder - b.displayOrder);
       });
     });
 
