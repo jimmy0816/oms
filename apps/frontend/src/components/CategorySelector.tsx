@@ -53,7 +53,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
           }
         } else if (fetchedCategories.length > 0) {
           // 否則，預設展開第一個大類
-          setExpandedLevel1([fetchedCategories[0].id]);
+          // setExpandedLevel1([fetchedCategories[0].id]);
         }
       } catch (err: any) {
         setError(err.message);
