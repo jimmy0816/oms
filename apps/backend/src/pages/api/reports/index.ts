@@ -200,6 +200,7 @@ async function getReports(
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
         { location: { name: { contains: search, mode: 'insensitive' } } },
+        { creator: { name: { contains: search, mode: 'insensitive' } } },
       ],
     });
   }
