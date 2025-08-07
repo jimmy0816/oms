@@ -44,8 +44,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // 查找用戶
     console.log('Finding user with email:', email);
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const user = await prisma.user.findFirst({
+      where: { email, deletedAt: null },
     });
 
     // 用戶不存在

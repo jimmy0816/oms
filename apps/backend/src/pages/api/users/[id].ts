@@ -39,7 +39,7 @@ export default async function handler(
 async function getUser(req: NextApiRequest, res: NextApiResponse, id: string) {
   try {
     const user = await prisma.user.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
     });
 
     if (!user) {
@@ -90,7 +90,7 @@ async function updateUser(
 
     // 檢查用戶是否存在
     const existingUser = await prisma.user.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
     });
 
     if (!existingUser) {
@@ -136,16 +136,20 @@ async function deleteUser(
   try {
     // 檢查用戶是否存在
     const existingUser = await prisma.user.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
     });
 
     if (!existingUser) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // 刪除用戶
-    await prisma.user.delete({
+    // 軟刪除用戶
+    await prisma.user.update({
       where: { id },
+      data: { 
+        deletedAt: new Date(),
+        email: `${existingUser.email}#DELETED_${Date.now()}`
+      },
     });
 
     return res.status(200).json({ success: true });

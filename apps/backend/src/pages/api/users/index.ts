@@ -32,7 +32,8 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
     const { role } = req.query;
 
     // 構建查詢條件
-    const where = role ? { role: role as string } : {};
+    const where: any = role ? { role: role as string } : {};
+    where.deletedAt = null;
 
     // 查詢用戶
     const users = await prisma.user.findMany({
@@ -100,8 +101,8 @@ async function createUser(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // 檢查郵箱是否已存在
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    const existingUser = await prisma.user.findFirst({
+      where: { email, deletedAt: null },
     });
 
     if (existingUser) {

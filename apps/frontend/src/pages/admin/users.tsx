@@ -100,7 +100,7 @@ export default function UsersPage() {
 
   // 處理搜索和過濾
   useEffect(() => {
-    let result = [...users];
+    let result = users.filter((user) => !user.deletedAt);
 
     // 搜索過濾
     if (searchTerm) {
