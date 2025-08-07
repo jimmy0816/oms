@@ -110,7 +110,8 @@ async function getTickets(
         t.title ILIKE ${searchPattern} OR
         t.id ILIKE ${searchPattern} OR
         creator.name ILIKE ${searchPattern} OR
-        assignee.name ILIKE ${searchPattern}
+        assignee.name ILIKE ${searchPattern} OR
+        role.name ILIKE ${searchPattern}
       )`);
     }
 
@@ -157,6 +158,7 @@ async function getTickets(
       ) AS loc ON t.id = loc."ticketId"
       LEFT JOIN "User" AS creator ON t."creatorId" = creator.id
       LEFT JOIN "User" AS assignee ON t."assigneeId" = assignee.id
+      LEFT JOIN "Role" AS role ON t."roleId" = role.id
     `;
 
     const countQuery = Prisma.sql`SELECT COUNT(t.id) ${fromAndJoins} ${whereSql}`;
@@ -200,6 +202,7 @@ async function getTickets(
       include: {
         creator: { select: { id: true, name: true, email: true } },
         assignee: { select: { id: true, name: true, email: true } },
+        role: { select: { id: true, name: true } },
         reports: {
           include: {
             report: {
@@ -238,7 +241,7 @@ async function getTickets(
   // Original logic for other sort fields
   const orderByClause: any = {};
   if (sortField && sortOrder) {
-    if (sortField === 'creator' || sortField === 'assignee') {
+    if (sortField === 'creator' || sortField === 'assignee' || sortField === 'role') {
       orderByClause[sortField] = { name: sortOrder };
     }
     else {
@@ -300,6 +303,7 @@ async function getTickets(
         { title: { contains: search, mode: 'insensitive' } },
         { creator: { name: { contains: search, mode: 'insensitive' } } },
         { assignee: { name: { contains: search, mode: 'insensitive' } } },
+        { role: { name: { contains: search, mode: 'insensitive' } } },
       ],
     });
   }
@@ -342,6 +346,7 @@ async function getTickets(
       include: {
         creator: { select: { id: true, name: true, email: true } },
         assignee: { select: { id: true, name: true, email: true } },
+        role: { select: { id: true, name: true } },
         reports: {
           include: {
             report: {

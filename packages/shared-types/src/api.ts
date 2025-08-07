@@ -66,6 +66,10 @@ export interface PaginatedResponse<T> {
 export interface TicketWithDetails extends Ticket {
   creator: User;
   assignee?: User;
+  role?: {
+    id: string;
+    name: string;
+  };
   comments: Comment[];
   attachments?: FileInfo[]; // New attachments field
   activityLogs?: ActivityLog[];

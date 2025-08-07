@@ -29,6 +29,7 @@ import {
   getStatusColor,
   getPriorityColor,
 } from '@/services/ticketService';
+import { getRoleName } from '@/services/roleService';
 import { savedViewService } from '@/services/savedViewService';
 import { locationService, Location } from '@/services/locationService'; // Import Location and locationService
 import SaveViewModal from '@/components/SaveViewModal';
@@ -183,6 +184,12 @@ export default function TicketsPage() {
               role: 'STAFF' as UserRole,
               createdAt: new Date(),
               updatedAt: new Date(),
+            }
+          : undefined,
+        role: ticket.roleId
+          ? {
+              id: ticket.roleId,
+              name: `${ticket.role.name}`,
             }
           : undefined,
         comments: [],
@@ -633,6 +640,20 @@ export default function TicketsPage() {
                     </th>
                     <th
                       scope="col"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-24"
+                      onClick={() => handleSort('role')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>指派角色</span>
+                        <SortIcon
+                          field="role"
+                          sortField={sortField}
+                          sortOrder={sortOrder as 'asc' | 'desc'}
+                        />
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
                       className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20"
                       onClick={() => handleSort('creator')}
                     >
@@ -747,6 +768,9 @@ export default function TicketsPage() {
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
                         {formatDate(ticket.createdAt)}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                        {getRoleName(ticket.role?.name) || '未指派'}
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
                         {ticket.creator?.name || '未知'}
