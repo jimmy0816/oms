@@ -29,7 +29,7 @@ import {
   getStatusColor,
   getPriorityColor,
 } from '@/services/ticketService';
-import { getRoleName } from '@/services/roleService';
+import { roleService, getRoleName } from '@/services/roleService';
 import { savedViewService } from '@/services/savedViewService';
 import { locationService, Location } from '@/services/locationService'; // Import Location and locationService
 import SaveViewModal from '@/components/SaveViewModal';
@@ -72,14 +72,17 @@ export default function TicketsPage() {
     priority: [] as string[],
     search: '',
     locationIds: [] as string[], // Added locationIds to filters
+    roleIds: [] as string[],
   });
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false); // Added state for location modal
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isPriorityModalOpen, setIsPriorityModalOpen] = useState(false);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const { user } = useAuth();
   const { showToast } = useToast();
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [allLocations, setAllLocations] = useState<Location[]>([]); // New state for all locations
+  const [allRoles, setAllRoles] = useState<any[]>([]);
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
   const [isFilterModified, setIsFilterModified] = useState(false);
   const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
@@ -155,6 +158,7 @@ export default function TicketsPage() {
       if (filters.search) apiFilters.search = filters.search;
       if (filters.locationIds.length > 0)
         apiFilters.locationIds = filters.locationIds;
+      if (filters.roleIds.length > 0) apiFilters.roleIds = filters.roleIds;
       if (sortField && sortOrder) {
         apiFilters.sortField = sortField;
         apiFilters.sortOrder = sortOrder;
@@ -210,6 +214,7 @@ export default function TicketsPage() {
     filters.priority,
     filters.search,
     filters.locationIds,
+    filters.roleIds,
     sortField,
     sortOrder,
   ]);
@@ -234,6 +239,16 @@ export default function TicketsPage() {
       }
     };
     fetchLocations();
+
+    const fetchRoles = async () => {
+      try {
+        const roles = await roleService.getAllRoles();
+        setAllRoles(roles);
+      } catch (err) {
+        console.error('Failed to fetch roles:', err);
+      }
+    };
+    fetchRoles();
   }, []);
 
   useEffect(() => {
@@ -264,12 +279,18 @@ export default function TicketsPage() {
           : viewToApply.filters.locationIds
           ? [viewToApply.filters.locationIds]
           : [];
+        const newRoleIds = Array.isArray(viewToApply.filters.roleIds)
+          ? viewToApply.filters.roleIds
+          : viewToApply.filters.roleIds
+          ? [viewToApply.filters.roleIds]
+          : [];
 
         setFilters({
           status: newStatus,
           priority: newPriority,
           search: viewToApply.filters.search || '',
           locationIds: newLocationIds,
+          roleIds: newRoleIds,
         });
         setSortField(viewToApply.filters.sortField || 'createdAt');
         setSortOrder(viewToApply.filters.sortOrder || 'desc');
@@ -326,6 +347,7 @@ export default function TicketsPage() {
       priority: [],
       search: '',
       locationIds: [] as string[],
+      roleIds: [] as string[],
     });
     setSelectedViewId(null);
     setCurrentPage(1);
@@ -339,6 +361,7 @@ export default function TicketsPage() {
         priority: filters.priority,
         search: filters.search,
         locationIds: filters.locationIds as string[],
+        roleIds: filters.roleIds as string[],
         sortField,
         sortOrder,
       };
@@ -374,7 +397,8 @@ export default function TicketsPage() {
         !!filters.search ||
         !!filters.status ||
         !!filters.priority ||
-        filters.locationIds.length > 0;
+        filters.locationIds.length > 0 ||
+        filters.roleIds.length > 0;
       setIsFilterModified(hasFilters);
       return;
     }
@@ -389,7 +413,9 @@ export default function TicketsPage() {
       (currentView.filters.priority || []).sort().join(',') ===
         filters.priority.sort().join(',') &&
       (currentView.filters.locationIds || []).sort().join(',') ===
-        filters.locationIds.sort().join(',');
+        filters.locationIds.sort().join(',') &&
+      (currentView.filters.roleIds || []).sort().join(',') ===
+        filters.roleIds.sort().join(',');
 
     setIsFilterModified(!filtersSame);
   }, [filters, selectedViewId, savedViews]);
@@ -537,6 +563,25 @@ export default function TicketsPage() {
               {filters.locationIds.length > 0
                 ? `已選 ${filters.locationIds.length} 個地點`
                 : '選擇地點...'}
+            </button>
+          </div>
+
+          {/* 指派角色篩選 */}
+          <div>
+            <label
+              htmlFor="role-filter"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              指派角色
+            </label>
+            <button
+              type="button"
+              onClick={() => setIsRoleModalOpen(true)}
+              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+            >
+              {filters.roleIds.length > 0
+                ? `已選 ${filters.roleIds.length} 個角色`
+                : '選擇角色...'}
             </button>
           </div>
         </div>
@@ -984,6 +1029,22 @@ export default function TicketsPage() {
           name: getPriorityText(priority),
         }))}
         title="選擇優先級"
+      />
+
+      {/* Role Filter Modal */}
+      <MultiSelectFilterModal
+        isOpen={isRoleModalOpen}
+        onClose={() => setIsRoleModalOpen(false)}
+        onConfirm={(selectedIds) => {
+          handleFilterChange('roleIds', selectedIds as string[]);
+          setIsRoleModalOpen(false);
+        }}
+        initialSelectedIds={filters.roleIds}
+        options={allRoles.map((role) => ({
+          id: role.id,
+          name: getRoleName(role.name),
+        }))}
+        title="選擇指派角色"
       />
     </>
   );

@@ -52,6 +52,7 @@ async function getTickets(
   const creatorId = req.query.creatorId as string | undefined;
   const search = req.query.search as string | undefined;
   const locationIds = req.query.locationIds as string | string[] | undefined;
+  const roleIds = req.query.roleIds as string | string[] | undefined;
   const sortField = req.query.sortField as string | undefined;
   const sortOrder = req.query.sortOrder as 'asc' | 'desc' | undefined;
 
@@ -101,6 +102,13 @@ async function getTickets(
             parsedLocationIds
           )})
         )`);
+      }
+    }
+
+    if (roleIds) {
+      const parsedRoleIds = Array.isArray(roleIds) ? roleIds : roleIds.split(',');
+      if (parsedRoleIds.length > 0) {
+        rawWhereClausesSql.push(Prisma.sql`t."roleId" IN (${Prisma.join(parsedRoleIds)})`);
       }
     }
 
@@ -293,6 +301,13 @@ async function getTickets(
           },
         },
       });
+    }
+  }
+
+  if (roleIds) {
+    const parsedRoleIds = Array.isArray(roleIds) ? roleIds : roleIds.split(',');
+    if (parsedRoleIds.length > 0) {
+      andClauses.push({ roleId: { in: parsedRoleIds } });
     }
   }
 
