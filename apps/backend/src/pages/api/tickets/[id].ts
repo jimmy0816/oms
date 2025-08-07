@@ -296,19 +296,6 @@ async function updateTicket(
         );
       }
 
-      // 狀態變更的活動日誌
-      if (
-        updateData.status !== undefined &&
-        updateData.status !== existingTicket.status
-      ) {
-        await createActivityLog(
-          tx,
-          id,
-          userId,
-          `工單狀態從「${existingTicket.status}」變更為「${updateData.status}」`
-        );
-      }
-
       // Handle attachments update
       if (attachments !== undefined) {
         const currentAttachmentIds = existingAttachments.map((a) => a.id);
