@@ -169,24 +169,7 @@ async function getReports(
       : categoryFilterId.split(',');
 
     if (parsedCategoryIds.length > 0) {
-      const allCategories = await categoryService.getAllCategories();
-      const thirdLevelCategoryIds: string[] = [];
-
-      parsedCategoryIds.forEach((filterId) => {
-        const targetCategory = allCategories.find((cat) => cat.id === filterId);
-        if (targetCategory) {
-          const collectThirdLevelIds = (category: Category) => {
-            if (category.level === 3) {
-              thirdLevelCategoryIds.push(category.id);
-            }
-            if (category.children) {
-              category.children.forEach(collectThirdLevelIds);
-            }
-          };
-          collectThirdLevelIds(targetCategory);
-        }
-      });
-      andClauses.push({ categoryId: { in: thirdLevelCategoryIds } });
+      andClauses.push({ categoryId: { in: parsedCategoryIds } });
     } else {
       andClauses.push({ categoryId: { in: [] } }); // Effectively returns no reports
     }

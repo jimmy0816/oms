@@ -40,6 +40,7 @@ import { locationService, Location } from '@/services/locationService'; // Impor
 import SaveViewModal from '@/components/SaveViewModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
 import ViewSelectorModal from '@/components/ViewSelectorModal'; // New import
+import CategoryTreeFilter from '@/components/CategoryTreeFilter';
 import MultiSelectFilterModal, {
   MultiSelectOption,
 } from '@/components/MultiSelectFilterModal'; // Import MultiSelectOption
@@ -601,7 +602,7 @@ export default function Reports() {
       />
 
       {/* Category Filter Modal */}
-      <MultiSelectFilterModal
+      <CategoryTreeFilter
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
         onConfirm={(selectedIds) => {
@@ -611,9 +612,7 @@ export default function Reports() {
           setIsFilterModified(true);
         }}
         initialSelectedIds={categoryFilter}
-        options={categories
-          .filter((cat) => cat.level === 1)
-          .map((cat) => ({ id: cat.id.toString(), name: cat.name }))}
+        categories={categories}
         title="選擇類別"
       />
 
