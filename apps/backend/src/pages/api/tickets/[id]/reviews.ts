@@ -12,11 +12,13 @@ const handler = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   }
 
   if (req.method === 'POST') {
-    const { content, attachments } = req.body;
+    const { content, attachments, finalStatus } = req.body;
 
     if (!content) {
       return res.status(400).json({ error: 'Content is required' });
     }
+
+    const targetStatus = finalStatus === 'FAILED' ? TicketStatus.FAILED : TicketStatus.COMPLETED;
 
     try {
       const ticketReview = await prisma.ticketReview.create({
@@ -47,13 +49,17 @@ const handler = async (req: AuthenticatedRequest, res: NextApiResponse) => {
 
       await prisma.ticket.update({
         where: { id: id as string },
-        data: { status: TicketStatus.COMPLETED },
+        data: { status: targetStatus },
       });
 
       // Add activity log
+      const logContent = targetStatus === TicketStatus.FAILED 
+        ? '工單無法完成，提交工單審核，等待審核' 
+        : '工單處理完成，提交工單審核，等待審核';
+
       await prisma.activityLog.create({
         data: {
-          content: '工單處理完成，提交工單審核，等待審核',
+          content: logContent,
           userId: user.id,
           parentId: id as string,
           parentType: 'TICKET',

@@ -29,6 +29,7 @@ export default function TicketDetail() {
   const { user, hasPermission } = useAuth();
   const { showToast } = useToast();
   const [isReviewFormOpen, setIsReviewFormOpen] = useState(false);
+  const [reviewType, setReviewType] = useState<'COMPLETED' | 'FAILED'>('COMPLETED');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [selectedReview, setSelectedReview] = useState<any>(null);
   const [showAllActivityLogs, setShowAllActivityLogs] = useState(false);
@@ -172,7 +173,7 @@ export default function TicketDetail() {
     if (!ticket?.id) return;
     setIsSubmittingReview(true);
     try {
-      await ticketService.submitTicketReview(ticket.id, content, attachments);
+      await ticketService.submitTicketReview(ticket.id, content, attachments, reviewType);
       setIsReviewFormOpen(false);
       await fetchTicket();
       showToast('審核已成功送出', 'success');
@@ -294,16 +295,20 @@ export default function TicketDetail() {
                   <>
                     <button
                       className="btn-primary"
-                      onClick={() => setIsReviewFormOpen(true)}
+                      onClick={() => {
+                        setReviewType('COMPLETED');
+                        setIsReviewFormOpen(true);
+                      }}
                       disabled={isSubmittingReview}
                     >
                       {isSubmittingReview ? '提交中...' : '送出審核'}
                     </button>
                     <button
                       className="btn-secondary"
-                      onClick={() =>
-                        updateTicketStatus(TicketStatus.FAILED, '無法完成工單')
-                      }
+                      onClick={() => {
+                        setReviewType('FAILED');
+                        setIsReviewFormOpen(true);
+                      }}
                     >
                       無法完成
                     </button>

@@ -297,10 +297,11 @@ export const ticketService = {
   async submitTicketReview(
     ticketId: string,
     content: string,
-    attachments: any[]
+    attachments: any[],
+    finalStatus: 'COMPLETED' | 'FAILED'
   ): Promise<any> {
     try {
-      return await apiClient.post<any>(`/api/tickets/${ticketId}/reviews`, { content, attachments });
+      return await apiClient.post<any>(`/api/tickets/${ticketId}/reviews`, { content, attachments, finalStatus });
     } catch (error) {
       console.error('提交審核失敗:', error);
       throw error;
