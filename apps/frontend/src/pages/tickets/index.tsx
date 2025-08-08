@@ -33,7 +33,7 @@ import { roleService, getRoleName } from '@/services/roleService';
 import { savedViewService } from '@/services/savedViewService';
 import { locationService, Location } from '@/services/locationService'; // Import Location and locationService
 import SaveViewModal from '@/components/SaveViewModal';
-import ViewSelectorModal from '@/components/ViewSelectorModal';
+import ViewTabs from '@/components/ViewTabs';
 import ManageViewsModal from '@/components/ManageViewsModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -86,7 +86,7 @@ export default function TicketsPage() {
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
   const [isFilterModified, setIsFilterModified] = useState(false);
   const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
-  const [isViewSelectorModalOpen, setIsViewSelectorModalOpen] = useState(false);
+  
   const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
   const [saveViewError, setSaveViewError] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState('');
@@ -456,28 +456,28 @@ export default function TicketsPage() {
       </div>
 
       {/* Saved Views Section */}
-      <div className="py-1">
-        <div className="flex items-center space-x-3">
-          <div
-            className="relative flex items-center border border-gray-300 bg-white rounded-md shadow-sm cursor-pointer"
-            onClick={() => setIsViewSelectorModalOpen(true)}
-          >
-            <span className="block py-2 px-3 text-sm font-medium text-gray-700 truncate max-w-[200px]">
-              {currentViewName}
-            </span>
-            <ChevronDownIcon className="h-5 w-5 text-gray-400 mr-2" />
-          </div>
-
-          {(!selectedViewId || isFilterModified) && (
-            <button
-              className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
-              onClick={() => setIsSaveViewModalOpen(true)}
-            >
-              {selectedViewId ? '更新視圖' : '儲存視圖'}
-            </button>
-          )}
-        </div>
-      </div>
+      <ViewTabs
+        views={savedViews}
+        activeViewId={selectedViewId}
+        isFilterModified={isFilterModified}
+        onSelectView={(view) => {
+          if (view && view.id) {
+            handleApplyView(view.id);
+          } else {
+            clearFilters();
+          }
+        }}
+        onSaveView={() => {
+          setIsSaveViewModalOpen(true);
+        }}
+        onSaveAsNewView={() => {
+          setSelectedViewId(null); // Clear selected view to force save as new
+          setIsSaveViewModalOpen(true);
+        }}
+        onManageViews={() => setIsManageViewsModalOpen(true)}
+        onSetDefaultView={handleSetDefaultView}
+        onDeleteView={handleDeleteView}
+      />
 
       {/* 篩選和搜尋 */}
       <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
@@ -949,30 +949,7 @@ export default function TicketsPage() {
         }
       />
 
-      <ViewSelectorModal
-        isOpen={isViewSelectorModalOpen}
-        onClose={() => setIsViewSelectorModalOpen(false)}
-        savedViews={savedViews}
-        onApplyView={(viewId) => {
-          handleApplyView(viewId);
-          setIsViewSelectorModalOpen(false);
-        }}
-        onManageViews={() => {
-          setIsManageViewsModalOpen(true);
-          setIsViewSelectorModalOpen(false);
-        }}
-        onSaveNewView={() => {
-          setSelectedViewId(null);
-          setIsSaveViewModalOpen(true);
-          setIsViewSelectorModalOpen(false);
-        }}
-        onClearView={() => {
-          clearFilters();
-          setIsViewSelectorModalOpen(false);
-        }}
-        selectedViewId={selectedViewId}
-        clearViewText="清除視圖 (顯示所有工單)"
-      />
+      
 
       <ManageViewsModal
         isOpen={isManageViewsModalOpen}

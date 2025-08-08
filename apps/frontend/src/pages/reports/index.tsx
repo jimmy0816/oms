@@ -39,8 +39,8 @@ import { savedViewService } from '@/services/savedViewService';
 import { locationService, Location } from '@/services/locationService'; // Import Location and locationService
 import SaveViewModal from '@/components/SaveViewModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
-import ViewSelectorModal from '@/components/ViewSelectorModal'; // New import
 import CategoryTreeFilter from '@/components/CategoryTreeFilter';
+import ViewTabs from '@/components/ViewTabs';
 import MultiSelectFilterModal, {
   MultiSelectOption,
 } from '@/components/MultiSelectFilterModal'; // Import MultiSelectOption
@@ -88,7 +88,7 @@ export default function Reports() {
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
   const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
-  const [isViewSelectorModalOpen, setIsViewSelectorModalOpen] = useState(false); // New state
+
   const [saveViewError, setSaveViewError] = useState<string | null>(null);
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
   const [isFilterModified, setIsFilterModified] = useState(false);
@@ -441,30 +441,30 @@ export default function Reports() {
       </div>
 
       {/* Saved Views Section */}
-      <div className="py-1">
-        <div className="mx-auto">
-          <div className="flex items-center space-x-3">
-            <div
-              className="relative flex items-center border border-gray-300 bg-white rounded-md shadow-sm cursor-pointer"
-              onClick={() => setIsViewSelectorModalOpen(true)}
-            >
-              <span className="block py-2 px-3 text-sm font-medium text-gray-700 truncate max-w-[200px]">
-                {currentViewName}
-              </span>
-              <ChevronDownIcon className="h-5 w-5 text-gray-400 mr-2" />
-            </div>
-
-            {(!selectedViewId || isFilterModified) && (
-              <button
-                className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
-                onClick={() => setIsSaveViewModalOpen(true)}
-              >
-                {selectedViewId ? '更新視圖' : '儲存視圖'}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <ViewTabs
+        views={savedViews}
+        activeViewId={selectedViewId}
+        isFilterModified={isFilterModified}
+        onSelectView={(view) => {
+          if (view && view.id) {
+            handleApplyView(view.id);
+          } else {
+            clearFilters();
+          }
+        }}
+        onSaveView={() => {
+          // If a view is selected and filters are modified, it's an update.
+          // Otherwise, it's saving a new view.
+          setIsSaveViewModalOpen(true);
+        }}
+        onSaveAsNewView={() => {
+          setSelectedViewId(null); // Clear selected view to force save as new
+          setIsSaveViewModalOpen(true);
+        }}
+        onManageViews={() => setIsManageViewsModalOpen(true)}
+        onSetDefaultView={handleSetDefaultView}
+        onDeleteView={handleDeleteView}
+      />
 
       {/* 篩選和搜尋 */}
       <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
@@ -664,31 +664,6 @@ export default function Reports() {
         savedViews={savedViews}
         onDeleteView={handleDeleteView}
         onSetDefaultView={handleSetDefaultView}
-      />
-
-      {/* View Selector Modal */}
-      <ViewSelectorModal
-        isOpen={isViewSelectorModalOpen}
-        onClose={() => setIsViewSelectorModalOpen(false)}
-        savedViews={savedViews}
-        onApplyView={(viewId) => {
-          handleApplyView(viewId);
-          setIsViewSelectorModalOpen(false);
-        }}
-        onManageViews={() => {
-          setIsManageViewsModalOpen(true);
-          setIsViewSelectorModalOpen(false);
-        }}
-        onSaveNewView={() => {
-          setSelectedViewId(null); // Clear selected view to force new save
-          setIsSaveViewModalOpen(true);
-          setIsViewSelectorModalOpen(false);
-        }}
-        onClearView={() => {
-          clearFilters();
-          setIsViewSelectorModalOpen(false);
-        }}
-        selectedViewId={selectedViewId}
       />
 
       {/* 通報列表 */}
