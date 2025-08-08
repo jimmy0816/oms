@@ -384,6 +384,15 @@ export default function Reports() {
     });
   };
 
+  const formatDateOnly = (date: Date | string) => {
+    if (!date) return '-';
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // 取得狀態顏色和圖標
   const getStatusInfo = (status: string) => {
     const IconComponent = getStatusIcon(status);
@@ -808,6 +817,20 @@ export default function Reports() {
                     <th
                       scope="col"
                       className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer"
+                      onClick={() => handleSort('trackingDate')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>追蹤日期</span>
+                        <SortIcon
+                          field="trackingDate"
+                          sortField={sortField}
+                          sortOrder={sortOrder}
+                        />
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer"
                       onClick={() => handleSort('creator')}
                     >
                       <div className="flex items-center space-x-1">
@@ -877,6 +900,11 @@ export default function Reports() {
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
                         {formatDate(report.createdAt)}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                        {report.trackingDate
+                          ? formatDateOnly(report.trackingDate)
+                          : '-'}
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
                         {report.creator?.name || '未知'}

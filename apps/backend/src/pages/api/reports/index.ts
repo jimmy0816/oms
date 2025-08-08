@@ -127,6 +127,9 @@ async function getReports(
     case 'creator':
       orderByClause.creator = { name: sortOrder || 'asc' };
       break;
+    case 'trackingDate':
+      orderByClause.trackingDate = sortOrder || 'asc';
+      break;
     default:
       orderByClause.createdAt = 'desc'; // Default sort
       break;

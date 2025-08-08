@@ -1,3 +1,5 @@
+import 'react-datepicker/dist/react-datepicker.css';
+import '@/styles/react-datepicker-theme.css';
 import '@/styles/globals.css';
 import type { AppProps } from 'next/app';
 import { Layout } from '@/components/Layout';
@@ -13,7 +15,9 @@ export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
   // Get the required permission for the current route from our configuration
-  const requiredPermission = routePermissions[router.pathname] as Permission | undefined;
+  const requiredPermission = routePermissions[router.pathname] as
+    | Permission
+    | undefined;
 
   // Check if the current route is the login page (which should not be protected)
   const isLoginPage = router.pathname === '/login';

@@ -82,6 +82,7 @@ interface UpdateReportRequest {
   categoryId?: string;
   contactPhone?: string;
   contactEmail?: string;
+  trackingDate?: Date;
   ticketIds?: string[];
   attachments?: any[];
 }
@@ -278,6 +279,7 @@ async function updateReport(
     categoryId,
     contactPhone,
     contactEmail,
+    trackingDate,
     attachments,
     ticketIds,
   } = req.body as UpdateReportRequest;
@@ -310,6 +312,7 @@ async function updateReport(
   if (categoryId !== undefined) updateData.categoryId = categoryId;
   if (contactPhone !== undefined) updateData.contactPhone = contactPhone;
   if (contactEmail !== undefined) updateData.contactEmail = contactEmail;
+  if (trackingDate !== undefined) updateData.trackingDate = trackingDate;
 
   const userId = req.user.id; // 從認證請求中獲取用戶ID
 

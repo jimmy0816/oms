@@ -37,6 +37,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { categoryService, getCategoryPath } from '@/services/categoryService';
 import PermissionGuard from '@/components/PermissionGuard';
+import DatePicker from 'react-datepicker';
+import { zhTW } from 'date-fns/locale';
 
 export default function ReportDetail() {
   const router = useRouter();
@@ -45,6 +47,8 @@ export default function ReportDetail() {
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<Report | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [trackingDate, setTrackingDate] = useState<Date | null>(null);
   const { user, hasPermission } = useAuth();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [newCommentContent, setNewCommentContent] = useState('');
@@ -130,16 +134,20 @@ export default function ReportDetail() {
   };
 
   // 處理通報狀態更新
-  const updateReportStatus = async (newStatus: string, log: string) => {
+  const updateReportStatus = async (
+    newStatus: string,
+    log: string,
+    trackingDate?: Date
+  ) => {
     if (!report || !id) return;
 
     setProcessing(true);
 
     try {
-      await reportService.updateReportStatus(
-        id.toString(),
-        newStatus as ReportStatus
-      );
+      await reportService.updateReport(id.toString(), {
+        status: newStatus as ReportStatus,
+        trackingDate: trackingDate,
+      });
 
       if (log) {
         await reportService.addActivityLog(
@@ -161,14 +169,24 @@ export default function ReportDetail() {
   };
 
   // 格式化日期
-  const formatDate = (dateString: Date) => {
-    return dateString.toLocaleDateString('zh-TW', {
+  const formatDate = (date: Date | string) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleString('zh-TW', {
       year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const formatDateOnly = (date: Date | string) => {
+    if (!date) return '-';
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // 取得狀態顏色和圖標
@@ -316,12 +334,7 @@ export default function ReportDetail() {
                   <div className="flex gap-2">
                     <button
                       className="btn-primary"
-                      onClick={() =>
-                        updateReportStatus(
-                          ReportStatus.PROCESSING,
-                          '開始處理通報'
-                        )
-                      }
+                      onClick={() => setIsDatePickerOpen(true)}
                       disabled={processing}
                     >
                       {processing ? '處理中...' : '開始處理'}
@@ -394,7 +407,7 @@ export default function ReportDetail() {
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
-                  <div>
+                  <div className="md:col-span-2">
                     <h3 className="text-sm font-medium text-gray-500">類別</h3>
                     <div className="flex items-center mt-1">
                       <p className="text-gray-900">
@@ -435,17 +448,31 @@ export default function ReportDetail() {
                     </div>
                   </div>
 
-                  {report.assignee && (
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">
-                        處理人員
-                      </h3>
-                      <div className="mt-1 flex items-center">
-                        <UserCircleIcon className="h-5 w-5 text-gray-400 mr-1" />
-                        <p className="text-gray-900">{report.assignee.name}</p>
-                      </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">
+                      追蹤日期
+                    </h3>
+                    <div className="mt-1 flex items-center">
+                      <ClockIcon className="h-5 w-5 text-gray-400 mr-1" />
+                      <p className="text-gray-900">
+                        {report.trackingDate
+                          ? formatDateOnly(report.trackingDate)
+                          : '-'}
+                      </p>
                     </div>
-                  )}
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">
+                      處理人員
+                    </h3>
+                    <div className="mt-1 flex items-center">
+                      <UserCircleIcon className="h-5 w-5 text-gray-400 mr-1" />
+                      <p className="text-gray-900">
+                        {report?.assignee?.name ? report.assignee.name : '-'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* 顯示上傳的圖片和影片（新版，支援 attachments，含 Lightbox） */}
@@ -781,6 +808,51 @@ export default function ReportDetail() {
           </div>
         </div>
       </div>
+
+      {isDatePickerOpen && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              請選擇追蹤日期
+            </h3>
+            <DatePicker
+              selected={trackingDate}
+              onChange={(date: Date) => setTrackingDate(date)}
+              dateFormat="yyyy/MM/dd"
+              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+              locale={zhTW}
+              wrapperClassName="w-full"
+              placeholderText="YYYY/MM/DD"
+            />
+            <div className="mt-4 flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setIsDatePickerOpen(false)}
+                className="btn-secondary"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (trackingDate) {
+                    updateReportStatus(
+                      ReportStatus.PROCESSING,
+                      '開始處理通報',
+                      trackingDate
+                    );
+                    setIsDatePickerOpen(false);
+                  }
+                }}
+                className="btn-primary"
+                disabled={!trackingDate}
+              >
+                確認
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -100,6 +100,7 @@ model Report {
   assigneeId   String?
   contactPhone String?
   contactEmail String?
+  trackingDate DateTime?
   comments     Comment[]
   assignee     User?          @relation("AssignedReports", fields: [assigneeId], references: [id])
   creator      User           @relation("CreatedReports", fields: [creatorId], references: [id])

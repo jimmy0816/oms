@@ -13,6 +13,8 @@ import LocationSelector from '@/components/LocationSelector';
 import FileUploader from '@/components/FileUploader';
 import { Attachment, ReportPriority, FileInfo } from 'shared-types';
 import { uploadService } from '@/services/uploadService';
+import DatePicker from 'react-datepicker';
+import { zhTW } from 'date-fns/locale';
 
 export default function EditReport() {
   const router = useRouter();
@@ -28,6 +30,7 @@ export default function EditReport() {
     ReportPriority.MEDIUM
   );
   const [locationId, setLocationId] = useState<number | undefined>(undefined);
+  const [trackingDate, setTrackingDate] = useState<Date | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
 
@@ -75,6 +78,7 @@ export default function EditReport() {
       setCategoryId(data.categoryId);
       setPriority(data.priority as ReportPriority);
       setLocationId(data.location?.id);
+      setTrackingDate(data.trackingDate ? new Date(data.trackingDate) : null);
       setAttachments(data.attachments || []);
       setUploadedFiles(data.attachments || []);
     } catch (err) {
@@ -109,6 +113,7 @@ export default function EditReport() {
         categoryId,
         priority,
         locationId,
+        trackingDate,
         attachments: uploadedFiles,
       });
       router.push(`/reports/${id}`);
@@ -153,7 +158,9 @@ export default function EditReport() {
             >
               <ArrowLeftIcon className="h-5 w-5 text-gray-500" />
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">編輯通報 - #{id} {title}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              編輯通報 - #{id} {title}
+            </h1>
           </div>
         </div>
 
@@ -235,6 +242,26 @@ export default function EditReport() {
                   onChange={(e) => setDescription(e.target.value)}
                   className="form-input"
                   placeholder="請詳細描述問題，包括發生時間、影響範圍、重現步驟等"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="trackingDate"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  追蹤日期
+                </label>
+                <DatePicker
+                  selected={trackingDate}
+                  onChange={(date: Date) => setTrackingDate(date)}
+                  onKeyDown={(e) => {
+                    e.preventDefault();
+                  }}
+                  dateFormat="yyyy/MM/dd"
+                  locale={zhTW}
+                  className="form-input"
+                  wrapperClassName="w-full"
+                  placeholderText="YYYY/MM/DD"
                 />
               </div>
               <div>
