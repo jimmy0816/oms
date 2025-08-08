@@ -135,19 +135,20 @@ export default function ReportDetail() {
 
   // 處理通報狀態更新
   const updateReportStatus = async (
-    newStatus: string,
     log: string,
-    trackingDate?: Date
+    updateData: Partial<Report>
   ) => {
     if (!report || !id) return;
 
     setProcessing(true);
 
     try {
-      await reportService.updateReport(id.toString(), {
-        status: newStatus as ReportStatus,
-        trackingDate: trackingDate,
-      });
+      const finalUpdateData = { ...updateData };
+      if (finalUpdateData.assigneeId) {
+        finalUpdateData.assigneeId = finalUpdateData.assigneeId.toString();
+      }
+
+      await reportService.updateReport(id.toString(), finalUpdateData);
 
       if (log) {
         await reportService.addActivityLog(
@@ -159,7 +160,14 @@ export default function ReportDetail() {
 
       fetchReport(); // Re-fetch report to update status and logs
 
-      showToast(`通報狀態已更新為${getStatusName(newStatus)}`, 'success');
+      if (updateData.status) {
+        showToast(
+          `通報狀態已更新為 ${getStatusName(updateData.status as string)}`,
+          'success'
+        );
+      } else {
+        showToast('通報已更新', 'success');
+      }
     } catch (error) {
       console.error('Error updating report status:', error);
       showToast('更新通報狀態失敗，請稍後再試', 'error');
@@ -342,10 +350,9 @@ export default function ReportDetail() {
                     <button
                       className="btn-secondary"
                       onClick={() =>
-                        updateReportStatus(
-                          ReportStatus.REJECTED,
-                          '此通報不處理'
-                        )
+                        updateReportStatus('此通報不處理', {
+                          status: ReportStatus.REJECTED,
+                        })
                       }
                       disabled={processing}
                     >
@@ -360,10 +367,9 @@ export default function ReportDetail() {
                     <button
                       className="btn-primary"
                       onClick={() =>
-                        updateReportStatus(
-                          ReportStatus.PENDING_REVIEW,
-                          '處理完成，送審核'
-                        )
+                        updateReportStatus('處理完成，送審核', {
+                          status: ReportStatus.PENDING_REVIEW,
+                        })
                       }
                       disabled={processing}
                     >
@@ -377,7 +383,9 @@ export default function ReportDetail() {
                     <button
                       className="btn-primary"
                       onClick={() =>
-                        updateReportStatus(ReportStatus.REVIEWED, '審核通過')
+                        updateReportStatus('審核通過', {
+                          status: ReportStatus.REVIEWED,
+                        })
                       }
                       disabled={processing}
                     >
@@ -386,7 +394,9 @@ export default function ReportDetail() {
                     <button
                       className="btn-secondary"
                       onClick={() =>
-                        updateReportStatus(ReportStatus.RETURNED, '退回處理')
+                        updateReportStatus('退回處理', {
+                          status: ReportStatus.RETURNED,
+                        })
                       }
                       disabled={processing}
                     >
@@ -835,12 +845,12 @@ export default function ReportDetail() {
               <button
                 type="button"
                 onClick={() => {
-                  if (trackingDate) {
-                    updateReportStatus(
-                      ReportStatus.PROCESSING,
-                      '開始處理通報',
-                      trackingDate
-                    );
+                  if (trackingDate && user) {
+                    updateReportStatus('開始處理通報', {
+                      status: ReportStatus.PROCESSING,
+                      trackingDate: trackingDate,
+                      assigneeId: user.id,
+                    });
                     setIsDatePickerOpen(false);
                   }
                 }}

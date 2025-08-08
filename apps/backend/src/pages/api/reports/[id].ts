@@ -308,6 +308,7 @@ async function updateReport(
   if (locationId !== undefined) updateData.locationId = locationId;
   if (status !== undefined) updateData.status = status;
   if (priority !== undefined) updateData.priority = priority;
+  console.log('assigneeId', assigneeId);
   if (assigneeId !== undefined) updateData.assigneeId = assigneeId;
   if (categoryId !== undefined) updateData.categoryId = categoryId;
   if (contactPhone !== undefined) updateData.contactPhone = contactPhone;
