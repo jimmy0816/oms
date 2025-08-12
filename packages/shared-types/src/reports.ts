@@ -1,4 +1,4 @@
-import { User, FileInfo, Ticket, Comment, ActivityLog, Attachment } from './models';
+import { User, FileInfo, Ticket, Comment, ActivityLog } from './models';
 
 // Report related types
 export enum ReportStatus {
@@ -109,7 +109,7 @@ export interface PublicReport {
     id: string;
     name: string;
   } | null;
-  attachments: Attachment[];
+  attachments: FileInfo[];
 }
 
 export interface PaginatedPublicReportsResponse {
