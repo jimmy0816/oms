@@ -15,6 +15,7 @@ import {
   ChevronUpIcon,
   BellIcon,
   DocumentTextIcon,
+  MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 import { getRoleName } from '@/services/roleService';
 import { Permission, UserRole } from 'shared-types';
@@ -47,6 +48,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (user) {
       // 儀表板 - 登入後總是可見
       baseNavigation.push({ name: '儀表板', href: '/', icon: HomeIcon });
+      baseNavigation.push({
+        name: '失物招領',
+        href: '/lost-and-found',
+        icon: MagnifyingGlassIcon,
+      });
 
       // 工單管理
       if (
@@ -130,7 +136,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     router.pathname.startsWith(path)
   );
 
-  const isNavigation = !isPublicPath && user;
+  const isNavigation = !isPublicPath || user;
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row bg-[#f7f9fb] text-[#18181b]">

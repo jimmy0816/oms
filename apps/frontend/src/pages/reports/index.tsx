@@ -414,27 +414,25 @@ export default function Reports() {
 
       <div className="space-y-6">
         {/* 頁面標題 */}
-        <div className="py-4">
-          <div className="mx-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl font-semibold text-gray-900">通報管理</h1>
-              <div className="flex items-center space-x-3">
-                <button
-                  className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
-                  onClick={clearFilters}
+        <div className="mx-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-semibold text-gray-900">通報管理</h1>
+            <div className="flex items-center space-x-3">
+              <button
+                className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
+                onClick={clearFilters}
+              >
+                清除篩選
+              </button>
+              <PermissionGuard required={Permission.CREATE_REPORTS}>
+                <Link
+                  href="/reports/new"
+                  className="btn-primary px-4 py-2 text-sm font-medium rounded-md flex items-center"
                 >
-                  清除篩選
-                </button>
-                <PermissionGuard required={Permission.CREATE_REPORTS}>
-                  <Link
-                    href="/reports/new"
-                    className="btn-primary px-4 py-2 text-sm font-medium rounded-md flex items-center"
-                  >
-                    <PlusIcon className="h-4 w-4 mr-1" />
-                    <span>建立通報</span>
-                  </Link>
-                </PermissionGuard>
-              </div>
+                  <PlusIcon className="h-4 w-4 mr-1" />
+                  <span>建立通報</span>
+                </Link>
+              </PermissionGuard>
             </div>
           </div>
         </div>

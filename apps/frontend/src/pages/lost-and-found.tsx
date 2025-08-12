@@ -10,6 +10,7 @@ import {
   Bars3Icon,
   BarsArrowDownIcon,
   BarsArrowUpIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 
 const SortIcon = ({
@@ -71,6 +72,35 @@ const Pagination = ({
   );
 };
 
+const ImagePreviewModal = ({
+  imageUrl,
+  onClose,
+}: {
+  imageUrl: string;
+  onClose: () => void;
+}) => {
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50"
+      onClick={onClose}
+    >
+      <div className="relative max-w-4xl max-h-full p-4">
+        <img
+          src={imageUrl}
+          alt="Preview"
+          className="max-w-full max-h-[90vh] object-contain"
+        />
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-white bg-gray-800 rounded-full p-2"
+        >
+          <XMarkIcon className="h-6 w-6" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // The actual page content is extracted into its own component
 const LostAndFoundPageContent = () => {
   const [reports, setReports] = useState<PublicReport[]>([]);
@@ -78,6 +108,7 @@ const LostAndFoundPageContent = () => {
   const [allLocations, setAllLocations] = useState<Location[]>([]);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
@@ -130,9 +161,9 @@ const LostAndFoundPageContent = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-6">
+    <>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">失物招領</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">失物招領</h1>
         <p className="text-gray-600">
           此頁面顯示所有「撿到了別人的東西」分類下的公開通報案件。
         </p>
@@ -199,7 +230,7 @@ const LostAndFoundPageContent = () => {
                       scope="col"
                       className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
-                      圖片
+                      照片
                     </th>
                     <th
                       scope="col"
@@ -250,21 +281,22 @@ const LostAndFoundPageContent = () => {
                         {report.id}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {report.attachments && report.attachments.length > 0 ? (
-                          <a
-                            href={report.attachments[0].url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <img
-                              src={report.attachments[0].url}
-                              alt={report.title}
-                              className="h-16 w-16 object-cover rounded"
-                            />
-                          </a>
-                        ) : (
-                          <span>無圖片</span>
-                        )}
+                        <div className="flex items-center space-x-2 overflow-x-auto py-1">
+                          {report.attachments &&
+                          report.attachments.length > 0 ? (
+                            report.attachments.map((att) => (
+                              <img
+                                key={att.id}
+                                src={att.url}
+                                alt={report.title}
+                                className="h-16 w-16 object-cover rounded hover:opacity-75 transition-opacity cursor-pointer flex-shrink-0"
+                                onClick={() => setPreviewImage(att.url)}
+                              />
+                            ))
+                          ) : (
+                            <span className="text-gray-400">無照片</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {report.title}
@@ -303,7 +335,13 @@ const LostAndFoundPageContent = () => {
           </div>
         )}
       </div>
-    </div>
+      {previewImage && (
+        <ImagePreviewModal
+          imageUrl={previewImage}
+          onClose={() => setPreviewImage(null)}
+        />
+      )}
+    </>
   );
 };
 
