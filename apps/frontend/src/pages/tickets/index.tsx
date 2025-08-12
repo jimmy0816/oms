@@ -596,7 +596,7 @@ export default function TicketsPage() {
         ) : totalTickets > 0 ? (
           <div>
             <div className="overflow-x-auto w-full">
-              <table className="w-full divide-y divide-gray-200 table-fixed min-w-full">
+              <table className="w-full divide-y divide-gray-200 table-auto md:table-fixed min-w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th
@@ -748,7 +748,7 @@ export default function TicketsPage() {
                       >
                         #{ticket.id}
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-ellipsis overflow-hidden">
+                      <td className="px-2 py-3 whitespace-nowrap md:text-ellipsis md:overflow-hidden">
                         <div className="text-sm font-medium text-gray-900">
                           {ticket.title}
                         </div>
@@ -774,7 +774,7 @@ export default function TicketsPage() {
                           {getPriorityText(ticket.priority)}
                         </span>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
                         {(() => {
                           const locations = [
                             ...new Set(
@@ -797,7 +797,7 @@ export default function TicketsPage() {
                               {displayLocations.map((loc) => (
                                 <span
                                   key={loc}
-                                  className="block text-ellipsis overflow-hidden"
+                                  className="block md:text-ellipsis md:overflow-hidden"
                                 >
                                   {loc}
                                 </span>
@@ -811,16 +811,16 @@ export default function TicketsPage() {
                           );
                         })()}
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
                         {formatDate(ticket.createdAt)}
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
                         {getRoleName(ticket.role?.name) || '未指派'}
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
                         {ticket.creator?.name || '未知'}
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
                         {ticket.assignee?.name || '未指派'}
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">

@@ -686,7 +686,7 @@ export default function Reports() {
         ) : reports.length > 0 ? (
           <div>
             <div className="overflow-x-auto w-full">
-              <table className="w-full divide-y divide-gray-200 table-fixed">
+              <table className="w-full divide-y divide-gray-200 table-auto md:table-fixed">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th
@@ -838,11 +838,11 @@ export default function Reports() {
                       >
                         #{report.id}
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-ellipsis overflow-hidden">
-                        <div className="text-sm font-medium text-gray-900 truncate">
+                      <td className="px-2 py-3 whitespace-nowrap md:text-ellipsis md:overflow-hidden">
+                        <div className="text-sm font-medium text-gray-900 md:truncate">
                           {report.title}
                         </div>
-                        <div className="text-sm text-gray-500 truncate">
+                        <div className="text-sm text-gray-500 md:truncate">
                           {report.description}
                         </div>
                       </td>
@@ -856,7 +856,7 @@ export default function Reports() {
                           {getStatusName(report.status)}
                         </span>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
                         {getCategoryPath(report.categoryId, categories)}
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap">
@@ -868,18 +868,18 @@ export default function Reports() {
                           {getPriorityText(report.priority as ReportPriority)}
                         </span>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
                         {report.location?.name}
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
                         {formatDate(report.createdAt)}
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
                         {report.trackingDate
                           ? formatDateOnly(report.trackingDate)
                           : '-'}
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-ellipsis overflow-hidden">
+                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
                         {report.creator?.name || '未知'}
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
