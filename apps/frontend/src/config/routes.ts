@@ -21,3 +21,5 @@ export const routePermissions: RouteConfig = {
   '/user/profile': undefined, // User profile page, might just need login
   // Add other routes as needed
 };
+
+export const publicRoutes = ['/login', '/lost-and-found'];

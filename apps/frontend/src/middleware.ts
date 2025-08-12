@@ -1,19 +1,15 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { publicRoutes as PUBLIC_PATHS } from '@/config/routes';
 
 // 從環境變數讀取 JWT secret，或使用一個預設值
 const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret';
-
-// 1. 設定哪些路徑是公開的，不需要登入即可訪問
-const PUBLIC_PATHS = ['/login'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // 2. 檢查請求的路徑是否為公開路徑
-  const isPublicPath = PUBLIC_PATHS.some((path) =>
-    pathname.startsWith(path)
-  );
+  const isPublicPath = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 
   if (isPublicPath) {
     // 如果是公開路徑，則直接放行

@@ -389,4 +389,44 @@ export const reportService = {
   async assignReport(id: string, assigneeId: string): Promise<Report> {
     return this.updateReport(id, { assigneeId });
   },
+
+  /**
+   * 獲取公開的通報 (失物招領)
+   */
+  async getPublicReports(
+    page = 1,
+    pageSize = 10,
+    filters: {
+      locationIds?: string[];
+      sortField?: string;
+      sortOrder?: 'asc' | 'desc';
+    } = {}
+  ): Promise<PaginatedPublicReportsResponse> {
+    try {
+      const params: Record<string, any> = { page, pageSize };
+
+      if (filters.locationIds && filters.locationIds.length > 0) {
+        params.locationIds = filters.locationIds.join(',');
+      }
+      if (filters.sortField) {
+        params.sortField = filters.sortField;
+      }
+      if (filters.sortOrder) {
+        params.sortOrder = filters.sortOrder;
+      }
+
+      const response = await apiClient.get<PaginatedPublicReportsResponse>('/api/public/reports', params);
+      
+      // 處理日期格式
+      response.items = response.items.map((report: any) => ({
+        ...report,
+        createdAt: new Date(report.createdAt),
+      }));
+
+      return response;
+    } catch (error) {
+      console.error('獲取公開通報列表失敗:', error);
+      throw error;
+    }
+  },
 };

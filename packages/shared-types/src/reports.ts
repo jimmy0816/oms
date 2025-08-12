@@ -1,4 +1,4 @@
-import { User, FileInfo, Ticket, Comment, ActivityLog } from './models';
+import { User, FileInfo, Ticket, Comment, ActivityLog, Attachment } from './models';
 
 // Report related types
 export enum ReportStatus {
@@ -97,4 +97,22 @@ export interface CloseReportRequest {
 export interface ReviewReportRequest {
   action: 'APPROVE' | 'RETURN';
   comment: string;
+}
+
+// Type for publicly accessible reports (lost and found)
+export interface PublicReport {
+  id: string;
+  title: string;
+  description: string;
+  createdAt: Date;
+  location: {
+    id: string;
+    name: string;
+  } | null;
+  attachments: Attachment[];
+}
+
+export interface PaginatedPublicReportsResponse {
+  items: PublicReport[];
+  total: number;
 }

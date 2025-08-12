@@ -18,6 +18,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { getRoleName } from '@/services/roleService';
 import { Permission, UserRole } from 'shared-types';
+import { publicRoutes as PUBLIC_PATHS } from '@/config/routes';
 
 interface NavigationItem {
   name: string;
@@ -125,6 +126,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     }));
   };
 
+  const isPublicPath = PUBLIC_PATHS.some((path) =>
+    router.pathname.startsWith(path)
+  );
+
+  const isNavigation = !isPublicPath && user;
+
   return (
     <div className="flex min-h-screen flex-col md:flex-row bg-[#f7f9fb] text-[#18181b]">
       <Head>
@@ -161,160 +168,162 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </button>
       </div>
 
-      <aside
-        className={`${
-          sidebarOpen ? 'flex' : 'hidden'
-        } md:flex h-auto md:h-screen w-full md:w-60 bg-white border-b md:border-b-0 md:border-r border-gray-100 flex-col py-4 md:py-6 px-2 md:px-3 fixed top-14 left-0 right-0 bottom-0 md:top-0 md:left-0 md:right-auto md:bottom-0 z-20 overflow-y-auto ${
-          !user ? 'hidden' : ''
-        }`}
-      >
-        <div className="mb-8 hidden md:flex items-center gap-2 px-2">
-          <div className="w-8 h-8 bg-gradient-to-tr from-indigo-500 to-blue-400 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-            O
+      {isNavigation && (
+        <aside
+          className={`${
+            sidebarOpen ? 'flex' : 'hidden'
+          } md:flex h-auto md:h-screen w-full md:w-60 bg-white border-b md:border-b-0 md:border-r border-gray-100 flex-col py-4 md:py-6 px-2 md:px-3 fixed top-14 left-0 right-0 bottom-0 md:top-0 md:left-0 md:right-auto md:bottom-0 z-20 overflow-y-auto`}
+        >
+          <div className="mb-8 hidden md:flex items-center gap-2 px-2">
+            <div className="w-8 h-8 bg-gradient-to-tr from-indigo-500 to-blue-400 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+              O
+            </div>
+            <span className="font-bold text-xl tracking-tight text-gray-900">
+              OMS
+            </span>
           </div>
-          <span className="font-bold text-xl tracking-tight text-gray-900">
-            OMS
-          </span>
-        </div>
-        <nav className="flex flex-col gap-2">
-          {navigation.map((item) => {
-            const isItemActive = hasActiveChild(item);
-            const isExpanded = expandedMenus[item.name] || isItemActive;
+          <nav className="flex flex-col gap-2">
+            {navigation.map((item) => {
+              const isItemActive = hasActiveChild(item);
+              const isExpanded = expandedMenus[item.name] || isItemActive;
 
-            if (item.children) {
-              return (
-                <div key={item.name} className="flex flex-col">
-                  <button
-                    className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      isItemActive
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`}
-                    onClick={() => toggleSubMenu(item.name)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      {item.name}
-                    </div>
-                    {isExpanded ? (
-                      <ChevronUpIcon className="h-4 w-4" />
-                    ) : (
-                      <ChevronDownIcon className="h-4 w-4" />
+              if (item.children) {
+                return (
+                  <div key={item.name} className="flex flex-col">
+                    <button
+                      className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        isItemActive
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                      onClick={() => toggleSubMenu(item.name)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                        {item.name}
+                      </div>
+                      {isExpanded ? (
+                        <ChevronUpIcon className="h-4 w-4" />
+                      ) : (
+                        <ChevronDownIcon className="h-4 w-4" />
+                      )}
+                    </button>
+
+                    {item.children && isExpanded && (
+                      <div className="ml-6 mt-2 space-y-1">
+                        {item.children.map((child) => (
+                          <Link
+                            key={child.name}
+                            href={child.href}
+                            className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                              isActive(child.href)
+                                ? 'bg-blue-50 text-blue-700'
+                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
+                            onClick={() => setSidebarOpen(false)}
+                          >
+                            <child.icon className="h-5 w-5 flex-shrink-0" />
+                            {child.name}
+                          </Link>
+                        ))}
+                      </div>
                     )}
-                  </button>
+                  </div>
+                );
+              }
 
-                  {item.children && isExpanded && (
-                    <div className="ml-6 mt-2 space-y-1">
-                      {item.children.map((child) => (
-                        <Link
-                          key={child.name}
-                          href={child.href}
-                          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                            isActive(child.href)
-                              ? 'bg-blue-50 text-blue-700'
-                              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                          }`}
-                          onClick={() => setSidebarOpen(false)}
-                        >
-                          <child.icon className="h-5 w-5 flex-shrink-0" />
-                          {child.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive(item.href)
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {item.name}
+                </Link>
               );
-            }
-
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive(item.href)
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {item.name}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="mt-auto pt-4 border-t border-gray-100 hidden md:block">
-          {user ? (
-            <div className="flex flex-col">
-              <Link
-                href="/user/profile"
-                className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-md"
-              >
-                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                  <UserIcon className="h-4 w-4 text-gray-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-700">
-                    {user.name}
-                  </p>
-                  <p className="text-xs text-gray-500">{user.email}</p>
-                  <p className="text-xs mt-1 bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full inline-block">
-                    {getRoleName(user.role as UserRole)}
-                  </p>
-                </div>
-              </Link>
-              <button
-                onClick={logout}
-                className="mt-2 w-full text-left text-sm text-red-600 hover:text-red-700 px-3 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+            })}
+          </nav>
+          <div className="mt-auto pt-4 border-t border-gray-100 hidden md:block">
+            {user ? (
+              <div className="flex flex-col">
+                <Link
+                  href="/user/profile"
+                  className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-md"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                  />
-                </svg>
-                登出
-              </button>
-            </div>
-          ) : (
-            <div className="px-3 py-2">
-              <Link
-                href="/login"
-                className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-2"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+                  <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
+                    <UserIcon className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-700">
+                      {user.name}
+                    </p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                    <p className="text-xs mt-1 bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full inline-block">
+                      {getRoleName(user.role as UserRole)}
+                    </p>
+                  </div>
+                </Link>
+                <button
+                  onClick={logout}
+                  className="mt-2 w-full text-left text-sm text-red-600 hover:text-red-700 px-3 py-2 rounded-md hover:bg-gray-50 flex items-center gap-2"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-                  />
-                </svg>
-                登入
-              </Link>
-            </div>
-          )}
-        </div>
-      </aside>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  登出
+                </button>
+              </div>
+            ) : (
+              <div className="px-3 py-2">
+                <Link
+                  href="/login"
+                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-2"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  登入
+                </Link>
+              </div>
+            )}
+          </div>
+        </aside>
+      )}
 
-      <main className="flex-1 pt-14 md:pt-0 md:ml-60">
+      <main
+        className={`flex-1 pt-14 md:pt-0 ${isNavigation ? 'md:ml-60' : ''}`}
+      >
         <header className="flex h-14 items-center justify-between border-b border-gray-100 bg-white px-4 md:px-6 sticky top-0 z-10">
           <h1 className="text-lg font-medium">
-            {navigation.find((item) => isActive(item.href))?.name || '儀表板'}
+            {navigation.find((item) => isActive(item.href))?.name || 'OMS'}
           </h1>
           <div className="flex items-center gap-4">
             {user && (
