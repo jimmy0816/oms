@@ -283,7 +283,9 @@ export default function TicketsPage() {
 
   useEffect(() => {
     const checkSize = () => {
-      setIsFilterVisible(window.innerWidth >= 768); // md breakpoint
+      if (window.innerWidth >= 768) {
+        setIsFilterVisible(true);
+      }
     };
     checkSize();
     window.addEventListener('resize', checkSize);
