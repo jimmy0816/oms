@@ -142,6 +142,9 @@ export default function RolesManagement() {
     roles: allPermissions.filter(
       (p) => p.startsWith('manage_roles') || p.startsWith('assign_permissions')
     ),
+    system: allPermissions.filter(
+      (p) => p.startsWith('manage_settings') || p.startsWith('manage_categories')
+    ),
   };
 
   return (
@@ -261,6 +264,32 @@ export default function RolesManagement() {
                   <h3 className="text-lg font-medium mb-2">角色管理權限</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {permissionGroups.roles.map((permission) => (
+                      <div key={permission} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={permission}
+                          checked={rolePermissions.includes(permission)}
+                          onChange={(e) =>
+                            handlePermissionChange(permission, e.target.checked)
+                          }
+                          className="mr-2"
+                          disabled={
+                            !hasPermission(Permission.ASSIGN_PERMISSIONS)
+                          }
+                        />
+                        <label htmlFor={permission} className="text-sm">
+                          {permission.replace(/_/g, ' ')}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 系統設定權限 */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium mb-2">系統設定權限</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {permissionGroups.system.map((permission) => (
                       <div key={permission} className="flex items-center">
                         <input
                           type="checkbox"

@@ -16,6 +16,11 @@ async function handleResponse(response: Response) {
     return Promise.reject(new Error('Session expired. Please log in again.'));
   }
 
+  // 如果回應狀態碼是 204 (No Content)，表示成功但沒有回傳內容
+  if (response.status === 204) {
+    return null; // 或 return Promise.resolve(null);
+  }
+
   const data = await response.json();
 
   if (!response.ok) {

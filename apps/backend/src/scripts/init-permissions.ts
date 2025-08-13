@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { Permission, UserRole, ROLE_PERMISSIONS } from 'shared-types';
+import { ROLE_PERMISSIONS } from 'shared-types';
 
 // 定義權限列表資料
 const permissions = [
@@ -25,6 +25,8 @@ const permissions = [
   { name: 'delete_users', description: '刪除用戶' },
   { name: 'manage_roles', description: '管理角色' },
   { name: 'assign_permissions', description: '分配權限' },
+  { name: 'manage_settings', description: '管理設定' },
+  { name: 'manage_categories', description: '管理分類' },
 ];
 
 const roles = [

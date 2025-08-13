@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useAuth } from '@/contexts/AuthContext';
-import {
+import { 
   UserIcon,
   Cog6ToothIcon,
   Bars3Icon,
@@ -16,6 +16,7 @@ import {
   BellIcon,
   DocumentTextIcon,
   MagnifyingGlassIcon,
+  TagIcon,
 } from '@heroicons/react/24/outline';
 import { getRoleName } from '@/services/roleService';
 import { Permission, UserRole } from 'shared-types';
@@ -92,6 +93,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: '角色權限',
           href: '/admin/roles',
           icon: ShieldCheckIcon,
+        });
+      }
+      if (hasPermission(Permission.MANAGE_CATEGORIES)) {
+        adminChildren.push({
+          name: '分類管理',
+          href: '/admin/categories',
+          icon: TagIcon,
         });
       }
 
