@@ -96,7 +96,7 @@ const MultiSelectFilterModal: React.FC<MultiSelectFilterModalProps> = ({
         {selectedIds.length > 0 && (
           <div className="mb-4 p-2 border border-blue-200 bg-blue-50 rounded-md text-sm text-blue-800">
             <p className="font-semibold mb-1">已選項目:</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-1">
               {options
                 .filter((opt) => selectedIds.includes(opt.id))
                 .map((opt) => (
