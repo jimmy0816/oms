@@ -31,7 +31,9 @@ import {
   Category,
   ReportPriority,
   Permission,
+  User,
 } from 'shared-types';
+import { userService } from '@/services/userService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { categoryService, getCategoryPath } from '@/services/categoryService';
@@ -73,10 +75,12 @@ export default function Reports() {
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
   const [locationFilter, setLocationFilter] = useState<string[]>([]);
+  const [creatorFilter, setCreatorFilter] = useState<string[]>([]); // New state for creator filter
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isPriorityModalOpen, setIsPriorityModalOpen] = useState(false);
+  const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false); // New state for creator modal
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -85,6 +89,7 @@ export default function Reports() {
   const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [allLocations, setAllLocations] = useState<Location[]>([]); // New state for all locations
+  const [allCreators, setAllCreators] = useState<User[]>([]); // New state for all creators
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
   const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
@@ -150,6 +155,8 @@ export default function Reports() {
         setCategories(fetchedCategories);
         const fetchedLocations = await locationService.getAllLocations(); // Fetch locations
         setAllLocations(fetchedLocations); // Set locations
+        const fetchedUsers = await userService.getAllUsers(); // Fetch users
+        setAllCreators(fetchedUsers); // Set creators
       } catch (err) {
         console.error('Error fetching data:', err);
       } finally {
@@ -192,6 +199,7 @@ export default function Reports() {
         priority?: string[];
         search?: string;
         locationIds?: string[];
+        creatorIds?: string[]; // Add creatorIds to filters
         sortField?: string;
         sortOrder?: 'asc' | 'desc';
       } = {};
@@ -200,6 +208,7 @@ export default function Reports() {
       if (priorityFilter.length > 0) filters.priority = priorityFilter;
       if (searchTerm) filters.search = searchTerm;
       if (locationFilter.length > 0) filters.locationIds = locationFilter;
+      if (creatorFilter.length > 0) filters.creatorIds = creatorFilter;
       if (sortField) filters.sortField = sortField;
       if (sortOrder) filters.sortOrder = sortOrder;
 
@@ -230,6 +239,7 @@ export default function Reports() {
     priorityFilter,
     searchTerm,
     locationFilter,
+    creatorFilter, // Add creatorFilter to dependency array
     sortField,
     sortOrder,
   ]);
@@ -261,6 +271,7 @@ export default function Reports() {
     setCategoryFilter([]);
     setPriorityFilter([]);
     setLocationFilter([]);
+    setCreatorFilter([]); // Clear creator filter
     setSelectedViewId(null); // Clear selected view
     setPage(1);
     setSortField(null);
@@ -277,6 +288,7 @@ export default function Reports() {
         categoryFilter,
         priorityFilter,
         locationFilter,
+        creatorFilter, // Include creatorFilter
         sortField,
         sortOrder,
       };
@@ -344,12 +356,20 @@ export default function Reports() {
           : viewToApply.filters.locationFilter
           ? [viewToApply.filters.locationFilter]
           : [];
+        const newCreatorFilter = Array.isArray(
+          viewToApply.filters.creatorFilter
+        )
+          ? viewToApply.filters.creatorFilter
+          : viewToApply.filters.creatorFilter
+          ? [viewToApply.filters.creatorFilter]
+          : [];
 
         setSearchTerm(viewToApply.filters.searchTerm || '');
         setStatusFilter(newStatusFilter);
         setCategoryFilter(newCategoryFilter);
         setPriorityFilter(newPriorityFilter);
         setLocationFilter(newLocationFilter);
+        setCreatorFilter(newCreatorFilter);
         setSelectedViewId(viewId);
         setPage(1);
         setSortField(viewToApply.filters.sortField || null);
@@ -592,6 +612,25 @@ export default function Reports() {
                   : '選擇地點...'}
               </button>
             </div>
+
+            {/* 建立者篩選 */}
+            <div>
+              <label
+                htmlFor="creator-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                建立者
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsCreatorModalOpen(true)}
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
+              >
+                {creatorFilter.length > 0
+                  ? `已選 ${creatorFilter.length} 個建立者`
+                  : '選擇建立者...'}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -660,6 +699,24 @@ export default function Reports() {
           name: getPriorityText(priority as ReportPriority),
         }))}
         title="選擇優先級"
+      />
+
+      {/* Creator Filter Modal */}
+      <MultiSelectFilterModal
+        isOpen={isCreatorModalOpen}
+        onClose={() => setIsCreatorModalOpen(false)}
+        onConfirm={(selectedIds) => {
+          setCreatorFilter(selectedIds as string[]);
+          setIsCreatorModalOpen(false);
+          setPage(1);
+          setIsFilterModified(true);
+        }}
+        initialSelectedIds={creatorFilter}
+        options={allCreators.map((creator) => ({
+          id: creator.id,
+          name: creator.name,
+        }))}
+        title="選擇建立者"
       />
 
       {/* Save View Modal */}

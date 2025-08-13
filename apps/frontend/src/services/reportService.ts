@@ -214,6 +214,7 @@ export const reportService = {
       priority?: string[];
       search?: string;
       locationIds?: number[];
+      creatorIds?: string[];
       sortField?: string;
       sortOrder?: 'asc' | 'desc';
     } = {}

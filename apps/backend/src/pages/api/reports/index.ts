@@ -95,7 +95,7 @@ async function getReports(
     | string[]
     | undefined; // Changed to categoryIds for multi-select
   const assigneeId = req.query.assigneeId as string | undefined;
-  const creatorId = req.query.creatorId as string | undefined;
+  const creatorIds = req.query.creatorIds as string | string[] | undefined;
   const search = req.query.search as string | undefined;
   const locationIds = req.query.locationIds as string | string[] | undefined;
   const sortField = req.query.sortField as string | undefined;
@@ -159,7 +159,14 @@ async function getReports(
   }
 
   if (assigneeId) andClauses.push({ assigneeId });
-  if (creatorId) andClauses.push({ creatorId });
+  if (creatorIds) {
+    const parsedCreatorIds = Array.isArray(creatorIds)
+      ? creatorIds
+      : creatorIds.split(',');
+    if (parsedCreatorIds.length > 0) {
+      andClauses.push({ creatorId: { in: parsedCreatorIds } });
+    }
+  }
 
   if (locationIds) {
     const parsedLocationIds = Array.isArray(locationIds)
