@@ -143,7 +143,10 @@ export default function RolesManagement() {
       (p) => p.startsWith('manage_roles') || p.startsWith('assign_permissions')
     ),
     system: allPermissions.filter(
-      (p) => p.startsWith('manage_settings') || p.startsWith('manage_categories')
+      (p) =>
+        p.startsWith('manage_settings') ||
+        p.startsWith('manage_categories') ||
+        p.startsWith('manage_locations')
     ),
   };
 
