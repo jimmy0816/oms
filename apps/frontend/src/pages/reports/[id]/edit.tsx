@@ -25,7 +25,6 @@ export default function EditReport() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
-  const [categoryPath, setCategoryPath] = useState<string>('');
   const [priority, setPriority] = useState<ReportPriority>(
     ReportPriority.MEDIUM
   );
@@ -94,10 +93,10 @@ export default function EditReport() {
 
   const handleCategorySelect = (selectedId: string, categoryPath: string) => {
     setCategoryId(selectedId);
-    setCategoryPath(categoryPath);
     if (categoryPath) {
-      const mainCategory = categoryPath.split(' > ')[0];
-      setTitle(mainCategory);
+      const categories = categoryPath.split(' > ');
+      const level3Category = categories[categories.length - 1];
+      setTitle(level3Category);
     }
   };
 
