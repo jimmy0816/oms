@@ -448,7 +448,7 @@ export default function TicketsPage() {
         <h1 className="text-2xl font-semibold text-gray-900">工單管理</h1>
         <div className="flex items-center space-x-3">
           <button
-            className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
+            className="btn-outline px-4 py-2.5 text-sm font-medium rounded-md flex items-center space-x-1 md:py-2"
             onClick={clearFilters}
           >
             清除篩選
@@ -456,7 +456,7 @@ export default function TicketsPage() {
           <PermissionGuard required={Permission.CREATE_TICKETS}>
             <Link
               href={`/tickets/new?returnUrl=${encodeURIComponent(currentPath)}`}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+              className="inline-flex items-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 md:py-2"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
               新增工單
@@ -501,7 +501,7 @@ export default function TicketsPage() {
               <input
                 type="text"
                 placeholder="搜尋工單..."
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm placeholder:text-sm"
                 value={filters.search}
                 onChange={handleSearchChange}
                 onKeyPress={(e) => e.key === 'Enter' && loadTickets()} // Trigger search on Enter
@@ -520,7 +520,7 @@ export default function TicketsPage() {
           <div className="md:hidden">
             <button
               onClick={() => setIsFilterVisible(!isFilterVisible)}
-              className="btn-outline w-full flex items-center justify-center px-4 py-2"
+              className="btn-outline w-full flex items-center justify-center px-4 py-1.5 text-sm"
             >
               <FunnelIcon className="h-5 w-5 mr-2" />
               {isFilterVisible ? '隱藏篩選' : '顯示篩選'}
@@ -541,7 +541,7 @@ export default function TicketsPage() {
               <button
                 type="button"
                 onClick={() => setIsStatusModalOpen(true)}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
                 {filters.status.length > 0
                   ? `已選 ${filters.status.length} 個狀態`
@@ -560,7 +560,7 @@ export default function TicketsPage() {
               <button
                 type="button"
                 onClick={() => setIsPriorityModalOpen(true)}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
                 {filters.priority.length > 0
                   ? `已選 ${filters.priority.length} 個優先級`
@@ -579,7 +579,7 @@ export default function TicketsPage() {
               <button
                 type="button"
                 onClick={() => setIsLocationModalOpen(true)}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
                 {filters.locationIds.length > 0
                   ? `已選 ${filters.locationIds.length} 個地點`
@@ -598,7 +598,7 @@ export default function TicketsPage() {
               <button
                 type="button"
                 onClick={() => setIsRoleModalOpen(true)}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
                 {filters.roleIds.length > 0
                   ? `已選 ${filters.roleIds.length} 個角色`
@@ -623,7 +623,7 @@ export default function TicketsPage() {
                   <tr>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32 min-w-max"
                       onClick={() => handleSort('id')}
                     >
                       <div className="flex items-center space-x-1">
@@ -637,7 +637,7 @@ export default function TicketsPage() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-48"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-48 min-w-max whitespace-nowrap"
                       onClick={() => handleSort('title')}
                     >
                       <div className="flex items-center space-x-1">
@@ -651,7 +651,7 @@ export default function TicketsPage() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20 min-w-max whitespace-nowrap"
                       onClick={() => handleSort('status')}
                     >
                       <div className="flex items-center space-x-1">
@@ -665,7 +665,7 @@ export default function TicketsPage() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20 min-w-max whitespace-nowrap"
                       onClick={() => handleSort('priority')}
                     >
                       <div className="flex items-center space-x-1">
@@ -679,7 +679,7 @@ export default function TicketsPage() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20 min-w-max whitespace-nowrap"
                       onClick={() => handleSort('location')}
                     >
                       <div className="flex items-center space-x-1">
@@ -693,7 +693,7 @@ export default function TicketsPage() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32 min-w-max whitespace-nowrap"
                       onClick={() => handleSort('createdAt')}
                     >
                       <div className="flex items-center space-x-1">
@@ -707,7 +707,7 @@ export default function TicketsPage() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-24"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-24 min-w-max whitespace-nowrap"
                       onClick={() => handleSort('role')}
                     >
                       <div className="flex items-center space-x-1">
@@ -721,7 +721,7 @@ export default function TicketsPage() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20 min-w-max whitespace-nowrap"
                       onClick={() => handleSort('creator')}
                     >
                       <div className="flex items-center space-x-1">
@@ -735,7 +735,7 @@ export default function TicketsPage() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-20 min-w-max whitespace-nowrap"
                       onClick={() => handleSort('assignee')}
                     >
                       <div className="flex items-center space-x-1">
@@ -749,7 +749,7 @@ export default function TicketsPage() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider w-20 min-w-max whitespace-nowrap"
                     >
                       操作
                     </th>
@@ -898,7 +898,7 @@ export default function TicketsPage() {
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  className="relative inline-flex items-center px-3 py-2.5 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 md:px-2 md:py-2"
                 >
                   <span className="sr-only">上一頁</span>
                   <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
@@ -911,7 +911,7 @@ export default function TicketsPage() {
                     <button
                       key={i}
                       onClick={() => handlePageChange(i + 1)}
-                      className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
+                      className={`relative inline-flex items-center px-5 py-2.5 border border-gray-300 bg-white text-sm font-medium ${
                         currentPage === i + 1
                           ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                           : 'text-gray-700 hover:bg-gray-50'
@@ -931,7 +931,7 @@ export default function TicketsPage() {
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage >= Math.ceil(totalTickets / pageSize)}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  className="relative inline-flex items-center px-3 py-2.5 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 md:px-2 md:py-2"
                 >
                   <span className="sr-only">下一頁</span>
                   <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />

@@ -429,7 +429,7 @@ export default function Reports() {
             <h1 className="text-2xl font-semibold text-gray-900">通報管理</h1>
             <div className="flex items-center space-x-3">
               <button
-                className="btn-outline px-4 py-2 text-sm font-medium rounded-md flex items-center space-x-1"
+                className="btn-outline px-4 py-2.5 text-sm font-medium rounded-md flex items-center space-x-1 md:py-2"
                 onClick={clearFilters}
               >
                 清除篩選
@@ -437,7 +437,7 @@ export default function Reports() {
               <PermissionGuard required={Permission.CREATE_REPORTS}>
                 <Link
                   href="/reports/new"
-                  className="btn-primary px-4 py-2 text-sm font-medium rounded-md flex items-center"
+                  className="btn-primary px-4 py-2.5 text-sm font-medium rounded-md flex items-center md:py-2"
                 >
                   <PlusIcon className="h-4 w-4 mr-1" />
                   <span>建立通報</span>
@@ -486,7 +486,7 @@ export default function Reports() {
               <input
                 type="text"
                 placeholder="搜尋通報..."
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm placeholder:text-sm"
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -507,7 +507,7 @@ export default function Reports() {
           <div className="md:hidden">
             <button
               onClick={() => setIsFilterVisible(!isFilterVisible)}
-              className="btn-outline w-full flex items-center justify-center px-4 py-2"
+              className="btn-outline w-full flex items-center justify-center px-4 py-1.5 text-sm"
             >
               <FunnelIcon className="h-5 w-5 mr-2" />
               {isFilterVisible ? '隱藏篩選' : '顯示篩選'}
@@ -528,7 +528,7 @@ export default function Reports() {
               <button
                 type="button"
                 onClick={() => setIsStatusModalOpen(true)}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
                 {statusFilter.length > 0
                   ? `已選 ${statusFilter.length} 個狀態`
@@ -547,7 +547,7 @@ export default function Reports() {
               <button
                 type="button"
                 onClick={() => setIsCategoryModalOpen(true)}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
                 {categoryFilter.length > 0
                   ? `已選 ${categoryFilter.length} 個類別`
@@ -566,7 +566,7 @@ export default function Reports() {
               <button
                 type="button"
                 onClick={() => setIsPriorityModalOpen(true)}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
                 {priorityFilter.length > 0
                   ? `已選 ${priorityFilter.length} 個優先級`
@@ -585,7 +585,7 @@ export default function Reports() {
               <button
                 type="button"
                 onClick={() => setIsLocationModalOpen(true)}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
                 {locationFilter.length > 0
                   ? `已選 ${locationFilter.length} 個地點`
@@ -712,7 +712,7 @@ export default function Reports() {
                   <tr>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32 min-w-max whitespace-nowrap"
                       onClick={() => handleSort('id')}
                     >
                       <div className="flex items-center space-x-1">
@@ -726,7 +726,7 @@ export default function Reports() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48 cursor-pointer"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider w-48 cursor-pointer min-w-max whitespace-nowrap"
                       onClick={() => handleSort('title')}
                     >
                       <div className="flex items-center space-x-1">
@@ -740,7 +740,7 @@ export default function Reports() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20 cursor-pointer"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider w-20 cursor-pointer min-w-max whitespace-nowrap"
                       onClick={() => handleSort('status')}
                     >
                       <div className="flex items-center space-x-1">
@@ -754,7 +754,7 @@ export default function Reports() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20 cursor-pointer"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider w-20 cursor-pointer min-w-max whitespace-nowrap"
                       onClick={() => handleSort('priority')}
                     >
                       <div className="flex items-center space-x-1">
@@ -768,7 +768,7 @@ export default function Reports() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer min-w-max whitespace-nowrap"
                       onClick={() => handleSort('location')}
                     >
                       <div className="flex items-center space-x-1">
@@ -782,7 +782,7 @@ export default function Reports() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer min-w-max whitespace-nowrap"
                       onClick={() => handleSort('createdAt')}
                     >
                       <div className="flex items-center space-x-1">
@@ -796,7 +796,7 @@ export default function Reports() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer min-w-max whitespace-nowrap"
                       onClick={() => handleSort('trackingDate')}
                     >
                       <div className="flex items-center space-x-1">
@@ -810,7 +810,7 @@ export default function Reports() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider w-24 cursor-pointer min-w-max whitespace-nowrap"
                       onClick={() => handleSort('creator')}
                     >
                       <div className="flex items-center space-x-1">
@@ -824,7 +824,7 @@ export default function Reports() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider w-20 min-w-max whitespace-nowrap"
                     >
                       操作
                     </th>
@@ -939,7 +939,7 @@ export default function Reports() {
                 <button
                   onClick={() => handlePageChange(page - 1)}
                   disabled={page === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  className="relative inline-flex items-center px-3 py-2.5 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 md:px-2 md:py-2"
                 >
                   <span className="sr-only">上一頁</span>
                   <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
@@ -953,7 +953,7 @@ export default function Reports() {
                     <button
                       key={i}
                       onClick={() => handlePageChange(i + 1)}
-                      className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
+                      className={`relative inline-flex items-center px-5 py-2.5 border border-gray-300 bg-white text-sm font-medium ${
                         page === i + 1
                           ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                           : 'text-gray-700 hover:bg-gray-50'
@@ -970,7 +970,7 @@ export default function Reports() {
                 <button
                   onClick={() => handlePageChange(page + 1)}
                   disabled={page >= Math.ceil(totalReports / pageSize)}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  className="relative inline-flex items-center px-3 py-2.5 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 md:px-2 md:py-2"
                 >
                   <span className="sr-only">下一頁</span>
                   <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
