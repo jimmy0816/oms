@@ -88,6 +88,7 @@ export default function Reports() {
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
   const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
 
   const [saveViewError, setSaveViewError] = useState<string | null>(null);
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
@@ -156,6 +157,15 @@ export default function Reports() {
       }
     };
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const checkSize = () => {
+      setIsFilterVisible(window.innerWidth >= 768); // md breakpoint
+    };
+    checkSize();
+    window.addEventListener('resize', checkSize);
+    return () => window.removeEventListener('resize', checkSize);
   }, []);
 
   // Fetch saved views on component mount
@@ -494,85 +504,96 @@ export default function Reports() {
               搜尋
             </button>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* 狀態篩選 */}
-          <div>
-            <label
-              htmlFor="status-filter"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              狀態
-            </label>
+          <div className="md:hidden">
             <button
-              type="button"
-              onClick={() => setIsStatusModalOpen(true)}
-              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+              onClick={() => setIsFilterVisible(!isFilterVisible)}
+              className="btn-outline w-full flex items-center justify-center px-4 py-2"
             >
-              {statusFilter.length > 0
-                ? `已選 ${statusFilter.length} 個狀態`
-                : '選擇狀態...'}
-            </button>
-          </div>
-
-          {/* 類別篩選 */}
-          <div>
-            <label
-              htmlFor="category-filter"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              類別
-            </label>
-            <button
-              type="button"
-              onClick={() => setIsCategoryModalOpen(true)}
-              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
-            >
-              {categoryFilter.length > 0
-                ? `已選 ${categoryFilter.length} 個類別`
-                : '選擇類別...'}
-            </button>
-          </div>
-
-          {/* 優先級篩選 */}
-          <div>
-            <label
-              htmlFor="priority-filter"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              優先級
-            </label>
-            <button
-              type="button"
-              onClick={() => setIsPriorityModalOpen(true)}
-              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
-            >
-              {priorityFilter.length > 0
-                ? `已選 ${priorityFilter.length} 個優先級`
-                : '選擇優先級...'}
-            </button>
-          </div>
-
-          {/* 地點篩選 */}
-          <div>
-            <label
-              htmlFor="location-filter"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              地點
-            </label>
-            <button
-              type="button"
-              onClick={() => setIsLocationModalOpen(true)}
-              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
-            >
-              {locationFilter.length > 0
-                ? `已選 ${locationFilter.length} 個地點`
-                : '選擇地點...'}
+              <FunnelIcon className="h-5 w-5 mr-2" />
+              {isFilterVisible ? '隱藏篩選' : '顯示篩選'}
             </button>
           </div>
         </div>
+
+        {isFilterVisible && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 md:pt-0">
+            {/* 狀態篩選 */}
+            <div>
+              <label
+                htmlFor="status-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                狀態
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsStatusModalOpen(true)}
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+              >
+                {statusFilter.length > 0
+                  ? `已選 ${statusFilter.length} 個狀態`
+                  : '選擇狀態...'}
+              </button>
+            </div>
+
+            {/* 類別篩選 */}
+            <div>
+              <label
+                htmlFor="category-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                類別
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsCategoryModalOpen(true)}
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+              >
+                {categoryFilter.length > 0
+                  ? `已選 ${categoryFilter.length} 個類別`
+                  : '選擇類別...'}
+              </button>
+            </div>
+
+            {/* 優先級篩選 */}
+            <div>
+              <label
+                htmlFor="priority-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                優先級
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsPriorityModalOpen(true)}
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+              >
+                {priorityFilter.length > 0
+                  ? `已選 ${priorityFilter.length} 個優先級`
+                  : '選擇優先級...'}
+              </button>
+            </div>
+
+            {/* 地點篩選 */}
+            <div>
+              <label
+                htmlFor="location-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                地點
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsLocationModalOpen(true)}
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+              >
+                {locationFilter.length > 0
+                  ? `已選 ${locationFilter.length} 個地點`
+                  : '選擇地點...'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Location Filter Modal */}

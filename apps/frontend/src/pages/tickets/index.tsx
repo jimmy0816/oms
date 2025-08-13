@@ -86,6 +86,7 @@ export default function TicketsPage() {
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
   const [isFilterModified, setIsFilterModified] = useState(false);
   const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
 
   const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
   const [saveViewError, setSaveViewError] = useState<string | null>(null);
@@ -252,6 +253,15 @@ export default function TicketsPage() {
   }, []);
 
   useEffect(() => {
+    const checkSize = () => {
+      setIsFilterVisible(window.innerWidth >= 768); // md breakpoint
+    };
+    checkSize();
+    window.addEventListener('resize', checkSize);
+    return () => window.removeEventListener('resize', checkSize);
+  }, []);
+
+  useEffect(() => {
     loadTickets();
   }, [loadTickets]);
 
@@ -408,7 +418,7 @@ export default function TicketsPage() {
 
     const filtersSame =
       (currentView.filters.search || '') === filters.search &&
-      (currentView.filters.status || []).sort().join(',') ===
+      (currentVew.filters.status || []).sort().join(',') ===
         filters.status.sort().join(',') &&
       (currentView.filters.priority || []).sort().join(',') ===
         filters.priority.sort().join(',') &&
@@ -506,85 +516,97 @@ export default function TicketsPage() {
               搜尋
             </button>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* 狀態篩選 */}
-          <div>
-            <label
-              htmlFor="status-filter"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              狀態
-            </label>
+          {/* Toggle Filter Button */}
+          <div className="md:hidden">
             <button
-              type="button"
-              onClick={() => setIsStatusModalOpen(true)}
-              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+              onClick={() => setIsFilterVisible(!isFilterVisible)}
+              className="btn-outline w-full flex items-center justify-center px-4 py-2"
             >
-              {filters.status.length > 0
-                ? `已選 ${filters.status.length} 個狀態`
-                : '選擇狀態...'}
-            </button>
-          </div>
-
-          {/* 優先級篩選 */}
-          <div>
-            <label
-              htmlFor="priority-filter"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              優先級
-            </label>
-            <button
-              type="button"
-              onClick={() => setIsPriorityModalOpen(true)}
-              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
-            >
-              {filters.priority.length > 0
-                ? `已選 ${filters.priority.length} 個優先級`
-                : '選擇優先級...'}
-            </button>
-          </div>
-
-          {/* 地點篩選 */}
-          <div>
-            <label
-              htmlFor="location-filter"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              地點
-            </label>
-            <button
-              type="button"
-              onClick={() => setIsLocationModalOpen(true)}
-              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
-            >
-              {filters.locationIds.length > 0
-                ? `已選 ${filters.locationIds.length} 個地點`
-                : '選擇地點...'}
-            </button>
-          </div>
-
-          {/* 指派角色篩選 */}
-          <div>
-            <label
-              htmlFor="role-filter"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              指派角色
-            </label>
-            <button
-              type="button"
-              onClick={() => setIsRoleModalOpen(true)}
-              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
-            >
-              {filters.roleIds.length > 0
-                ? `已選 ${filters.roleIds.length} 個角色`
-                : '選擇角色...'}
+              <FunnelIcon className="h-5 w-5 mr-2" />
+              {isFilterVisible ? '隱藏篩選' : '顯示篩選'}
             </button>
           </div>
         </div>
+
+        {isFilterVisible && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 md:pt-0">
+            {/* 狀態篩選 */}
+            <div>
+              <label
+                htmlFor="status-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                狀態
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsStatusModalOpen(true)}
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+              >
+                {filters.status.length > 0
+                  ? `已選 ${filters.status.length} 個狀態`
+                  : '選擇狀態...'}
+              </button>
+            </div>
+
+            {/* 優先級篩選 */}
+            <div>
+              <label
+                htmlFor="priority-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                優先級
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsPriorityModalOpen(true)}
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+              >
+                {filters.priority.length > 0
+                  ? `已選 ${filters.priority.length} 個優先級`
+                  : '選擇優先級...'}
+              </button>
+            </div>
+
+            {/* 地點篩選 */}
+            <div>
+              <label
+                htmlFor="location-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                地點
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsLocationModalOpen(true)}
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+              >
+                {filters.locationIds.length > 0
+                  ? `已選 ${filters.locationIds.length} 個地點`
+                  : '選擇地點...'}
+              </button>
+            </div>
+
+            {/* 指派角色篩選 */}
+            <div>
+              <label
+                htmlFor="role-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                指派角色
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsRoleModalOpen(true)}
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left"
+              >
+                {filters.roleIds.length > 0
+                  ? `已選 ${filters.roleIds.length} 個角色`
+                  : '選擇角色...'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tickets List */}
