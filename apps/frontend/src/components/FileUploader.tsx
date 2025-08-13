@@ -33,10 +33,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<PreviewFile[]>([]);
   const initialFilesRef = useRef<Attachments[]>([]);
+  const [isDragging, setIsDragging] = useState(false); // For drag & drop UI
 
   // Initialize uploadedFiles with initialFiles
   useEffect(() => {
-    // Deep compare initialFiles to prevent infinite loop
     if (
       JSON.stringify(initialFiles) !== JSON.stringify(initialFilesRef.current)
     ) {
@@ -46,10 +46,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         url: file.url,
         fileType: file.fileType,
         fileSize: file.fileSize,
-        objectURL: file.url, // For existing files, URL is already valid
+        objectURL: file.url,
       }));
       setUploadedFiles(initialPreviewFiles);
-      initialFilesRef.current = initialFiles; // Update ref
+      initialFilesRef.current = initialFiles;
     }
   }, [initialFiles]);
 
@@ -57,57 +57,67 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     onFilesChange(uploadedFiles);
   }, [uploadedFiles, onFilesChange]);
 
-  const handleRemoveFile = useCallback(
-    (fileId: string) => {
-      setUploadedFiles((prevFiles) => {
-        const fileToRemove = prevFiles.find((file) => file.id === fileId);
-        if (fileToRemove && fileToRemove.url.startsWith('blob:')) {
-          // Only revoke object URL if it's a temporary blob URL
-          URL.revokeObjectURL(fileToRemove.objectURL);
+  const handleRemoveFile = useCallback((fileId: string) => {
+    setUploadedFiles((prevFiles) => {
+      const fileToRemove = prevFiles.find((file) => file.id === fileId);
+      if (fileToRemove && fileToRemove.objectURL.startsWith('blob:')) {
+        URL.revokeObjectURL(fileToRemove.objectURL);
+      }
+      const updatedFiles = prevFiles.filter((file) => file.id !== fileId);
+      return updatedFiles;
+    });
+  }, []);
+
+  const handleFiles = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
+
+      setError(null); // Clear previous errors
+
+      const validFiles: File[] = [];
+      let hasInvalidFiles = false;
+      for (const file of files) {
+        const fileType = file.type.startsWith('image/')
+          ? 'image'
+          : file.type.startsWith('video/')
+          ? 'video'
+          : undefined;
+        if (!fileType) {
+          hasInvalidFiles = true;
+        } else {
+          validFiles.push(file);
         }
-        const updatedFiles = prevFiles.filter((file) => file.id !== fileId);
-        // onFilesChange(updatedFiles);
-        return updatedFiles;
-      });
-    },
-    []
-  );
+      }
 
-  const handleFileChange = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
+      if (hasInvalidFiles) {
+        setError('一個或多個檔案類型不受支援。');
+      }
 
-      setUploading(true);
-      setError(null);
-      onUploadStart?.();
-
-      const fileType = file.type.startsWith('image/')
-        ? 'image'
-        : file.type.startsWith('video/')
-        ? 'video'
-        : undefined;
-      if (!fileType) {
-        setError('不支援的檔案類型');
-        setUploading(false);
-        onUploadEnd?.();
+      if (validFiles.length === 0) {
         return;
       }
 
-      const objectURL = URL.createObjectURL(file);
+      setUploading(true);
+      onUploadStart?.();
 
       try {
-        const newFile = await uploadFunction(file);
-        const previewFile: PreviewFile = {
-          ...newFile,
-          objectURL,
-          fileType: file.type, // Use original file.type for more accuracy
-        };
-        setUploadedFiles((prevFiles) => {
-          const updatedFiles = [...prevFiles, previewFile];
-          // onFilesChange(updatedFiles);
-          return updatedFiles;
+        const uploadPromises = validFiles.map(async (file) => {
+          const objectURL = URL.createObjectURL(file);
+          try {
+            const newFile = await uploadFunction(file);
+            return {
+              ...newFile,
+              objectURL,
+              fileType: file.type,
+            };
+          } catch (uploadError) {
+            URL.revokeObjectURL(objectURL);
+            throw uploadError;
+          }
         });
+
+        const newFiles = await Promise.all(uploadPromises);
+        setUploadedFiles((prevFiles) => [...prevFiles, ...newFiles]);
       } catch (err: any) {
         console.error(err);
         setError(err.message || '上傳時發生錯誤');
@@ -116,14 +126,70 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         onUploadEnd?.();
       }
     },
-    [onUploadStart, onUploadEnd, uploadFunction]
+    [uploadFunction, onUploadStart, onUploadEnd]
+  );
+
+  const handleFileChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (event.target.files) {
+        handleFiles(Array.from(event.target.files));
+      }
+    },
+    [handleFiles]
+  );
+
+  const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLLabelElement>) => {
+      event.preventDefault();
+      setIsDragging(false);
+      if (event.dataTransfer.files) {
+        handleFiles(Array.from(event.dataTransfer.files));
+      }
+    },
+    [handleFiles]
+  );
+
+  const handlePaste = useCallback(
+    (event: React.ClipboardEvent<HTMLDivElement>) => {
+      const items = event.clipboardData?.items;
+      if (!items) return;
+
+      const imageFiles = Array.from(items)
+        .filter((item) => item.type.startsWith('image/'))
+        .map((item) => {
+          const file = item.getAsFile();
+          if (file) {
+            return new File(
+              [file],
+              `pasted-${Date.now()}.${file.type.split('/')[1]}`,
+              { type: file.type }
+            );
+          }
+          return null;
+        })
+        .filter((file): file is File => file !== null);
+
+      if (imageFiles.length > 0) {
+        handleFiles(imageFiles);
+      }
+    },
+    [handleFiles]
   );
 
   useEffect(() => {
-    // Clean up object URLs when component unmounts or uploadedFiles change
     return () => {
       uploadedFiles.forEach((file) => {
-        if (file.url.startsWith('blob:')) {
+        if (file.objectURL.startsWith('blob:')) {
           URL.revokeObjectURL(file.objectURL);
         }
       });
@@ -131,10 +197,21 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   }, [uploadedFiles]);
 
   return (
-    <div className="flex flex-col items-center justify-center w-full">
+    <div
+      className="flex flex-col items-center justify-center w-full"
+      onPaste={handlePaste}
+      tabIndex={0}
+    >
       <label
         htmlFor="dropzone-file"
-        className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 ${
+          isDragging
+            ? 'border-blue-500 bg-blue-50'
+            : 'border-gray-300 hover:bg-gray-100'
+        }`}
       >
         <div className="flex flex-col items-center justify-center pt-5 pb-6">
           <svg
@@ -153,7 +230,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
             />
           </svg>
           <p className="mb-2 text-sm text-gray-500">
-            <span className="font-semibold">點擊上傳</span> 或拖曳檔案到此處
+            <span className="font-semibold">點擊上傳</span>
+            、拖曳或貼上檔案
           </p>
           <p className="text-xs text-gray-500">
             支援圖片及影片 (PNG, JPG, GIF, MP4, MOV)
@@ -166,6 +244,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           onChange={handleFileChange}
           disabled={uploading}
           accept="image/*,video/*"
+          multiple // Allow multiple files
         />
       </label>
       {uploading && <p className="mt-2 text-sm text-blue-600">上傳中...</p>}
@@ -205,3 +284,4 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 };
 
 export default FileUploader;
+
