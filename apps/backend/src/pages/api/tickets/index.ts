@@ -47,8 +47,8 @@ async function getTickets(
   const pageSize = Number(req.query.pageSize) || 20;
   const status = req.query.status as string | string[] | undefined;
   const priority = req.query.priority as string | string[] | undefined;
-  const assigneeId = req.query.assigneeId as string | undefined;
-  const creatorId = req.query.creatorId as string | undefined;
+  const assigneeIds = req.query.assigneeIds as string | string[] | undefined;
+  const creatorIds = req.query.creatorIds as string | string[] | undefined;
   const search = req.query.search as string | undefined;
   const locationIds = req.query.locationIds as string | string[] | undefined;
   const roleIds = req.query.roleIds as string | string[] | undefined;
@@ -79,10 +79,31 @@ async function getTickets(
         );
       }
     }
-    if (assigneeId)
-      rawWhereClausesSql.push(Prisma.sql`t."assigneeId" = ${assigneeId}`);
-    if (creatorId)
-      rawWhereClausesSql.push(Prisma.sql`t."creatorId" = ${creatorId}`);
+    if (assigneeIds) {
+      const parsedAssigneeIds = Array.isArray(assigneeIds)
+        ? assigneeIds
+        : assigneeIds.split(',');
+      if (parsedAssigneeIds.length > 0) {
+        const hasUnassigned = parsedAssigneeIds.includes('UNASSIGNED');
+        const filteredAssigneeIds = parsedAssigneeIds.filter(id => id !== 'UNASSIGNED');
+
+        if (hasUnassigned && filteredAssigneeIds.length > 0) {
+          rawWhereClausesSql.push(Prisma.sql`(t."assigneeId" IS NULL OR t."assigneeId" IN (${Prisma.join(filteredAssigneeIds)}))`);
+        } else if (hasUnassigned) {
+          rawWhereClausesSql.push(Prisma.sql`t."assigneeId" IS NULL`);
+        } else if (filteredAssigneeIds.length > 0) {
+          rawWhereClausesSql.push(Prisma.sql`t."assigneeId" IN (${Prisma.join(filteredAssigneeIds)})`);
+        }
+      }
+    }
+    if (creatorIds) {
+      const parsedCreatorIds = Array.isArray(creatorIds)
+        ? creatorIds
+        : creatorIds.split(',');
+      if (parsedCreatorIds.length > 0) {
+        rawWhereClausesSql.push(Prisma.sql`t."creatorId" IN (${Prisma.join(parsedCreatorIds)})`);
+      }
+    }
 
     if (locationIds) {
       let parsedLocationIds: string[] = [];
@@ -282,8 +303,36 @@ async function getTickets(
       andClauses.push({ priority: { in: parsedPriority } });
     }
   }
-  if (assigneeId) andClauses.push({ assigneeId });
-  if (creatorId) andClauses.push({ creatorId });
+  if (assigneeIds) {
+    const parsedAssigneeIds = Array.isArray(assigneeIds)
+      ? assigneeIds
+      : assigneeIds.split(',');
+    if (parsedAssigneeIds.length > 0) {
+      const hasUnassigned = parsedAssigneeIds.includes('UNASSIGNED');
+      const filteredAssigneeIds = parsedAssigneeIds.filter(id => id !== 'UNASSIGNED');
+
+      if (hasUnassigned && filteredAssigneeIds.length > 0) {
+        andClauses.push({
+          OR: [
+            { assigneeId: null },
+            { assigneeId: { in: filteredAssigneeIds } },
+          ],
+        });
+      } else if (hasUnassigned) {
+        andClauses.push({ assigneeId: null });
+      } else if (filteredAssigneeIds.length > 0) {
+        andClauses.push({ assigneeId: { in: filteredAssigneeIds } });
+      }
+    }
+  }
+  if (creatorIds) {
+    const parsedCreatorIds = Array.isArray(creatorIds)
+      ? creatorIds
+      : creatorIds.split(',');
+    if (parsedCreatorIds.length > 0) {
+      andClauses.push({ creatorId: { in: parsedCreatorIds } });
+    }
+  }
 
   if (locationIds) {
     let parsedLocationIds: string[] = [];

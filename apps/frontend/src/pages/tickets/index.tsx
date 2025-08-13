@@ -21,7 +21,9 @@ import {
   TicketWithDetails,
   SavedView,
   Permission,
+  User,
 } from 'shared-types';
+import { userService } from '@/services/userService';
 import {
   ticketService,
   getStatusText,
@@ -73,16 +75,22 @@ export default function TicketsPage() {
     search: '',
     locationIds: [] as string[], // Added locationIds to filters
     roleIds: [] as string[],
+    creatorIds: [] as string[], // New state for creator filter
+    assigneeIds: [] as string[], // New state for assignee filter
   });
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false); // Added state for location modal
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isPriorityModalOpen, setIsPriorityModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false); // New state for creator modal
+  const [isAssigneeModalOpen, setIsAssigneeModalOpen] = useState(false); // New state for assignee modal
   const { user } = useAuth();
   const { showToast } = useToast();
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [allLocations, setAllLocations] = useState<Location[]>([]); // New state for all locations
   const [allRoles, setAllRoles] = useState<any[]>([]);
+  const [allCreators, setAllCreators] = useState<User[]>([]); // New state for all creators
+  const [allAssignees, setAllAssignees] = useState<User[]>([]); // New state for all assignees
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
   const [isFilterModified, setIsFilterModified] = useState(false);
   const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
@@ -160,6 +168,10 @@ export default function TicketsPage() {
       if (filters.locationIds.length > 0)
         apiFilters.locationIds = filters.locationIds;
       if (filters.roleIds.length > 0) apiFilters.roleIds = filters.roleIds;
+      if (filters.creatorIds.length > 0)
+        apiFilters.creatorIds = filters.creatorIds;
+      if (filters.assigneeIds.length > 0)
+        apiFilters.assigneeIds = filters.assigneeIds;
       if (sortField && sortOrder) {
         apiFilters.sortField = sortField;
         apiFilters.sortOrder = sortOrder;
@@ -216,6 +228,8 @@ export default function TicketsPage() {
     filters.search,
     filters.locationIds,
     filters.roleIds,
+    filters.creatorIds,
+    filters.assigneeIds,
     sortField,
     sortOrder,
   ]);
@@ -250,6 +264,21 @@ export default function TicketsPage() {
       }
     };
     fetchRoles();
+
+    const fetchUsers = async () => {
+      try {
+        const users = await userService.getAllUsers();
+        setAllCreators(users);
+        // For assignees, include an "Unassigned" option
+        setAllAssignees([
+          { id: 'UNASSIGNED', name: '未指派', email: '' } as User,
+          ...users,
+        ]);
+      } catch (err) {
+        console.error('Failed to fetch users:', err);
+      }
+    };
+    fetchUsers();
   }, []);
 
   useEffect(() => {
@@ -294,6 +323,16 @@ export default function TicketsPage() {
           : viewToApply.filters.roleIds
           ? [viewToApply.filters.roleIds]
           : [];
+        const newCreatorIds = Array.isArray(viewToApply.filters.creatorIds)
+          ? viewToApply.filters.creatorIds
+          : viewToApply.filters.creatorIds
+          ? [viewToApply.filters.creatorIds]
+          : [];
+        const newAssigneeIds = Array.isArray(viewToApply.filters.assigneeIds)
+          ? viewToApply.filters.assigneeIds
+          : viewToApply.filters.assigneeIds
+          ? [viewToApply.filters.assigneeIds]
+          : [];
 
         setFilters({
           status: newStatus,
@@ -301,6 +340,8 @@ export default function TicketsPage() {
           search: viewToApply.filters.search || '',
           locationIds: newLocationIds,
           roleIds: newRoleIds,
+          creatorIds: newCreatorIds,
+          assigneeIds: newAssigneeIds,
         });
         setSortField(viewToApply.filters.sortField || 'createdAt');
         setSortOrder(viewToApply.filters.sortOrder || 'desc');
@@ -358,6 +399,8 @@ export default function TicketsPage() {
       search: '',
       locationIds: [] as string[],
       roleIds: [] as string[],
+      creatorIds: [] as string[],
+      assigneeIds: [] as string[],
     });
     setSelectedViewId(null);
     setCurrentPage(1);
@@ -372,6 +415,8 @@ export default function TicketsPage() {
         search: filters.search,
         locationIds: filters.locationIds as string[],
         roleIds: filters.roleIds as string[],
+        creatorIds: filters.creatorIds as string[],
+        assigneeIds: filters.assigneeIds as string[],
         sortField,
         sortOrder,
       };
@@ -408,7 +453,9 @@ export default function TicketsPage() {
         !!filters.status ||
         !!filters.priority ||
         filters.locationIds.length > 0 ||
-        filters.roleIds.length > 0;
+        filters.roleIds.length > 0 ||
+        filters.creatorIds.length > 0 ||
+        filters.assigneeIds.length > 0;
       setIsFilterModified(hasFilters);
       return;
     }
@@ -418,14 +465,18 @@ export default function TicketsPage() {
 
     const filtersSame =
       (currentView.filters.search || '') === filters.search &&
-      (currentVew.filters.status || []).sort().join(',') ===
+      (currentView.filters.status || []).sort().join(',') ===
         filters.status.sort().join(',') &&
       (currentView.filters.priority || []).sort().join(',') ===
         filters.priority.sort().join(',') &&
       (currentView.filters.locationIds || []).sort().join(',') ===
         filters.locationIds.sort().join(',') &&
       (currentView.filters.roleIds || []).sort().join(',') ===
-        filters.roleIds.sort().join(',');
+        filters.roleIds.sort().join(',') &&
+      (currentView.filters.creatorIds || []).sort().join(',') ===
+        filters.creatorIds.sort().join(',') &&
+      (currentView.filters.assigneeIds || []).sort().join(',') ===
+        filters.assigneeIds.sort().join(',');
 
     setIsFilterModified(!filtersSame);
   }, [filters, selectedViewId, savedViews]);
@@ -603,6 +654,44 @@ export default function TicketsPage() {
                 {filters.roleIds.length > 0
                   ? `已選 ${filters.roleIds.length} 個角色`
                   : '選擇角色...'}
+              </button>
+            </div>
+
+            {/* 建立者篩選 */}
+            <div>
+              <label
+                htmlFor="creator-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                建立者
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsCreatorModalOpen(true)}
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
+              >
+                {filters.creatorIds.length > 0
+                  ? `已選 ${filters.creatorIds.length} 個建立者`
+                  : '選擇建立者...'}
+              </button>
+            </div>
+
+            {/* 負責人篩選 */}
+            <div>
+              <label
+                htmlFor="assignee-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                負責人
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsAssigneeModalOpen(true)}
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
+              >
+                {filters.assigneeIds.length > 0
+                  ? `已選 ${filters.assigneeIds.length} 個負責人`
+                  : '選擇負責人...'}
               </button>
             </div>
           </div>
@@ -1042,6 +1131,38 @@ export default function TicketsPage() {
           name: getRoleName(role.name),
         }))}
         title="選擇指派角色"
+      />
+
+      {/* Creator Filter Modal */}
+      <MultiSelectFilterModal
+        isOpen={isCreatorModalOpen}
+        onClose={() => setIsCreatorModalOpen(false)}
+        onConfirm={(selectedIds) => {
+          handleFilterChange('creatorIds', selectedIds as string[]);
+          setIsCreatorModalOpen(false);
+        }}
+        initialSelectedIds={filters.creatorIds}
+        options={allCreators.map((creator) => ({
+          id: creator.id,
+          name: creator.name,
+        }))}
+        title="選擇建立者"
+      />
+
+      {/* Assignee Filter Modal */}
+      <MultiSelectFilterModal
+        isOpen={isAssigneeModalOpen}
+        onClose={() => setIsAssigneeModalOpen(false)}
+        onConfirm={(selectedIds) => {
+          handleFilterChange('assigneeIds', selectedIds as string[]);
+          setIsAssigneeModalOpen(false);
+        }}
+        initialSelectedIds={filters.assigneeIds}
+        options={allAssignees.map((assignee) => ({
+          id: assignee.id,
+          name: assignee.name,
+        }))}
+        title="選擇負責人"
       />
     </>
   );

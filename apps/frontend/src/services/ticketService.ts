@@ -91,7 +91,17 @@ export const ticketService = {
   async getAllTickets(
     page = 1,
     pageSize = 20,
-    filters: Record<string, any> = {} // Changed to 'any' to allow number[]
+    filters: {
+      status?: string[];
+      priority?: string[];
+      search?: string;
+      locationIds?: string[];
+      roleIds?: string[];
+      creatorIds?: string[];
+      assigneeIds?: string[];
+      sortField?: string;
+      sortOrder?: 'asc' | 'desc';
+    } = {}
   ): Promise<PaginatedResponse<Ticket>> {
     try {
       const params: Record<string, any> = { page, pageSize };
