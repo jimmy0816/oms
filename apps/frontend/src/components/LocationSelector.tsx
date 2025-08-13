@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
-import { locationService, Location } from '@/services/locationService';
+import locationService from '@/services/locationService'; // Corrected import
+import { Location } from 'shared-types'; // Corrected import
 
 interface LocationSelectorProps {
-  value: number | null;
-  onChange: (value: number | null) => void;
+  value: string | null; // Changed to string
+  onChange: (value: string | null) => void; // Changed to string
 }
 
 const LocationSelector: React.FC<LocationSelectorProps> = ({
@@ -17,10 +18,11 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const data = await locationService.getAllLocations();
+        // Changed to getActiveLocations
+        const data = await locationService.getActiveLocations();
         setLocations(data);
       } catch (error) {
-        console.error('Failed to fetch locations', error);
+        console.error('Failed to fetch active locations', error);
       }
       setIsLoading(false);
     };
@@ -29,7 +31,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   }, []);
 
   const options = locations.map((loc) => ({
-    value: loc.id,
+    value: loc.id, // id is now string
     label: loc.name,
   }));
 

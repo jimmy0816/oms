@@ -102,6 +102,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           icon: TagIcon,
         });
       }
+      if (hasPermission(Permission.MANAGE_LOCATIONS)) {
+        adminChildren.push({
+          name: '空間管理',
+          href: '/admin/locations',
+          icon: HomeIcon, // Using HomeIcon for now, can be changed if a better icon is available
+        });
+      }
 
       if (adminChildren.length > 0) {
         baseNavigation.push({

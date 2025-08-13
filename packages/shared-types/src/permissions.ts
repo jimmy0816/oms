@@ -33,6 +33,7 @@ export enum Permission {
   // 系統設定
   MANAGE_SETTINGS = 'manage_settings', // 管理系統設定
   MANAGE_CATEGORIES = 'manage_categories', // 管理分類
+  MANAGE_LOCATIONS = 'manage_locations', // 管理空間
 }
 
 export enum UserRole {
@@ -74,6 +75,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.ASSIGN_PERMISSIONS,
     Permission.MANAGE_SETTINGS,
     Permission.MANAGE_CATEGORIES,
+    Permission.MANAGE_LOCATIONS,
   ],
   [UserRole.MANAGER]: [
     Permission.VIEW_ALL_TICKETS,

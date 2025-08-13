@@ -27,6 +27,7 @@ const permissions = [
   { name: 'assign_permissions', description: '分配權限' },
   { name: 'manage_settings', description: '管理設定' },
   { name: 'manage_categories', description: '管理分類' },
+  { name: 'manage_locations', description: '管理空間' },
 ];
 
 const roles = [

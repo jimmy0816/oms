@@ -247,7 +247,7 @@ export default function TicketsPage() {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const data = await locationService.getAllLocations();
+        const data = await locationService.getActiveLocations();
         setAllLocations(data);
       } catch (err) {
         console.error('Failed to fetch locations:', err);
@@ -316,9 +316,9 @@ export default function TicketsPage() {
           ? [viewToApply.filters.priority]
           : [];
         const newLocationIds = Array.isArray(viewToApply.filters.locationIds)
-          ? viewToApply.filters.locationIds
+          ? viewToApply.filters.locationIds.filter(id => allLocations.some(loc => loc.id === id))
           : viewToApply.filters.locationIds
-          ? [viewToApply.filters.locationIds]
+          ? [viewToApply.filters.locationIds].filter(id => allLocations.some(loc => loc.id === id))
           : [];
         const newRoleIds = Array.isArray(viewToApply.filters.roleIds)
           ? viewToApply.filters.roleIds

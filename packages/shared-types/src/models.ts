@@ -138,8 +138,11 @@ export interface Category {
 }
 
 export interface Location {
-  id: number;
+  id: string;
+  externalId?: number; // 新增：用於儲存來自外部系統的原始數字 ID
   name: string;
+  active: boolean;
+  sortOrder: number;
 }
 
 export interface SavedView {

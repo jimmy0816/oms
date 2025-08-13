@@ -18,6 +18,7 @@ export const routePermissions: RouteConfig = {
   '/admin/users': Permission.VIEW_USERS,
   '/admin/roles': Permission.MANAGE_ROLES,
   '/admin/categories': Permission.MANAGE_CATEGORIES,
+  '/admin/locations': Permission.MANAGE_LOCATIONS,
   '/notifications': undefined, // Notifications page, might just need login
   '/user/profile': undefined, // User profile page, might just need login
   // Add other routes as needed

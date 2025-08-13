@@ -229,6 +229,8 @@ model Location {
   id         String   @id @default(uuid())
   externalId Int?     @unique // 新增：用於儲存來自外部系統的原始數字 ID
   name       String   @unique
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0)
   reports    Report[]
 }
 

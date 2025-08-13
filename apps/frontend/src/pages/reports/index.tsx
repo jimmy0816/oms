@@ -153,7 +153,7 @@ export default function Reports() {
         setLoading(true);
         const fetchedCategories = await categoryService.getAllCategories();
         setCategories(fetchedCategories);
-        const fetchedLocations = await locationService.getAllLocations(); // Fetch locations
+        const fetchedLocations = await locationService.getActiveLocations(); // Fetch only active locations
         setAllLocations(fetchedLocations); // Set locations
         const fetchedUsers = await userService.getAllUsers(); // Fetch users
         setAllCreators(fetchedUsers); // Set creators
@@ -354,9 +354,9 @@ export default function Reports() {
         const newLocationFilter = Array.isArray(
           viewToApply.filters.locationFilter
         )
-          ? viewToApply.filters.locationFilter
+          ? viewToApply.filters.locationFilter.filter(id => allLocations.some(loc => loc.id === id))
           : viewToApply.filters.locationFilter
-          ? [viewToApply.filters.locationFilter]
+          ? [viewToApply.filters.locationFilter].filter(id => allLocations.some(loc => loc.id === id))
           : [];
         const newCreatorFilter = Array.isArray(
           viewToApply.filters.creatorFilter
