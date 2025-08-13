@@ -80,7 +80,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(20);
   const [totalReports, setTotalReports] = useState(0);
   const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);

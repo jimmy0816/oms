@@ -15,8 +15,6 @@ import {
   QuestionMarkCircleIcon,
 } from '@heroicons/react/24/outline';
 
-
-
 // Report 類型定義
 export interface Report {
   id: string;
@@ -209,7 +207,7 @@ export const reportService = {
    */
   async getAllReports(
     page = 1,
-    pageSize = 10,
+    pageSize = 20,
     filters: {
       status?: string[];
       categoryIds?: string[];
@@ -224,7 +222,7 @@ export const reportService = {
       const params: Record<string, any> = { page, pageSize };
 
       // 動態、自動化地處理所有過濾條件
-      Object.keys(filters).forEach(key => {
+      Object.keys(filters).forEach((key) => {
         const value = filters[key as keyof typeof filters];
         if (value !== undefined && value !== null && value !== '') {
           if (Array.isArray(value) && value.length > 0) {
@@ -235,8 +233,11 @@ export const reportService = {
         }
       });
 
-      const paginatedResponse = await apiClient.get<PaginatedResponse<Report>>('/api/reports', params);
-      
+      const paginatedResponse = await apiClient.get<PaginatedResponse<Report>>(
+        '/api/reports',
+        params
+      );
+
       // 處理日期格式
       paginatedResponse.items = paginatedResponse.items.map((report: any) => ({
         ...report,
@@ -257,14 +258,17 @@ export const reportService = {
   async getReportById(id: string): Promise<Report> {
     try {
       const report = await apiClient.get<Report>(`/api/reports/${id}`);
-      
+
       // 遞歸處理日期格式
       const parseDates = (obj: any): any => {
         if (!obj || typeof obj !== 'object') return obj;
         if (Array.isArray(obj)) return obj.map(parseDates);
 
         return Object.entries(obj).reduce((acc, [key, value]) => {
-          if ((key === 'createdAt' || key === 'updatedAt') && typeof value === 'string') {
+          if (
+            (key === 'createdAt' || key === 'updatedAt') &&
+            typeof value === 'string'
+          ) {
             acc[key] = new Date(value);
           } else {
             acc[key] = parseDates(value);
@@ -305,7 +309,10 @@ export const reportService = {
     reportData: Partial<UpdateReportRequest>
   ): Promise<Report> {
     try {
-      const report = await apiClient.put<Report>(`/api/reports/${id}`, reportData);
+      const report = await apiClient.put<Report>(
+        `/api/reports/${id}`,
+        reportData
+      );
       return {
         ...report,
         createdAt: new Date(report.createdAt),
@@ -338,7 +345,11 @@ export const reportService = {
     userId: string
   ): Promise<any> {
     try {
-      const comment = await apiClient.post<any>('/api/reports/comments', { reportId, content, userId });
+      const comment = await apiClient.post<any>('/api/reports/comments', {
+        reportId,
+        content,
+        userId,
+      });
       return {
         ...comment,
         createdAt: new Date(comment.createdAt),
@@ -395,7 +406,7 @@ export const reportService = {
    */
   async getPublicReports(
     page = 1,
-    pageSize = 10,
+    pageSize = 20,
     filters: {
       locationIds?: string[];
       sortField?: string;
@@ -415,8 +426,11 @@ export const reportService = {
         params.sortOrder = filters.sortOrder;
       }
 
-      const response = await apiClient.get<PaginatedPublicReportsResponse>('/api/public/reports', params);
-      
+      const response = await apiClient.get<PaginatedPublicReportsResponse>(
+        '/api/public/reports',
+        params
+      );
+
       // 處理日期格式
       response.items = response.items.map((report: any) => ({
         ...report,

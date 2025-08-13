@@ -66,7 +66,7 @@ export default function TicketsPage() {
   const [loading, setLoading] = useState(true);
   const [totalTickets, setTotalTickets] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(20);
   const [filters, setFilters] = useState({
     status: [] as string[],
     priority: [] as string[],
@@ -86,7 +86,7 @@ export default function TicketsPage() {
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
   const [isFilterModified, setIsFilterModified] = useState(false);
   const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
-  
+
   const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
   const [saveViewError, setSaveViewError] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState('');
@@ -948,8 +948,6 @@ export default function TicketsPage() {
             : ''
         }
       />
-
-      
 
       <ManageViewsModal
         isOpen={isManageViewsModalOpen}

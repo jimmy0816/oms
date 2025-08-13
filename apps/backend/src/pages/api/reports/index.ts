@@ -87,10 +87,13 @@ async function getReports(
   res: NextApiResponse<ApiResponse<PaginatedResponse<Report>>>
 ) {
   const page = Number(req.query.page) || 1;
-  const pageSize = Number(req.query.pageSize) || 10;
+  const pageSize = Number(req.query.pageSize) || 20;
   const status = req.query.status as string | string[] | undefined;
   const priority = req.query.priority as string | string[] | undefined;
-  const categoryFilterId = req.query.categoryIds as string | string[] | undefined; // Changed to categoryIds for multi-select
+  const categoryFilterId = req.query.categoryIds as
+    | string
+    | string[]
+    | undefined; // Changed to categoryIds for multi-select
   const assigneeId = req.query.assigneeId as string | undefined;
   const creatorId = req.query.creatorId as string | undefined;
   const search = req.query.search as string | undefined;
@@ -159,7 +162,9 @@ async function getReports(
   if (creatorId) andClauses.push({ creatorId });
 
   if (locationIds) {
-    const parsedLocationIds = Array.isArray(locationIds) ? locationIds : locationIds.split(',');
+    const parsedLocationIds = Array.isArray(locationIds)
+      ? locationIds
+      : locationIds.split(',');
     if (parsedLocationIds.length > 0) {
       andClauses.push({ locationId: { in: parsedLocationIds } });
     }

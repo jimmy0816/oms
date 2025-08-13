@@ -111,7 +111,7 @@ const LostAndFoundPageContent = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(20);
   const [totalReports, setTotalReports] = useState(0);
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');

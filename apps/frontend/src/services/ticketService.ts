@@ -7,8 +7,6 @@ import {
   CreateTicketRequest,
 } from 'shared-types';
 
-
-
 // 取得狀態文字說明
 export const getStatusText = (status: TicketStatus) => {
   switch (status) {
@@ -92,14 +90,14 @@ export const ticketService = {
    */
   async getAllTickets(
     page = 1,
-    pageSize = 10,
+    pageSize = 20,
     filters: Record<string, any> = {} // Changed to 'any' to allow number[]
   ): Promise<PaginatedResponse<Ticket>> {
     try {
       const params: Record<string, any> = { page, pageSize };
 
       // 動態、自動化地處理所有過濾條件
-      Object.keys(filters).forEach(key => {
+      Object.keys(filters).forEach((key) => {
         const value = filters[key as keyof typeof filters];
         if (value !== undefined && value !== null && value !== '') {
           if (Array.isArray(value) && value.length > 0) {
@@ -110,7 +108,10 @@ export const ticketService = {
         }
       });
 
-      const paginatedResponse = await apiClient.get<PaginatedResponse<Ticket>>('/api/tickets', params);
+      const paginatedResponse = await apiClient.get<PaginatedResponse<Ticket>>(
+        '/api/tickets',
+        params
+      );
 
       // 處理日期格式
       paginatedResponse.items = paginatedResponse.items.map((ticket: any) => ({
@@ -139,7 +140,10 @@ export const ticketService = {
         if (Array.isArray(obj)) return obj.map(parseDates);
 
         return Object.entries(obj).reduce((acc, [key, value]) => {
-          if ((key === 'createdAt' || key === 'updatedAt') && typeof value === 'string') {
+          if (
+            (key === 'createdAt' || key === 'updatedAt') &&
+            typeof value === 'string'
+          ) {
             acc[key] = new Date(value);
           } else {
             acc[key] = parseDates(value);
@@ -177,7 +181,10 @@ export const ticketService = {
    */
   async updateTicket(id: string, ticketData: Partial<Ticket>): Promise<Ticket> {
     try {
-      const ticket = await apiClient.put<Ticket>(`/api/tickets/${id}`, ticketData);
+      const ticket = await apiClient.put<Ticket>(
+        `/api/tickets/${id}`,
+        ticketData
+      );
       return {
         ...ticket,
         createdAt: new Date(ticket.createdAt),
@@ -210,7 +217,11 @@ export const ticketService = {
     userId: string
   ): Promise<any> {
     try {
-      const comment = await apiClient.post<any>('/api/tickets/comments', { ticketId, content, userId });
+      const comment = await apiClient.post<any>('/api/tickets/comments', {
+        ticketId,
+        content,
+        userId,
+      });
       return {
         ...comment,
         createdAt: new Date(comment.createdAt),
@@ -260,7 +271,9 @@ export const ticketService = {
    */
   async claimTicket(ticketId: string, userId: string): Promise<Ticket> {
     try {
-      const ticket = await apiClient.patch<Ticket>(`/api/tickets/${ticketId}`, { action: 'claim' });
+      const ticket = await apiClient.patch<Ticket>(`/api/tickets/${ticketId}`, {
+        action: 'claim',
+      });
       await this.addActivityLog(ticketId, '認領工單', userId);
       return {
         ...ticket,
@@ -278,7 +291,9 @@ export const ticketService = {
    */
   async abandonTicket(ticketId: string, userId: string): Promise<Ticket> {
     try {
-      const ticket = await apiClient.patch<Ticket>(`/api/tickets/${ticketId}`, { action: 'abandon' });
+      const ticket = await apiClient.patch<Ticket>(`/api/tickets/${ticketId}`, {
+        action: 'abandon',
+      });
       await this.addActivityLog(ticketId, '放棄工單', userId);
       return {
         ...ticket,
@@ -301,7 +316,11 @@ export const ticketService = {
     finalStatus: 'COMPLETED' | 'FAILED'
   ): Promise<any> {
     try {
-      return await apiClient.post<any>(`/api/tickets/${ticketId}/reviews`, { content, attachments, finalStatus });
+      return await apiClient.post<any>(`/api/tickets/${ticketId}/reviews`, {
+        content,
+        attachments,
+        finalStatus,
+      });
     } catch (error) {
       console.error('提交審核失敗:', error);
       throw error;

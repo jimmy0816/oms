@@ -14,7 +14,6 @@ import { ActivityLogService } from '@/services/activityLogService';
 import { notificationService } from '@/services/notificationService';
 import { Prisma } from '@prisma/client'; // Corrected import path
 
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse<Ticket | PaginatedResponse<Ticket>>>
@@ -45,7 +44,7 @@ async function getTickets(
   res: NextApiResponse<ApiResponse<PaginatedResponse<Ticket>>>
 ) {
   const page = Number(req.query.page) || 1;
-  const pageSize = Number(req.query.pageSize) || 10;
+  const pageSize = Number(req.query.pageSize) || 20;
   const status = req.query.status as string | string[] | undefined;
   const priority = req.query.priority as string | string[] | undefined;
   const assigneeId = req.query.assigneeId as string | undefined;
@@ -106,9 +105,13 @@ async function getTickets(
     }
 
     if (roleIds) {
-      const parsedRoleIds = Array.isArray(roleIds) ? roleIds : roleIds.split(',');
+      const parsedRoleIds = Array.isArray(roleIds)
+        ? roleIds
+        : roleIds.split(',');
       if (parsedRoleIds.length > 0) {
-        rawWhereClausesSql.push(Prisma.sql`t."roleId" IN (${Prisma.join(parsedRoleIds)})`);
+        rawWhereClausesSql.push(
+          Prisma.sql`t."roleId" IN (${Prisma.join(parsedRoleIds)})`
+        );
       }
     }
 
@@ -249,14 +252,16 @@ async function getTickets(
   // Original logic for other sort fields
   const orderByClause: any = {};
   if (sortField && sortOrder) {
-    if (sortField === 'creator' || sortField === 'assignee' || sortField === 'role') {
+    if (
+      sortField === 'creator' ||
+      sortField === 'assignee' ||
+      sortField === 'role'
+    ) {
       orderByClause[sortField] = { name: sortOrder };
-    }
-    else {
+    } else {
       orderByClause[sortField] = sortOrder;
     }
-  }
-  else {
+  } else {
     orderByClause.createdAt = 'desc';
   }
 
@@ -284,8 +289,7 @@ async function getTickets(
     let parsedLocationIds: string[] = [];
     if (Array.isArray(locationIds)) {
       parsedLocationIds = locationIds;
-    }
-    else if (typeof locationIds === 'string') {
+    } else if (typeof locationIds === 'string') {
       parsedLocationIds = locationIds.split(',');
     }
 
