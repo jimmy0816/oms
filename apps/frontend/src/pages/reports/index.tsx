@@ -734,20 +734,6 @@ export default function Reports() {
                     <th
                       scope="col"
                       className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20 cursor-pointer"
-                      onClick={() => handleSort('category')}
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>類別</span>
-                        <SortIcon
-                          field="category"
-                          sortField={sortField}
-                          sortOrder={sortOrder}
-                        />
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20 cursor-pointer"
                       onClick={() => handleSort('priority')}
                     >
                       <div className="flex items-center space-x-1">
@@ -855,9 +841,6 @@ export default function Reports() {
                           {getStatusInfo(report.status).icon}
                           {getStatusName(report.status)}
                         </span>
-                      </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
-                        {getCategoryPath(report.categoryId, categories)}
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap">
                         <span
