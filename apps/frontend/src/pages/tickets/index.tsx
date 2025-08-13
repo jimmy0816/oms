@@ -487,6 +487,13 @@ export default function TicketsPage() {
     ? savedViews.find((view) => view.id === selectedViewId)?.name
     : '所有工單';
 
+  const truncateString = (str: string, num: number) => {
+    if (str.length > num) {
+      return str.slice(0, num) + '...';
+    }
+    return str;
+  };
+
   return (
     <>
       <Head>
@@ -862,11 +869,17 @@ export default function TicketsPage() {
                         #{ticket.id}
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap md:text-ellipsis md:overflow-hidden">
-                        <div className="text-sm font-medium text-gray-900">
-                          {ticket.title}
+                        <div
+                          className="text-sm font-medium text-gray-900 md:truncate"
+                          title={ticket.title}
+                        >
+                          {truncateString(ticket.title, 30)}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {ticket.description}
+                        <div
+                          className="text-sm text-gray-500 md:truncate whitespace-normal"
+                          title={ticket.description}
+                        >
+                          {truncateString(ticket.description, 30)}
                         </div>
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap">

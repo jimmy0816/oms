@@ -434,6 +434,13 @@ export default function Reports() {
     };
   };
 
+  const truncateString = (str: string, num: number) => {
+    if (str.length > num) {
+      return str.slice(0, num) + '...';
+    }
+    return str;
+  };
+
   const currentViewName = selectedViewId
     ? savedViews.find((view) => view.id === selectedViewId)?.name
     : '所有通報'; // Changed from '新增視圖' to '所有通報' for clarity when no view is selected
@@ -908,8 +915,8 @@ export default function Reports() {
                         <div className="text-sm font-medium text-gray-900 md:truncate">
                           {report.title}
                         </div>
-                        <div className="text-sm text-gray-500 md:truncate">
-                          {report.description}
+                        <div className="text-sm text-gray-500 md:truncate whitespace-normal">
+                          {truncateString(report.description, 30)}
                         </div>
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap">
