@@ -531,13 +531,13 @@ async function updateReport(
 
     // Create notification if status was changed
     if (status && status !== existingReport.status) {
-      await notificationService.create({
-        title: '通報狀態更新',
-        message: `您的通報「${finalUpdatedReport.title}」狀態已更新為 ${status}`,
-        userId: existingReport.creatorId,
-        relatedId: id,
-        relatedType: 'REPORT',
-      });
+      // await notificationService.create({
+      //   title: '通報狀態更新',
+      //   message: `您的通報「${finalUpdatedReport.title}」狀態已更新為 ${status}`,
+      //   userId: existingReport.creatorId,
+      //   relatedId: id,
+      //   relatedType: 'REPORT',
+      // });
     }
 
     // Create notification if other data was changed

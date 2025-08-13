@@ -442,13 +442,13 @@ async function updateTicket(
 
     // Create notification for status change
     if (status && status !== existingTicket.status) {
-      await notificationService.create({
-        title: '工單狀態更新',
-        message: `工單「${finalUpdatedTicket.title}」的狀態已變更為 ${status}`,
-        userId: existingTicket.creatorId,
-        relatedId: id,
-        relatedType: 'TICKET',
-      });
+      // await notificationService.create({
+      //   title: '工單狀態更新',
+      //   message: `工單「${finalUpdatedTicket.title}」的狀態已變更為 ${status}`,
+      //   userId: existingTicket.creatorId,
+      //   relatedId: id,
+      //   relatedType: 'TICKET',
+      // });
     }
 
     // Create notification for assignee change
