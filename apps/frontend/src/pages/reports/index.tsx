@@ -354,9 +354,9 @@ export default function Reports() {
         const newLocationFilter = Array.isArray(
           viewToApply.filters.locationFilter
         )
-          ? viewToApply.filters.locationFilter.filter(id => allLocations.some(loc => loc.id === id))
+          ? viewToApply.filters.locationFilter
           : viewToApply.filters.locationFilter
-          ? [viewToApply.filters.locationFilter].filter(id => allLocations.some(loc => loc.id === id))
+          ? [viewToApply.filters.locationFilter]
           : [];
         const newCreatorFilter = Array.isArray(
           viewToApply.filters.creatorFilter
