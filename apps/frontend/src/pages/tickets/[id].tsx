@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import {
   ticketService,
   getStatusText,
@@ -122,6 +122,21 @@ export default function TicketDetail() {
     }
   };
 
+  const handleDelete = async (ticketId: string, ticketTitle: string) => {
+    if (
+      window.confirm(`您確定要刪除工單「${ticketTitle}」嗎？此操作無法復原。`)
+    ) {
+      try {
+        await ticketService.deleteTicket(ticketId);
+        showToast('工單已成功刪除！', 'success');
+        router.push('/tickets');
+      } catch (error) {
+        console.error('刪除工單失敗:', error);
+        showToast('刪除工單失敗，請稍後再試。', 'error');
+      }
+    }
+  };
+
   const updateTicketStatus = async (newStatus: TicketStatus, log: string) => {
     if (!ticket?.id || !user?.id) return;
 
@@ -226,7 +241,27 @@ export default function TicketDetail() {
           </h1>
         </div>
 
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+        <div className="bg-white shadow-md rounded-lg overflow-hidden relative">
+          <div className="absolute top-4 right-4 flex items-center space-x-2">
+            <PermissionGuard required={Permission.EDIT_TICKETS}>
+              <Link
+                href={`/tickets/${ticket.id}/edit`}
+                className="text-blue-600 hover:text-blue-900 p-2 bg-white rounded-full shadow-md"
+                title="編輯"
+              >
+                <PencilIcon className="h-6 w-6" />
+              </Link>
+            </PermissionGuard>
+            <PermissionGuard required={Permission.DELETE_TICKETS}>
+              <button
+                onClick={() => handleDelete(ticket.id, ticket.title)}
+                className="text-red-600 hover:text-red-900 p-2 bg-white rounded-full shadow-md"
+                title="刪除"
+              >
+                <TrashIcon className="h-6 w-6" />
+              </button>
+            </PermissionGuard>
+          </div>
           <div className="p-6 border-b border-gray-200">
             <div className="text-sm text-gray-600 flex flex-wrap items-center justify-between gap-4 mb-4">
               #{ticket.id}
