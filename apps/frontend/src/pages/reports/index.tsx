@@ -46,6 +46,9 @@ import ViewTabs from '@/components/ViewTabs';
 import MultiSelectFilterModal, {
   MultiSelectOption,
 } from '@/components/MultiSelectFilterModal'; // Import MultiSelectOption
+import DatePicker from 'react-datepicker';
+import { zhTW } from 'date-fns/locale';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const SortIcon = ({
   field,
@@ -76,6 +79,10 @@ export default function Reports() {
   const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
   const [locationFilter, setLocationFilter] = useState<string[]>([]);
   const [creatorFilter, setCreatorFilter] = useState<string[]>([]); // New state for creator filter
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
+    null,
+    null,
+  ]);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -202,6 +209,8 @@ export default function Reports() {
         search?: string;
         locationIds?: string[];
         creatorIds?: string[]; // Add creatorIds to filters
+        startDate?: string;
+        endDate?: string;
         sortField?: string;
         sortOrder?: 'asc' | 'desc';
       } = {};
@@ -211,6 +220,12 @@ export default function Reports() {
       if (searchTerm) filters.search = searchTerm;
       if (locationFilter.length > 0) filters.locationIds = locationFilter;
       if (creatorFilter.length > 0) filters.creatorIds = creatorFilter;
+      if (dateRange[0]) {
+        filters.startDate = dateRange[0].toISOString();
+      }
+      if (dateRange[1]) {
+        filters.endDate = dateRange[1].toISOString();
+      }
       if (sortField) filters.sortField = sortField;
       if (sortOrder) filters.sortOrder = sortOrder;
 
@@ -242,6 +257,7 @@ export default function Reports() {
     searchTerm,
     locationFilter,
     creatorFilter, // Add creatorFilter to dependency array
+    dateRange,
     sortField,
     sortOrder,
   ]);
@@ -274,6 +290,7 @@ export default function Reports() {
     setPriorityFilter([]);
     setLocationFilter([]);
     setCreatorFilter([]); // Clear creator filter
+    setDateRange([null, null]);
     setSelectedViewId(null); // Clear selected view
     setPage(1);
     setSortField(null);
@@ -291,6 +308,7 @@ export default function Reports() {
         priorityFilter,
         locationFilter,
         creatorFilter, // Include creatorFilter
+        dateRange,
         sortField,
         sortOrder,
       };
@@ -366,12 +384,24 @@ export default function Reports() {
           ? [viewToApply.filters.creatorFilter]
           : [];
 
+        const newDateRange = viewToApply.filters.dateRange
+          ? [
+              viewToApply.filters.dateRange[0]
+                ? new Date(viewToApply.filters.dateRange[0])
+                : null,
+              viewToApply.filters.dateRange[1]
+                ? new Date(viewToApply.filters.dateRange[1])
+                : null,
+            ]
+          : [null, null];
+
         setSearchTerm(viewToApply.filters.searchTerm || '');
         setStatusFilter(newStatusFilter);
         setCategoryFilter(newCategoryFilter);
         setPriorityFilter(newPriorityFilter);
         setLocationFilter(newLocationFilter);
         setCreatorFilter(newCreatorFilter);
+        setDateRange(newDateRange as [Date | null, Date | null]);
         setSelectedViewId(viewId);
         setPage(1);
         setSortField(viewToApply.filters.sortField || null);
@@ -639,6 +669,30 @@ export default function Reports() {
                   ? `已選 ${creatorFilter.length} 個建立者`
                   : '選擇建立者...'}
               </button>
+            </div>
+
+            {/* 日期範圍篩選 */}
+            <div className="col-span-2">
+              <label
+                htmlFor="date-range-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                建立日期範圍
+              </label>
+              <DatePicker
+                selectsRange={true}
+                startDate={dateRange[0]}
+                endDate={dateRange[1]}
+                onChange={(update) => {
+                  setDateRange(update);
+                  setIsFilterModified(true);
+                }}
+                isClearable={true}
+                locale={zhTW}
+                dateFormat="yyyy/MM/dd"
+                placeholderText="選擇日期範圍"
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
+              />
             </div>
           </div>
         )}

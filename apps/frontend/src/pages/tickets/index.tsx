@@ -33,7 +33,7 @@ import {
 } from '@/services/ticketService';
 import { roleService, getRoleName } from '@/services/roleService';
 import { savedViewService } from '@/services/savedViewService';
-import { locationService, Location } from '@/services/locationService'; // Import Location and locationService
+import { locationService } from '@/services/locationService'; // Import Location and locationService
 import SaveViewModal from '@/components/SaveViewModal';
 import ViewTabs from '@/components/ViewTabs';
 import ManageViewsModal from '@/components/ManageViewsModal';
@@ -41,6 +41,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import MultiSelectFilterModal from '@/components/MultiSelectFilterModal';
 import PermissionGuard from '@/components/PermissionGuard';
+import DatePicker from 'react-datepicker';
+import { zhTW } from 'date-fns/locale';
 
 const SortIcon = ({
   field,
@@ -77,6 +79,7 @@ export default function TicketsPage() {
     roleIds: [] as string[],
     creatorIds: [] as string[], // New state for creator filter
     assigneeIds: [] as string[], // New state for assignee filter
+    dateRange: [null, null] as [Date | null, Date | null],
   });
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false); // Added state for location modal
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
@@ -172,6 +175,12 @@ export default function TicketsPage() {
         apiFilters.creatorIds = filters.creatorIds;
       if (filters.assigneeIds.length > 0)
         apiFilters.assigneeIds = filters.assigneeIds;
+      if (filters.dateRange[0]) {
+        apiFilters.startDate = filters.dateRange[0].toISOString();
+      }
+      if (filters.dateRange[1]) {
+        apiFilters.endDate = filters.dateRange[1].toISOString();
+      }
       if (sortField && sortOrder) {
         apiFilters.sortField = sortField;
         apiFilters.sortOrder = sortOrder;
@@ -230,6 +239,7 @@ export default function TicketsPage() {
     filters.roleIds,
     filters.creatorIds,
     filters.assigneeIds,
+    filters.dateRange,
     sortField,
     sortOrder,
   ]);
@@ -316,9 +326,13 @@ export default function TicketsPage() {
           ? [viewToApply.filters.priority]
           : [];
         const newLocationIds = Array.isArray(viewToApply.filters.locationIds)
-          ? viewToApply.filters.locationIds.filter(id => allLocations.some(loc => loc.id === id))
+          ? viewToApply.filters.locationIds.filter((id) =>
+              allLocations.some((loc) => loc.id === id)
+            )
           : viewToApply.filters.locationIds
-          ? [viewToApply.filters.locationIds].filter(id => allLocations.some(loc => loc.id === id))
+          ? [viewToApply.filters.locationIds].filter((id) =>
+              allLocations.some((loc) => loc.id === id)
+            )
           : [];
         const newRoleIds = Array.isArray(viewToApply.filters.roleIds)
           ? viewToApply.filters.roleIds
@@ -336,6 +350,17 @@ export default function TicketsPage() {
           ? [viewToApply.filters.assigneeIds]
           : [];
 
+        const newDateRange = viewToApply.filters.dateRange
+          ? [
+              viewToApply.filters.dateRange[0]
+                ? new Date(viewToApply.filters.dateRange[0])
+                : null,
+              viewToApply.filters.dateRange[1]
+                ? new Date(viewToApply.filters.dateRange[1])
+                : null,
+            ]
+          : [null, null];
+
         setFilters({
           status: newStatus,
           priority: newPriority,
@@ -344,6 +369,7 @@ export default function TicketsPage() {
           roleIds: newRoleIds,
           creatorIds: newCreatorIds,
           assigneeIds: newAssigneeIds,
+          dateRange: newDateRange as [Date | null, Date | null],
         });
         setSortField(viewToApply.filters.sortField || 'createdAt');
         setSortOrder(viewToApply.filters.sortOrder || 'desc');
@@ -386,6 +412,13 @@ export default function TicketsPage() {
     []
   );
 
+  const handleDateChange = useCallback((dates: [Date | null, Date | null]) => {
+    const [start, end] = dates;
+    setFilters((prev) => ({ ...prev, dateRange: [start, end] }));
+    setIsFilterModified(true);
+    setCurrentPage(1);
+  }, []);
+
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setFilters((prev) => ({ ...prev, search: e.target.value }));
@@ -403,6 +436,7 @@ export default function TicketsPage() {
       roleIds: [] as string[],
       creatorIds: [] as string[],
       assigneeIds: [] as string[],
+      dateRange: [null, null],
     });
     setSelectedViewId(null);
     setCurrentPage(1);
@@ -419,6 +453,7 @@ export default function TicketsPage() {
         roleIds: filters.roleIds as string[],
         creatorIds: filters.creatorIds as string[],
         assigneeIds: filters.assigneeIds as string[],
+        dateRange: filters.dateRange,
         sortField,
         sortOrder,
       };
@@ -457,7 +492,9 @@ export default function TicketsPage() {
         filters.locationIds.length > 0 ||
         filters.roleIds.length > 0 ||
         filters.creatorIds.length > 0 ||
-        filters.assigneeIds.length > 0;
+        filters.assigneeIds.length > 0 ||
+        !!filters.dateRange[0] ||
+        !!filters.dateRange[1];
       setIsFilterModified(hasFilters);
       return;
     }
@@ -478,7 +515,11 @@ export default function TicketsPage() {
       (currentView.filters.creatorIds || []).sort().join(',') ===
         filters.creatorIds.sort().join(',') &&
       (currentView.filters.assigneeIds || []).sort().join(',') ===
-        filters.assigneeIds.sort().join(',');
+        filters.assigneeIds.sort().join(',') &&
+      JSON.stringify(currentView.filters.dateRange || [null, null]) ===
+        JSON.stringify(
+          filters.dateRange.map((d) => (d ? d.toISOString() : null))
+        );
 
     setIsFilterModified(!filtersSame);
   }, [filters, selectedViewId, savedViews]);
@@ -702,6 +743,29 @@ export default function TicketsPage() {
                   ? `已選 ${filters.assigneeIds.length} 個負責人`
                   : '選擇負責人...'}
               </button>
+            </div>
+
+            {/* 日期範圍篩選 */}
+            <div className="col-span-2">
+              <label
+                htmlFor="date-range-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                建立日期範圍
+              </label>
+              <DatePicker
+                selectsRange={true}
+                startDate={filters.dateRange[0]}
+                endDate={filters.dateRange[1]}
+                onChange={(update) => {
+                  handleDateChange(update);
+                }}
+                isClearable={true}
+                locale={zhTW}
+                placeholderText="選擇日期範圍"
+                dateFormat="yyyy/MM/dd"
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
+              />
             </div>
           </div>
         )}

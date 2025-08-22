@@ -54,6 +54,8 @@ async function getTickets(
   const roleIds = req.query.roleIds as string | string[] | undefined;
   const sortField = req.query.sortField as string | undefined;
   const sortOrder = req.query.sortOrder as 'asc' | 'desc' | undefined;
+  const startDate = req.query.startDate as string | undefined;
+  const endDate = req.query.endDate as string | undefined;
 
   const skip = (page - 1) * pageSize;
 
@@ -145,6 +147,14 @@ async function getTickets(
         assignee.name ILIKE ${searchPattern} OR
         role.name ILIKE ${searchPattern}
       )`);
+    }
+
+    if (startDate) {
+      rawWhereClausesSql.push(Prisma.sql`t."createdAt" >= ${new Date(startDate)}`);
+    }
+
+    if (endDate) {
+      rawWhereClausesSql.push(Prisma.sql`t."createdAt" <= ${new Date(endDate)}`);
     }
 
     const userId = req.user.id;
@@ -403,6 +413,16 @@ async function getTickets(
 
   if (andClauses.length > 0) {
     where.AND = andClauses;
+  }
+
+  if (startDate || endDate) {
+    where.createdAt = {};
+    if (startDate) {
+      where.createdAt.gte = new Date(startDate);
+    }
+    if (endDate) {
+      where.createdAt.lte = new Date(endDate);
+    }
   }
 
   const [tickets, total] = await Promise.all([
