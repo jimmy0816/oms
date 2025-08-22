@@ -80,7 +80,12 @@ async function getTicket(
       },
       reports: {
         include: {
-          report: true,
+          report: {
+            include: {
+              location: true,
+              category: true,
+            },
+          },
         },
       },
       role: true,

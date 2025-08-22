@@ -410,6 +410,9 @@ export default function TicketDetail() {
                         <p className="text-gray-600 text-sm mt-0.5 break-all">
                           通報 #{ticketReport.report.id}
                         </p>
+                        <p className="text-gray-600 text-sm mt-0.5 break-all">
+                          地區: {ticketReport.report.location?.name || 'N/A'}
+                        </p>
                       </div>
                       <Link
                         href={`/reports/${ticketReport.report.id}`}
