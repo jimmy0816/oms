@@ -22,12 +22,14 @@ steps:
         cp -R . /tmp/monorepo
         cd /tmp/monorepo
 
-        pnpm install --filter backend --frozen-lockfile
-        pnpm install --filter prisma-client --frozen-lockfile
+        pnpm install --frozen-lockfile
 
         /workspace/cloud_sql_proxy -dir=/workspace -instances=${_CLOUD_SQL_CONNECTION_NAME}=tcp:5432&
         echo "Waiting for Cloud SQL Proxy to start..."
         sleep 5
+
+        pnpm --filter prisma-client db:generate
+        echo "Prisma Client generated."
 
         pnpm --filter prisma-client db:migrate
         echo "Prisma Migrate completed."
@@ -36,7 +38,7 @@ steps:
         echo "Permission sync completed."
     env:
       - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/oms"
-    id: "Run Prisma Migrations"
+    id: "Run Prisma Operations and Permission Sync"
     waitFor: ["proxy-install"]
 
   # 步驟 1: 建構 Docker 映像
