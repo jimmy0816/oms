@@ -17,9 +17,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     await seedPermissions();
-    await seedCategories();
-    await seedLocations();
-    await seedAdmin();
+    // await seedCategories();
+    // await seedLocations();
+    // await seedAdmin();
     return res.status(200).json({ success: true, message: '初始化成功' });
   } catch (error) {
     console.error('初始化過程中發生錯誤:', error);

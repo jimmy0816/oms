@@ -120,7 +120,8 @@ export default function RolesManagement() {
         p.startsWith('assign_tickets') ||
         p.startsWith('claim_tickets') ||
         p.startsWith('complete_tickets') ||
-        p.startsWith('verify_tickets')
+        p.startsWith('verify_tickets') ||
+        p.startsWith('export_tickets')
     ),
     reports: allPermissions.filter(
       (p) =>
@@ -130,7 +131,8 @@ export default function RolesManagement() {
         p.startsWith('edit_reports') ||
         p.startsWith('delete_reports') ||
         p.startsWith('process_reports') ||
-        p.startsWith('review_reports')
+        p.startsWith('review_reports') ||
+        p.startsWith('export_reports')
     ),
     users: allPermissions.filter(
       (p) =>

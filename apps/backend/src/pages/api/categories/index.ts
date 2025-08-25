@@ -12,24 +12,28 @@ async function handler(
     case 'GET':
       return getCategories(req, res);
     case 'POST':
-      return withPermission(Permission.MANAGE_CATEGORIES)(createCategory)(req, res);
+      return withPermission(Permission.MANAGE_CATEGORIES)(createCategory)(
+        req,
+        res
+      );
     default:
       res.setHeader('Allow', ['GET', 'POST']);
-      return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
+      return res
+        .status(405)
+        .json({ success: false, error: `Method ${req.method} Not Allowed` });
   }
 }
 
-const getCategories = withAuth(async (
-  req: AuthenticatedRequest,
-  res: NextApiResponse<ApiResponse<any>>
-) => {
-  try {
-    const categories = await categoryService.getAllCategories();
-    return res.status(200).json({ success: true, data: categories });
-  } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+const getCategories = withAuth(
+  async (req: AuthenticatedRequest, res: NextApiResponse<ApiResponse<any>>) => {
+    try {
+      const categories = await categoryService.getAllCategories();
+      return res.status(200).json({ success: true, data: categories });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
   }
-});
+);
 
 const createCategory = async (
   req: AuthenticatedRequest,

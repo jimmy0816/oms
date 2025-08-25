@@ -65,9 +65,9 @@ const apiClient = {
     return handleResponse(response);
   },
 
-  async post<T>(path: string, body: any): Promise<T> {
+  async post<T>(path: string, body: any, options: { responseType?: 'blob', headers?: Record<string, string> } = {}): Promise<T> {
     const token = authService.getToken();
-    const headers: HeadersInit = {
+    const headers: HeadersInit = options.headers || {
       'Content-Type': 'application/json',
     };
     if (token) {
@@ -79,6 +79,13 @@ const apiClient = {
       headers,
       body: JSON.stringify(body),
     });
+
+    if (options.responseType === 'blob') {
+        if (!response.ok) {
+            return Promise.reject(new Error('Failed to download file'));
+        }
+        return response.blob() as Promise<T>;
+    }
 
     return handleResponse(response);
   },

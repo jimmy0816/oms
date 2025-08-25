@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import {
+import { 
+  ArrowDownTrayIcon, // Added for export
   FunnelIcon,
   MagnifyingGlassIcon,
   PlusIcon,
@@ -143,6 +144,47 @@ export default function TicketsPage() {
         console.error('刪除視圖失敗:', error);
         showToast('刪除視圖失敗，請稍後再試。', 'error');
       }
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const apiFilters: Record<string, any> = {};
+      if (filters.status.length > 0) apiFilters.status = filters.status;
+      if (filters.priority.length > 0) apiFilters.priority = filters.priority;
+      if (filters.search) apiFilters.search = filters.search;
+      if (filters.locationIds.length > 0)
+        apiFilters.locationIds = filters.locationIds;
+      if (filters.roleIds.length > 0) apiFilters.roleIds = filters.roleIds;
+      if (filters.creatorIds.length > 0)
+        apiFilters.creatorIds = filters.creatorIds;
+      if (filters.assigneeIds.length > 0)
+        apiFilters.assigneeIds = filters.assigneeIds;
+      if (filters.dateRange[0]) {
+        apiFilters.startDate = filters.dateRange[0].toISOString();
+      }
+      if (filters.dateRange[1]) {
+        apiFilters.endDate = filters.dateRange[1].toISOString();
+      }
+      if (sortField && sortOrder) {
+        apiFilters.sortField = sortField;
+        apiFilters.sortOrder = sortOrder;
+      }
+
+      const blob = await ticketService.exportTickets(apiFilters);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tickets.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      showToast('工單已成功匯出！', 'success');
+    } catch (error) {
+      console.error('匯出工單失敗:', error);
+      showToast('匯出工單失敗，請稍後再試。', 'error');
     }
   };
 
@@ -554,6 +596,15 @@ export default function TicketsPage() {
           >
             清除篩選
           </button>
+          <PermissionGuard required={Permission.EXPORT_TICKETS}>
+            <button
+              className="btn-outline px-4 py-2.5 text-sm font-medium rounded-md flex items-center space-x-1 md:py-2"
+              onClick={handleExport}
+            >
+              <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+              匯出 Excel
+            </button>
+          </PermissionGuard>
           <PermissionGuard required={Permission.CREATE_TICKETS}>
             <Link
               href={`/tickets/new?returnUrl=${encodeURIComponent(currentPath)}`}

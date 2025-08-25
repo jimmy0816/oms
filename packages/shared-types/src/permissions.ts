@@ -10,6 +10,7 @@ export enum Permission {
   CLAIM_TICKETS = 'claim_tickets', // 認領工單
   COMPLETE_TICKETS = 'complete_tickets', // 完成工單
   VERIFY_TICKETS = 'verify_tickets', // 驗收工單
+  EXPORT_TICKETS = 'export_tickets', // 匯出工單
 
   // 通報權限
   VIEW_ALL_REPORTS = 'view_all_reports', // 查看所有通報
@@ -19,6 +20,7 @@ export enum Permission {
   DELETE_REPORTS = 'delete_reports', // 刪除通報
   PROCESS_REPORTS = 'process_reports', // 處理通報
   REVIEW_REPORTS = 'review_reports', // 審核通報
+  EXPORT_REPORTS = 'export_reports', // 匯出通報
 
   // 用戶管理權限
   VIEW_USERS = 'view_users', // 查看用戶
@@ -60,6 +62,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CLAIM_TICKETS,
     Permission.COMPLETE_TICKETS,
     Permission.VERIFY_TICKETS,
+    Permission.EXPORT_TICKETS,
     Permission.VIEW_ALL_REPORTS,
     Permission.VIEW_REPORTS,
     Permission.CREATE_REPORTS,
@@ -67,6 +70,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.DELETE_REPORTS,
     Permission.PROCESS_REPORTS,
     Permission.REVIEW_REPORTS,
+    Permission.EXPORT_REPORTS,
     Permission.VIEW_USERS,
     Permission.CREATE_USERS,
     Permission.EDIT_USERS,
@@ -84,12 +88,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.EDIT_TICKETS,
     Permission.ASSIGN_TICKETS,
     Permission.VERIFY_TICKETS,
+    Permission.EXPORT_TICKETS,
     Permission.VIEW_ALL_REPORTS,
     Permission.VIEW_REPORTS,
     Permission.EDIT_REPORTS,
     Permission.DELETE_REPORTS,
     Permission.PROCESS_REPORTS,
     Permission.REVIEW_REPORTS,
+    Permission.EXPORT_REPORTS,
     Permission.VIEW_USERS,
   ],
   [UserRole.REPORT_PROCESSOR]: [

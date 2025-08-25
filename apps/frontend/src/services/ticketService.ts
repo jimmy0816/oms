@@ -138,6 +138,22 @@ export const ticketService = {
   },
 
   /**
+   * 匯出工單
+   */
+  async exportTickets(filters: any): Promise<Blob> {
+    try {
+      const response = await apiClient.post<Blob>('/api/tickets/export', filters, {
+        responseType: 'blob',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response;
+    } catch (error) {
+      console.error('匯出工單失敗:', error);
+      throw error;
+    }
+  },
+
+  /**
    * 根據 ID 獲取工單
    */
   async getTicketById(id: string): Promise<Ticket> {

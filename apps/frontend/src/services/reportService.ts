@@ -254,6 +254,22 @@ export const reportService = {
   },
 
   /**
+   * 匯出報表
+   */
+  async exportReports(filters: any): Promise<Blob> {
+    try {
+      const response = await apiClient.post<Blob>('/api/reports/export', filters, {
+        responseType: 'blob',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response;
+    } catch (error) {
+      console.error('匯出報表失敗:', error);
+      throw error;
+    }
+  },
+
+  /**
    * 根據 ID 獲取通報
    */
   async getReportById(id: string): Promise<Report> {

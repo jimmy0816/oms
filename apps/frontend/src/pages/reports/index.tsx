@@ -2,7 +2,8 @@ import PermissionGuard from '@/components/PermissionGuard';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import {
+import { 
+  ArrowDownTrayIcon, // Added for export
   MagnifyingGlassIcon,
   FunnelIcon,
   PlusIcon,
@@ -139,6 +140,38 @@ export default function Reports() {
         console.error('刪除視圖失敗:', error);
         showToast('刪除視圖失敗，請稍後再試。', 'error');
       }
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const filters = {
+        status: statusFilter,
+        categoryIds: categoryFilter,
+        priority: priorityFilter,
+        search: searchTerm,
+        locationIds: locationFilter,
+        creatorIds: creatorFilter,
+        startDate: dateRange[0]?.toISOString(),
+        endDate: dateRange[1]?.toISOString(),
+        sortField: sortField,
+        sortOrder: sortOrder,
+      };
+
+      const blob = await reportService.exportReports(filters);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'reports.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      showToast('報表已成功匯出！', 'success');
+    } catch (error) {
+      console.error('匯出報表失敗:', error);
+      showToast('匯出報表失敗，請稍後再試。', 'error');
     }
   };
 
@@ -493,6 +526,15 @@ export default function Reports() {
               >
                 清除篩選
               </button>
+              <PermissionGuard required={Permission.EXPORT_REPORTS}>
+                <button
+                  className="btn-outline px-4 py-2.5 text-sm font-medium rounded-md flex items-center space-x-1 md:py-2"
+                  onClick={handleExport}
+                >
+                  <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                  匯出 Excel
+                </button>
+              </PermissionGuard>
               <PermissionGuard required={Permission.CREATE_REPORTS}>
                 <Link
                   href="/reports/new"
