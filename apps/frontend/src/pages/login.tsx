@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -13,8 +13,12 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
-  // This useEffect is now removed as per previous discussion.
-  // It's handled by next-auth middleware and AuthContext's useSession.
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      router.push('/');
+    }
+  }, [user, router]);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,15 +61,13 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     const { callbackUrl } = router.query;
     // Let next-auth automatically handle the callbackUrl from the query string.
-    signIn('oidc', { callbackUrl: (callbackUrl as string) || '/' }).catch(
-      (err) => {
-        showToast(
-          err instanceof Error ? err.message : 'OIDC 登入失敗',
-          'error'
-        );
-        setLoading(false);
-      }
-    );
+    signIn('oidc', {
+      callbackUrl:
+        (callbackUrl as string) || `${process.env.NEXT_PUBLIC_BASE_URL}`,
+    }).catch((err) => {
+      showToast(err instanceof Error ? err.message : 'OIDC 登入失敗', 'error');
+      setLoading(false);
+    });
   };
 
   return (

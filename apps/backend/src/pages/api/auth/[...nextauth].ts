@@ -76,6 +76,49 @@ export const authOptions: NextAuthOptions = {
     signIn: '/login',
   },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.type === 'oauth') {
+        // Check if a user with the same email already exists
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email as string },
+        });
+
+        if (existingUser) {
+          // If the user exists, check if an account for this provider already exists
+          const existingAccount = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+              },
+            },
+          });
+
+          if (!existingAccount) {
+            // If no account exists for this provider, link the new OAuth account to the existing user
+            await prisma.account.create({
+              data: {
+                userId: existingUser.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                refresh_token: account.refresh_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+                session_state: account.session_state,
+              },
+            });
+          }
+          // Allow sign in for existing user
+          return true;
+        }
+      }
+      // For new users or credential provider, allow default sign-in behavior
+      return true;
+    },
     async redirect({ url, baseUrl }) {
       const frontendUrl = process.env.FRONTEND_BASE_URL;
       if (frontendUrl && url.startsWith(frontendUrl)) {

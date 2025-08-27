@@ -7,7 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { useRouter } from 'next/router';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { notificationService } from '@/services/notificationService';
 import { Notification, Permission } from 'shared-types';
 import { User } from '@/types/user'; // Assuming you have a User type that matches next-auth's user
@@ -15,7 +15,6 @@ import { User } from '@/types/user'; // Assuming you have a User type that match
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  // login: (email: string, password: string, returnUrl?: string) => Promise<void>; // Removed as signIn is called directly
   logout: () => void;
   hasPermission: (permission: Permission) => boolean;
   notifications: Notification[];
@@ -55,17 +54,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [status, fetchNotifications]);
 
-  // The login function is now handled directly in login.tsx by calling signIn.
-  // This placeholder is kept for AuthContextType compatibility if needed elsewhere.
-  const login = async (email: string, password: string, returnUrl?: string) => {
-    // This function should ideally not be called directly anymore for login.
-    // Login is handled by signIn('credentials', ...) in login.tsx
-    console.warn(
-      'AuthContext.login should not be called directly for login. Use signIn from next-auth/react.'
-    );
-    throw new Error('AuthContext.login is deprecated for direct login calls.');
-  };
-
   const logout = () => {
     const logoutUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/login`;
     signOut({ callbackUrl: logoutUrl });
@@ -101,7 +89,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const value = {
     user,
     loading,
-    login,
     logout,
     hasPermission,
     notifications,
