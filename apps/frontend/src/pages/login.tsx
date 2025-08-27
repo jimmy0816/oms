@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 
+import { signIn } from 'next-auth/react';
+
 /**
  * 登入頁面組件
  */
@@ -22,9 +24,9 @@ const LoginPage: React.FC = () => {
   }, [user]);
 
   /**
-   * 處理登入表單提交
+   * 處理傳統帳號密碼登入
    */
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -48,6 +50,27 @@ const LoginPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * 處理 OIDC 登入
+   */
+  const handleOidcLogin = () => {
+    setLoading(true);
+
+    const callbackUrl = process.env.NEXT_PUBLIC_BASE_URL || '/';
+    const { returnUrl } = router.query;
+
+    // 使用 next-auth 的 signIn 方法，指定 'oidc' provider
+    signIn('oidc', { callbackUrl: `${callbackUrl}/${returnUrl}` }).catch(
+      (err) => {
+        showToast(
+          err instanceof Error ? err.message : 'OIDC 登入失敗',
+          'error'
+        );
+        setLoading(false);
+      }
+    );
   };
 
   return (
@@ -84,7 +107,7 @@ const LoginPage: React.FC = () => {
           </div>
         )}
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6" onSubmit={handlePasswordLogin}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">
@@ -132,6 +155,23 @@ const LoginPage: React.FC = () => {
             </button>
           </div>
         </form>
+
+        <div className="relative flex py-2 items-center">
+          <div className="flex-grow border-t border-gray-300"></div>
+          <span className="flex-shrink mx-4 text-gray-400">或</span>
+          <div className="flex-grow border-t border-gray-300"></div>
+        </div>
+
+        <div>
+          <button
+            type="button"
+            onClick={handleOidcLogin}
+            disabled={loading}
+            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gray-700 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? '處理中...' : '使用 OIDC Provider 登入'}
+          </button>
+        </div>
       </div>
     </div>
   );

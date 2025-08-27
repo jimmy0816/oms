@@ -7,6 +7,7 @@ export interface User {
   name: string;
   role: string;
   additionalRoles?: string[];
+  permissions?: string[];
   createdAt?: string;
   updatedAt?: string;
 }

@@ -1,22 +1,23 @@
 import React, {
   createContext,
   useContext,
-  useState,
   useEffect,
   ReactNode,
   useCallback,
+  useState,
 } from 'react';
 import { useRouter } from 'next/router';
-import authService, { User } from '@/services/authService';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import { notificationService } from '@/services/notificationService';
-import { Notification, Permission } from 'shared-types'; // Import Permission
+import { Notification, Permission } from 'shared-types';
+import { User } from '@/types/user';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string, returnUrl?: string) => Promise<void>;
   logout: () => void;
-  hasPermission: (permission: Permission) => boolean; // New permission checker
+  hasPermission: (permission: Permission) => boolean;
   notifications: Notification[];
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
@@ -26,77 +27,51 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
+  const user = session?.user as User | null;
+  const loading = status === 'loading';
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const router = useRouter();
 
   const fetchNotifications = useCallback(async () => {
-    // 只有在用戶已登入時才嘗試獲取通知
-    if (!authService.isLoggedIn()) {
-      setNotifications([]); // 確保未登入時清空通知
+    if (!session) {
+      setNotifications([]);
       return;
     }
     try {
       const fetchedNotifications = await notificationService.getNotifications();
       setNotifications(fetchedNotifications);
     } catch (error) {
-      console.error("Failed to fetch notifications:", error);
-      setNotifications([]); // Clear notifications on error
-    }
-  }, []);
-
-  const initAuth = useCallback(async () => {
-    const currentUser = authService.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-      await fetchNotifications();
-    } else {
-      // 明確地將 user 設置為 null，並清空通知
-      setUser(null);
+      console.error('Failed to fetch notifications:', error);
       setNotifications([]);
     }
-    setLoading(false);
-  }, [fetchNotifications]);
+  }, [session]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      initAuth();
-
-      // 監聽路由變化，在每次路由變化時重新檢查認證狀態
-      const handleRouteChange = () => {
-        initAuth();
-      };
-
-      router.events.on('routeChangeComplete', handleRouteChange);
-
-      return () => {
-        router.events.off('routeChangeComplete', handleRouteChange);
-      };
+    if (status === 'authenticated') {
+      fetchNotifications();
     }
-  }, [initAuth, router.events]);
+  }, [status, fetchNotifications]);
 
   const login = async (email: string, password: string, returnUrl?: string) => {
-    setLoading(true);
-    try {
-      const response = await authService.login({ email, password });
-      setUser(response.user);
-      await fetchNotifications();
-      if (returnUrl) {
-        router.replace(returnUrl); // 登入成功後，導向到 returnUrl
-      } else {
-        router.replace('/'); // 否則導向首頁
-      }
-    } finally {
-      setLoading(false);
+    const result = await signIn('credentials', {
+      redirect: false,
+      email,
+      password,
+    });
+
+    if (result?.error) {
+      throw new Error(result.error);
+    }
+
+    if (result?.ok) {
+      router.replace(returnUrl || '/');
     }
   };
 
   const logout = () => {
-    authService.logout();
-    setUser(null);
-    setNotifications([]);
-    router.push('/login');
+    const logoutUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/login`;
+    signOut({ callbackUrl: logoutUrl });
   };
 
   const markNotificationAsRead = async (id: string) => {
@@ -106,7 +81,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
     } catch (error) {
-      console.error("Failed to mark notification as read:", error);
+      console.error('Failed to mark notification as read:', error);
     }
   };
 
@@ -115,11 +90,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await notificationService.markAllAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch (error) {
-      console.error("Failed to mark all notifications as read:", error);
+      console.error('Failed to mark all notifications as read:', error);
     }
   };
 
-  // --- New Permission-Based Checker ---
   const hasPermission = (permission: Permission): boolean => {
     if (!user || !user.permissions) {
       return false;
@@ -132,7 +106,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loading,
     login,
     logout,
-    hasPermission, // Use the new function
+    hasPermission,
     notifications,
     fetchNotifications,
     markNotificationAsRead,

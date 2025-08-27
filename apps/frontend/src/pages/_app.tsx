@@ -11,7 +11,12 @@ import { routePermissions } from '@/config/routes'; // Import routePermissions
 import { useRouter } from 'next/router'; // Import useRouter
 import { Permission } from 'shared-types'; // Import Permission enum
 
-export default function App({ Component, pageProps }: AppProps) {
+import { SessionProvider } from 'next-auth/react';
+
+export default function App({
+  Component,
+  pageProps: { session, ...pageProps },
+}: AppProps) {
   const router = useRouter();
 
   // Get the required permission for the current route from our configuration
@@ -32,18 +37,20 @@ export default function App({ Component, pageProps }: AppProps) {
   }, []);
 
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <Layout>
-          {needsProtection ? (
-            <ProtectedRoute requiredPermission={requiredPermission!}>
+    <SessionProvider session={session}>
+      <AuthProvider>
+        <ToastProvider>
+          <Layout>
+            {needsProtection ? (
+              <ProtectedRoute requiredPermission={requiredPermission!}>
+                <Component {...pageProps} />
+              </ProtectedRoute>
+            ) : (
               <Component {...pageProps} />
-            </ProtectedRoute>
-          ) : (
-            <Component {...pageProps} />
-          )}
-        </Layout>
-      </ToastProvider>
-    </AuthProvider>
+            )}
+          </Layout>
+        </ToastProvider>
+      </AuthProvider>
+    </SessionProvider>
   );
 }

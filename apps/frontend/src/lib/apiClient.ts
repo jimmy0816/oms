@@ -1,35 +1,24 @@
-import authService from '@/services/authService';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-/**
- * 處理 API 回應的通用函式
- * @param response - Fetch API 的 Response 物件
- * @returns - 解析後的 JSON 資料
- */
 async function handleResponse(response: Response) {
-  // 如果回應狀態碼是 401 (Unauthorized)，表示 token 失效
   if (response.status === 401) {
-    // 呼叫 logout，這會清除本地存儲和 cookie，並重定向到登入頁
-    authService.logout();
-    // 拋出一個錯誤，中斷當前的 promise chain
-    return Promise.reject(new Error('Session expired. Please log in again.'));
+    // The next-auth middleware should handle redirects, but as a fallback,
+    // we can force a client-side sign-out.
+    // signOut({ callbackUrl: '/login' });
+    return Promise.reject(new Error('Unauthorized'));
   }
 
-  // 如果回應狀態碼是 204 (No Content)，表示成功但沒有回傳內容
   if (response.status === 204) {
-    return null; // 或 return Promise.resolve(null);
+    return null;
   }
 
   const data = await response.json();
 
   if (!response.ok) {
-    // 從後端回應中提取錯誤訊息
     const error = (data && data.error) || response.statusText;
     return Promise.reject(new Error(error));
   }
 
-  // 如果後端格式包含 { success: boolean, data: ... }，則只回傳 data 部分
   if (data && typeof data.success === 'boolean' && 'data' in data) {
     return data.data;
   }
@@ -37,9 +26,6 @@ async function handleResponse(response: Response) {
   return data;
 }
 
-/**
- * 封裝的 API Client
- */
 const apiClient = {
   async get<T>(path: string, params?: Record<string, any>): Promise<T> {
     const url = new URL(`${API_URL}${path}`);
@@ -49,94 +35,76 @@ const apiClient = {
       );
     }
 
-    const token = authService.getToken();
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
     const response = await fetch(url.toString(), {
       method: 'GET',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Include cookies in cross-origin requests
     });
 
     return handleResponse(response);
   },
 
-  async post<T>(path: string, body: any, options: { responseType?: 'blob', headers?: Record<string, string> } = {}): Promise<T> {
-    const token = authService.getToken();
-    const headers: HeadersInit = options.headers || {
+  async post<T>(
+    path: string,
+    body: any,
+    options: { responseType?: 'blob'; headers?: Record<string, string> } = {}
+  ): Promise<T> {
+    const headers = options.headers || {
       'Content-Type': 'application/json',
     };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
 
     const response = await fetch(`${API_URL}${path}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
+      credentials: 'include', // Include cookies in cross-origin requests
     });
 
     if (options.responseType === 'blob') {
-        if (!response.ok) {
-            return Promise.reject(new Error('Failed to download file'));
-        }
-        return response.blob() as Promise<T>;
+      if (!response.ok) {
+        return Promise.reject(new Error('Failed to download file'));
+      }
+      return response.blob() as Promise<T>;
     }
 
     return handleResponse(response);
   },
 
   async put<T>(path: string, body: any): Promise<T> {
-    const token = authService.getToken();
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
     const response = await fetch(`${API_URL}${path}`, {
       method: 'PUT',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(body),
+      credentials: 'include', // Include cookies in cross-origin requests
     });
 
     return handleResponse(response);
   },
-  async patch<T>(path: string, body: any): Promise<T> {
-    const token = authService.getToken();
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
 
+  async patch<T>(path: string, body: any): Promise<T> {
     const response = await fetch(`${API_URL}${path}`, {
       method: 'PATCH',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(body),
+      credentials: 'include', // Include cookies in cross-origin requests
     });
 
     return handleResponse(response);
   },
 
   async delete<T>(path: string): Promise<T> {
-    const token = authService.getToken();
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
     const response = await fetch(`${API_URL}${path}`, {
       method: 'DELETE',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Include cookies in cross-origin requests
     });
 
     return handleResponse(response);

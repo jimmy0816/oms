@@ -1,17 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { UserRole, Permission } from 'shared-types';
-import jwt from 'jsonwebtoken';
+import { getServerSession } from 'next-auth'; // Corrected import path
+import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { User } from '@/types/user';
+import { Permission } from 'shared-types';
 import { als } from '@/lib/als';
 
-// 定義擴展的請求類型，包含用戶信息
 export interface AuthenticatedRequest extends NextApiRequest {
-  user?: {
-    id: string;
-    email: string;
-    name: string;
-    role: UserRole;
-    permissions?: string[];
-  };
+  user?: User;
 }
 
 type NextApiHandler = (
@@ -19,61 +14,29 @@ type NextApiHandler = (
   res: NextApiResponse
 ) => Promise<void> | void;
 
-/**
- * JWT 令牌驗證函數
- * @param token JWT令牌
- * @returns 解析後的用戶數據或null
- */
-export const verifyToken = (token: string): any => {
-  try {
-    // 從環境變量獲取密鑰
-    const secret = process.env.JWT_SECRET || 'local_development_secret';
-    console.log('Using JWT_SECRET:', secret.substring(0, 3) + '...');
-    return jwt.verify(token, secret);
-  } catch (error) {
-    console.error('Token verification failed:', error);
-    return null;
-  }
-};
-
-/**
- * 身份驗證中間件
- * 驗證請求中的JWT令牌並將用戶信息添加到請求對象中
- */
 export const withAuth = (handler: NextApiHandler): NextApiHandler => {
   return async (req: AuthenticatedRequest, res: NextApiResponse) => {
     try {
-      // 從請求頭中獲取授權令牌
-      const token = req.headers.authorization?.split(' ')[1];
-      if (!token) {
-        res.status(401).json({ message: 'withAuth未授權訪問' });
-        return;
+      const session = await getServerSession(req, res, authOptions);
+
+      console.log('backend session', session);
+
+      if (!session || !session.user) {
+        return res.status(401).json({ message: '未授權訪問，請先登入' });
       }
 
-      // 驗證令牌
-      const user = verifyToken(token);
-      if (!user) {
-        res.status(401).json({ message: '無效的令牌' });
-        return;
-      }
+      req.user = session.user as User;
 
-      // 將用戶信息添加到請求中
-      req.user = user;
-      await als.run({ actor: user }, async () => {
+      await als.run({ actor: req.user }, async () => {
         await handler(req, res);
       });
     } catch (error) {
-      console.error('Authentication error:', error);
-      res.status(401).json({ message: '授權失敗' });
+      console.error('Authentication error in withAuth:', error);
+      res.status(500).json({ message: '伺服器內部錯誤' });
     }
   };
 };
 
-/**
- * 權限檢查中間件
- * 檢查用戶是否擁有特定權限
- * @param permission 需要的權限或權限列表
- */
 export const withPermission = (permission: Permission | Permission[]) => {
   return (handler: NextApiHandler): NextApiHandler => {
     return withAuth(async (req: AuthenticatedRequest, res: NextApiResponse) => {
@@ -83,9 +46,7 @@ export const withPermission = (permission: Permission | Permission[]) => {
       }
 
       const permissions = Array.isArray(permission) ? permission : [permission];
-
-      // 檢查 user.permissions 欄位
-      const userPermissions: string[] = user.permissions || [];
+      const userPermissions: string[] = (user.permissions as string[]) || [];
       const hasAccess = permissions.some((p) => userPermissions.includes(p));
 
       if (!hasAccess) {
