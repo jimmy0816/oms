@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "next lint",
-    "db:sync-permissions": "node --loader ts-node/esm ./src/scripts/sync-permissions.mts"
+    "db:sync-permissions": "tsc ./src/scripts/sync-permissions.ts --outDir dist/scripts && node dist/scripts/sync-permissions.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.842.0",

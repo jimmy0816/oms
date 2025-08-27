@@ -34,7 +34,7 @@ steps:
         pnpm --filter prisma-client db:migrate
         echo "Prisma Migrate completed."
 
-        pnpm --filter backend db:sync-permissions
+        pnpm --filter backend db:sync-permissions:prod
         echo "Permission sync completed."
     env:
       - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/oms"
