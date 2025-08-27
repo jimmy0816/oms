@@ -28,13 +28,10 @@ steps:
         echo "Waiting for Cloud SQL Proxy to start..."
         sleep 5
 
-        pnpm --filter prisma-client db:generate
-        echo "Prisma Client generated."
-
         pnpm --filter prisma-client db:migrate
         echo "Prisma Migrate completed."
 
-        pnpm --filter backend db:sync-permissions:prod
+        pnpm --filter backend db:sync-permissions
         echo "Permission sync completed."
     env:
       - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/oms"
