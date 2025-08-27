@@ -118,8 +118,13 @@ export default function UserProfilePage() {
               <p>
                 <strong>姓名:</strong> {profile.name}
               </p>
-              <p>
+              <p className="flex items-center">
                 <strong>電子郵件:</strong> {profile.email}
+                {user?.isOidcLinked && (
+                  <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                    Thehapp.
+                  </span>
+                )}
               </p>
               <p>
                 <strong>角色:</strong> {getRoleName(profile.role as UserRole)}

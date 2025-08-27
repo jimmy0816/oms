@@ -5,6 +5,7 @@ import {
   UserPlusIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
+  PencilIcon, // Added PencilIcon
 } from '@heroicons/react/24/outline';
 import { User as BaseUser, UserRole, Permission } from 'shared-types';
 import { getRoleName } from '@/services/roleService';
@@ -361,6 +362,7 @@ export default function UsersPage() {
                     >
                       角色
                     </th>
+
                     <th
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -384,8 +386,13 @@ export default function UsersPage() {
                             <div className="text-sm font-medium text-gray-900">
                               {user.name}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-gray-500 flex items-center">
                               {user.email}
+                              {user.isOidcLinked && (
+                                <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                  Thehapp.
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -433,6 +440,7 @@ export default function UsersPage() {
                             )}
                         </div>
                       </td>
+
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(user.createdAt).toLocaleDateString('zh-TW')}
                       </td>
@@ -444,7 +452,7 @@ export default function UsersPage() {
                               onClick={() => handleEditUser(user)}
                               className="text-blue-600 hover:text-blue-900 mr-3"
                             >
-                              編輯
+                              <PencilIcon className="h-5 w-5" />
                             </button>
                           </PermissionGuard>
 

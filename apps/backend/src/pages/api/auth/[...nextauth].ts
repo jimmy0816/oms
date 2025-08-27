@@ -112,6 +112,11 @@ export const authOptions: NextAuthOptions = {
               },
             });
           }
+          // Update isOidcLinked for the existing user
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: { isOidcLinked: true },
+          });
           // Allow sign in for existing user
           return true;
         }
@@ -129,9 +134,19 @@ export const authOptions: NextAuthOptions = {
       }
       return baseUrl;
     },
-    async jwt({ token, user }) {
-      console.log('jwt', token, user);
+    async jwt({ token, user, account }) { // Added 'account' to jwt callback
+      console.log('jwt', token, user, account); // Added 'account' to console.log
       if (user) {
+        // If it's an OAuth login and isOidcLinked is not set, update it
+        if (account?.type === 'oauth' && !user.isOidcLinked) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { isOidcLinked: true },
+          });
+          // Update the user object in the token to reflect the change immediately
+          user.isOidcLinked = true;
+        }
+
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
           include: {
@@ -170,6 +185,7 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.additionalRoles = additionalRoles;
         token.permissions = Array.from(permissions);
+        token.isOidcLinked = user.isOidcLinked; // Add isOidcLinked to token
       }
       return token;
     },
@@ -179,6 +195,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.additionalRoles = token.additionalRoles as string[];
         session.user.permissions = token.permissions as string[];
+        session.user.isOidcLinked = token.isOidcLinked as boolean; // Add isOidcLinked to session.user
       }
       return session;
     },

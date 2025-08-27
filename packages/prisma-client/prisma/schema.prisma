@@ -47,6 +47,7 @@ model User {
   password        String? // Made optional for OIDC users
   emailVerified   DateTime?      // Added for next-auth
   image           String?        // Added for next-auth
+  isOidcLinked    Boolean        @default(false) // Added to indicate if the account is linked to OIDC
 
   // Your existing fields
   role            String         @default("USER")

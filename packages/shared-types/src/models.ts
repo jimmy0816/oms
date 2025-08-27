@@ -9,6 +9,7 @@ export interface User {
   role: UserRole;
   password?: string; // 密碼欄位，創建用戶時必須，但在返回給前端時應該被移除
   additionalRoles?: string[]; // 用戶的額外角色列表
+  isOidcLinked?: boolean; // Added to indicate if the account is linked to OIDC
   createdAt: Date;
   updatedAt: Date;
 }
