@@ -54,9 +54,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [status, fetchNotifications]);
 
-  const logout = () => {
-    const logoutUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/login`;
-    signOut({ callbackUrl: logoutUrl });
+  const logout = async () => {
+    const frontendLogoutUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/login`;
+
+    // Get id_token from session before clearing it
+    const idToken = user?.id_token;
+    console.log('Frontend idToken:', idToken); // Add this line for debugging
+
+    // First, clear the NextAuth session locally without redirecting
+    await signOut({ redirect: false });
+
+    try {
+      // Attempt to get the OIDC logout URL from the backend
+      // Pass id_token as a query parameter
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/oidc-logout-url?id_token=${idToken || ''}`
+      );
+      console.log('logout!', response);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.logoutUrl) {
+          // If OIDC logout URL is provided, redirect the browser to it
+          window.location.href = data.logoutUrl;
+          return; // Exit to prevent further execution
+        }
+      }
+    } catch (error) {
+      console.error('Failed to get OIDC logout URL from backend:', error);
+      // Fallback to default NextAuth signOut if backend call fails
+    }
+
+    // Fallback: If not an OIDC login, or if OIDC logout URL could not be obtained,
+    // perform a standard NextAuth signOut with callback.
+    // This will redirect to the frontendLogoutUrl after clearing the session.
+    window.location.href = frontendLogoutUrl;
   };
 
   const markNotificationAsRead = async (id: string) => {

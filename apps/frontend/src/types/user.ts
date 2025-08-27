@@ -9,6 +9,7 @@ export interface User {
   additionalRoles?: string[];
   permissions?: string[];
   isOidcLinked?: boolean; // Added to indicate if the account is linked to OIDC
+  id_token?: string; // Add id_token for OIDC logout
   createdAt?: string;
   updatedAt?: string;
 }

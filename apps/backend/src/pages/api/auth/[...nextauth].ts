@@ -134,8 +134,11 @@ export const authOptions: NextAuthOptions = {
       }
       return baseUrl;
     },
-    async jwt({ token, user, account }) { // Added 'account' to jwt callback
-      console.log('jwt', token, user, account); // Added 'account' to console.log
+    async jwt({ token, user, account }) {
+      if (account?.id_token) {
+        // Store id_token if available from OAuth account
+        token.id_token = account.id_token;
+      }
       if (user) {
         // If it's an OAuth login and isOidcLinked is not set, update it
         if (account?.type === 'oauth' && !user.isOidcLinked) {
@@ -196,6 +199,7 @@ export const authOptions: NextAuthOptions = {
         session.user.additionalRoles = token.additionalRoles as string[];
         session.user.permissions = token.permissions as string[];
         session.user.isOidcLinked = token.isOidcLinked as boolean; // Add isOidcLinked to session.user
+        session.user.id_token = token.id_token as string; // Add id_token to session.user
       }
       return session;
     },
