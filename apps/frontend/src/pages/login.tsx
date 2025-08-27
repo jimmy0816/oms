@@ -1,47 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-
 import { signIn } from 'next-auth/react';
 
-/**
- * 登入頁面組件
- */
 const LoginPage: React.FC = () => {
   const router = useRouter();
-  const { login, user, logout } = useAuth();
+  const { user } = useAuth(); // Only need user to check if already logged in
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
-  useEffect(() => {
-    if (user) {
-      router.push('/');
-    }
-  }, [user]);
+  // This useEffect is now removed as per previous discussion.
+  // It's handled by next-auth middleware and AuthContext's useSession.
 
-  /**
-   * 處理傳統帳號密碼登入
-   */
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setError(null); // Clear previous errors
     setLoading(true);
 
     try {
-      // 驗證輸入
       if (!email || !password) {
         showToast('請輸入電子郵件和密碼', 'error');
         setLoading(false);
         return;
       }
 
-      // 使用 AuthContext 的 login 方法
-      const { returnUrl } = router.query;
-      await login(email, password, returnUrl as string);
+      // Directly use next-auth's signIn for credentials
+      // We set redirect: false to handle the redirect manually after checking result.
+      const result = await signIn('credentials', {
+        redirect: false,
+        email,
+        password,
+      });
+
+      if (result?.error) {
+        showToast(result.error, 'error');
+      } else if (result?.ok) {
+        // If signIn is successful, manually redirect to the callbackUrl or home.
+        const { callbackUrl } = router.query;
+        router.push((callbackUrl as string) || '/');
+      }
     } catch (err) {
       showToast(
         err instanceof Error ? err.message : '登入失敗，請檢查您的憑證',
@@ -52,17 +53,11 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  /**
-   * 處理 OIDC 登入
-   */
   const handleOidcLogin = () => {
     setLoading(true);
-
-    const callbackUrl = process.env.NEXT_PUBLIC_BASE_URL || '/';
-    const { returnUrl } = router.query;
-
-    // 使用 next-auth 的 signIn 方法，指定 'oidc' provider
-    signIn('oidc', { callbackUrl: `${callbackUrl}/${returnUrl}` }).catch(
+    const { callbackUrl } = router.query;
+    // Let next-auth automatically handle the callbackUrl from the query string.
+    signIn('oidc', { callbackUrl: (callbackUrl as string) || '/' }).catch(
       (err) => {
         showToast(
           err instanceof Error ? err.message : 'OIDC 登入失敗',

@@ -15,20 +15,20 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('請輸入電子郵件和密碼');
+          throw new Error('請輸入信箱和密碼');
         }
         const user = await prisma.user.findUnique({
           where: { email: credentials.email, deletedAt: null },
         });
         if (!user || !user.password) {
-          throw new Error('無效的憑證');
+          throw new Error('信箱與密碼錯誤');
         }
         const isValid = await bcrypt.compare(
           credentials.password,
           user.password
         );
         if (!isValid) {
-          throw new Error('無效的憑證');
+          throw new Error('信箱與密碼錯誤');
         }
         return user;
       },
@@ -87,6 +87,7 @@ export const authOptions: NextAuthOptions = {
       return baseUrl;
     },
     async jwt({ token, user }) {
+      console.log('jwt', token, user);
       if (user) {
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },

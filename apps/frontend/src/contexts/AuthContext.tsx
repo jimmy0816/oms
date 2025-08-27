@@ -10,12 +10,12 @@ import { useRouter } from 'next/router';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { notificationService } from '@/services/notificationService';
 import { Notification, Permission } from 'shared-types';
-import { User } from '@/types/user';
+import { User } from '@/types/user'; // Assuming you have a User type that matches next-auth's user
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string, returnUrl?: string) => Promise<void>;
+  // login: (email: string, password: string, returnUrl?: string) => Promise<void>; // Removed as signIn is called directly
   logout: () => void;
   hasPermission: (permission: Permission) => boolean;
   notifications: Notification[];
@@ -26,7 +26,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const { data: session, status } = useSession();
   const user = session?.user as User | null;
   const loading = status === 'loading';
@@ -53,20 +55,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [status, fetchNotifications]);
 
+  // The login function is now handled directly in login.tsx by calling signIn.
+  // This placeholder is kept for AuthContextType compatibility if needed elsewhere.
   const login = async (email: string, password: string, returnUrl?: string) => {
-    const result = await signIn('credentials', {
-      redirect: false,
-      email,
-      password,
-    });
-
-    if (result?.error) {
-      throw new Error(result.error);
-    }
-
-    if (result?.ok) {
-      router.replace(returnUrl || '/');
-    }
+    // This function should ideally not be called directly anymore for login.
+    // Login is handled by signIn('credentials', ...) in login.tsx
+    console.warn(
+      'AuthContext.login should not be called directly for login. Use signIn from next-auth/react.'
+    );
+    throw new Error('AuthContext.login is deprecated for direct login calls.');
   };
 
   const logout = () => {
