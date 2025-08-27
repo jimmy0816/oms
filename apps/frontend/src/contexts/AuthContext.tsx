@@ -59,7 +59,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     // Get id_token from session before clearing it
     const idToken = user?.id_token;
-    console.log('Frontend idToken:', idToken); // Add this line for debugging
 
     // First, clear the NextAuth session locally without redirecting
     await signOut({ redirect: false });
@@ -70,7 +69,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/oidc-logout-url?id_token=${idToken || ''}`
       );
-      console.log('logout!', response);
+      // console.log('logout!', response); // Removed debugging log
       if (response.ok) {
         const data = await response.json();
         if (data.logoutUrl) {
