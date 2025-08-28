@@ -290,6 +290,10 @@ export const authOptions: NextAuthOptions = {
         sameSite: 'none',
         path: '/',
         secure: true,
+        domain:
+          process.env.NODE_ENV === 'production'
+            ? new URL(process.env.NEXTAUTH_URL as string).hostname
+            : 'localhost',
       },
     },
     callbackUrl: {
