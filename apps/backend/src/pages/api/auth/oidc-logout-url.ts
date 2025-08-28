@@ -29,7 +29,7 @@ export default async function oidcLogoutUrl(
         .json({ error: 'OIDC end_session_endpoint not found.' });
     }
 
-    const postLogoutRedirectUri = `${process.env.FRONTEND_BASE_URL}/login`;
+    const postLogoutRedirectUri = `${process.env.PUBLIC_FRONTEND_URL}/login`;
 
     let logoutUrl = `${endSessionEndpoint}?post_logout_redirect_uri=${encodeURIComponent(
       postLogoutRedirectUri

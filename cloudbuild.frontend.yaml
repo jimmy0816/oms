@@ -11,6 +11,12 @@ steps:
         ".",
         "--build-arg",
         "NEXT_PUBLIC_API_URL=${_BACKEND_URL}",
+        "--build-arg",
+        "NEXT_PUBLIC_BASE_URL=${_FRONTEND_URL}",
+        "--build-arg",
+        "NEXTAUTH_URL=${_NEXTAUTH_URL}",
+        "--build-arg",
+        "NEXTAUTH_SECRET=${_NEXTAUTH_SECRET}",
       ]
   # 推送 Docker 鏡像
   - name: "gcr.io/cloud-builders/docker"
@@ -35,6 +41,9 @@ steps:
 # 替換變數
 substitutions:
   _BACKEND_URL: "https://oms-backend-url.run.app" # 將在 Cloud Build 觸發器中設置為後端服務的 URL
+  _FRONTEND_URL: "https://oms-frontend-url.run.app" # 將在 Cloud Build 觸發器中設置為前端服務的 URL
+  _NEXTAUTH_URL: "https://oms-nextauth-url.run.app" # 將在 Cloud Build 觸發器中設置為 NextAuth 服務的 URL
+  _NEXTAUTH_SECRET: "nextauth-secret" # 將在 Cloud Build 觸發器中設置為 NextAuth 密鑰
 
 # 構建的鏡像
 images:

@@ -4,6 +4,54 @@ import { prisma } from '@/lib/prisma';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 
+// Function to refresh the access token
+async function refreshAccessToken(token: any) {
+  try {
+    // Use the wellKnown endpoint to get the token_endpoint
+    const wellKnownResponse = await fetch(
+      `${process.env.OIDC_ISSUER}/.well-known/openid-configuration`
+    );
+    const wellKnownConfig = await wellKnownResponse.json();
+    const tokenEndpoint = wellKnownConfig.token_endpoint;
+
+    if (!tokenEndpoint) {
+      throw new Error(
+        'Token endpoint not found in OIDC well-known configuration'
+      );
+    }
+
+    const response = await fetch(tokenEndpoint, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      method: 'POST',
+      body: new URLSearchParams({
+        client_id: process.env.OIDC_CLIENT_ID as string,
+        client_secret: process.env.OIDC_CLIENT_SECRET as string,
+        grant_type: 'refresh_token',
+        refresh_token: token.refreshToken as string,
+      }),
+    });
+
+    const refreshedTokens = await response.json();
+
+    if (!response.ok) {
+      throw refreshedTokens;
+    }
+
+    return {
+      ...token,
+      accessToken: refreshedTokens.access_token,
+      accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
+      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
+      id_token: refreshedTokens.id_token ?? token.id_token,
+    };
+  } catch (error) {
+    console.error('Error refreshing access token', error);
+    return { ...token, error: 'RefreshAccessTokenError' };
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -125,7 +173,7 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async redirect({ url, baseUrl }) {
-      const frontendUrl = process.env.FRONTEND_BASE_URL;
+      const frontendUrl = process.env.PUBLIC_FRONTEND_URL;
       if (frontendUrl && url.startsWith(frontendUrl)) {
         return url;
       }
@@ -135,21 +183,9 @@ export const authOptions: NextAuthOptions = {
       return baseUrl;
     },
     async jwt({ token, user, account }) {
-      if (account?.id_token) {
-        // Store id_token if available from OAuth account
-        token.id_token = account.id_token;
-      }
-      if (user) {
-        // If it's an OAuth login and isOidcLinked is not set, update it
-        if (account?.type === 'oauth' && !user.isOidcLinked) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { isOidcLinked: true },
-          });
-          // Update the user object in the token to reflect the change immediately
-          user.isOidcLinked = true;
-        }
-
+      // Initial sign in: user and account are available
+      if (user && account) {
+        // Fetch dbUser and permissions only once during initial sign-in
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
           include: {
@@ -161,7 +197,9 @@ export const authOptions: NextAuthOptions = {
                     rolePermissions: {
                       select: {
                         permission: {
-                          select: { name: true },
+                          select: {
+                            name: true,
+                          },
                         },
                       },
                     },
@@ -184,22 +222,59 @@ export const authOptions: NextAuthOptions = {
           });
         }
 
-        token.id = user.id;
-        token.role = (user as any).role;
-        token.additionalRoles = additionalRoles;
-        token.permissions = Array.from(permissions);
-        token.isOidcLinked = user.isOidcLinked; // Add isOidcLinked to token
+        return {
+          accessToken: account.access_token,
+          refreshToken: account.refresh_token,
+          accessTokenExpires: account.expires_at
+            ? account.expires_at * 1000
+            : Date.now() + 60 * 60 * 24 * 30 * 1000, // Default to 30 days from now if not provided
+          id_token: account.id_token,
+          id: user.id, // Store id at root
+          email: user.email, // Store email at root
+          name: user.name, // Store name at root
+          isOidcLinked: (user as any).isOidcLinked, // Store isOidcLinked at root
+          role: (dbUser as any)?.role, // Store role at root
+          additionalRoles: additionalRoles, // Store additionalRoles at root
+          permissions: Array.from(permissions), // Store permissions at root
+        };
       }
-      return token;
+
+      // Subsequent calls: user and account are not available, only token
+      // Check if access token is expired
+      if (
+        token.accessTokenExpires &&
+        typeof token.accessTokenExpires === 'number' &&
+        Date.now() < token.accessTokenExpires
+      ) {
+        return token; // Token is still valid
+      }
+
+      // Access token has expired, try to refresh it
+      const refreshedToken = await refreshAccessToken(token);
+
+      // If refresh failed, return the token with error
+      if (refreshedToken.error) {
+        return refreshedToken;
+      }
+
+      // Return the refreshed token (which already contains all user data from initial sign-in)
+      return refreshedToken;
     },
     async session({ session, token }) {
+      console.log('Session callback - token:', token);
+      if (token.error === 'RefreshAccessTokenError') {
+        // If there was an error refreshing the access token,
+        // invalidate the session to force re-login.
+        return { ...session, error: 'RefreshAccessTokenError' };
+      }
+
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.additionalRoles = token.additionalRoles as string[];
         session.user.permissions = token.permissions as string[];
-        session.user.isOidcLinked = token.isOidcLinked as boolean; // Add isOidcLinked to session.user
-        session.user.id_token = token.id_token as string; // Add id_token to session.user
+        session.user.isOidcLinked = token.isOidcLinked as boolean;
+        session.user.id_token = token.id_token as string;
       }
       return session;
     },

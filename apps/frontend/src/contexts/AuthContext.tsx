@@ -34,6 +34,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const router = useRouter();
 
+  console.log('user', user);
+
   const fetchNotifications = useCallback(async () => {
     if (!session) {
       setNotifications([]);
@@ -67,7 +69,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       // Attempt to get the OIDC logout URL from the backend
       // Pass id_token as a query parameter
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/oidc-logout-url?id_token=${idToken || ''}`
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/oidc-logout-url?id_token=${
+          idToken || ''
+        }`
       );
       // console.log('logout!', response); // Removed debugging log
       if (response.ok) {
