@@ -55,6 +55,7 @@ async function refreshAccessToken(token: any) {
 const cookiePrefix = 'oms-';
 
 export const authOptions: NextAuthOptions = {
+  url: process.env.NEXTAUTH_URL,
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
