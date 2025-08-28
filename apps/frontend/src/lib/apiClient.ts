@@ -2,13 +2,13 @@ import { signOut } from 'next-auth/react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
-console.log('DEBUG: NEXT_PUBLIC_BASE_URL is', process.env.NEXT_PUBLIC_BASE_URL);
-
 async function handleResponse(response: Response) {
   if (response.status === 401) {
-    // The next-auth middleware should handle redirects, but as a fallback,
-    // we can force a client-side sign-out.
-    return Promise.reject(new Error('Unauthorized'));
+    const frontendLogoutUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/login`;
+
+    await signOut({ redirect: false });
+
+    window.location.href = frontendLogoutUrl;
   }
 
   if (response.status === 204) {

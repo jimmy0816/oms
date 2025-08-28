@@ -289,10 +289,6 @@ export const authOptions: NextAuthOptions = {
         sameSite: 'none',
         path: '/',
         secure: true,
-        domain:
-          process.env.NODE_ENV === 'production'
-            ? '.asia-east1.run.app'
-            : 'localhost',
       },
     },
     callbackUrl: {
