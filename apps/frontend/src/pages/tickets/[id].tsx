@@ -230,12 +230,13 @@ export default function TicketDetail() {
 
       <div className="space-y-6 p-4 md:p-6">
         <div className="flex items-center mb-6">
-          <Link
-            href="/tickets"
+          <button
+            onClick={() => router.back()}
             className="mr-4 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+            aria-label="返回"
           >
             <ArrowLeftIcon className="h-5 w-5 text-gray-600" />
-          </Link>
+          </button>
           <h1 className="text-2xl font-bold text-gray-900 truncate">
             {ticket.title}
           </h1>

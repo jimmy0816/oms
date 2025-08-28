@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import {
   ArrowDownTrayIcon, // Added for export
   FunnelIcon,
@@ -103,11 +104,119 @@ export default function TicketsPage() {
 
   const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
   const [saveViewError, setSaveViewError] = useState<string | null>(null);
-  const [currentPath, setCurrentPath] = useState('');
+  
   const isInitialLoad = useRef(true);
 
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
+
+  const router = useRouter();
+
+  // Effect to synchronize URL query params to component state on initial load
+  useEffect(() => {
+    if (!router.isReady || !isInitialLoad.current) return;
+
+    const query = router.query;
+
+    if (Object.keys(query).length > 0) {
+      const status = Array.isArray(query.status)
+        ? query.status
+        : query.status
+        ? [query.status]
+        : [];
+      const priority = Array.isArray(query.priority)
+        ? query.priority
+        : query.priority
+        ? [query.priority]
+        : [];
+      const locationIds = Array.isArray(query.locationIds)
+        ? query.locationIds
+        : query.locationIds
+        ? [query.locationIds]
+        : [];
+      const roleIds = Array.isArray(query.roleIds)
+        ? query.roleIds
+        : query.roleIds
+        ? [query.roleIds]
+        : [];
+      const creatorIds = Array.isArray(query.creatorIds)
+        ? query.creatorIds
+        : query.creatorIds
+        ? [query.creatorIds]
+        : [];
+      const assigneeIds = Array.isArray(query.assigneeIds)
+        ? query.assigneeIds
+        : query.assigneeIds
+        ? [query.assigneeIds]
+        : [];
+      const startDate = query.startDate
+        ? new Date(query.startDate as string)
+        : null;
+      const endDate = query.endDate ? new Date(query.endDate as string) : null;
+
+      setFilters({
+        status,
+        priority,
+        search: (query.search as string) || '',
+        locationIds,
+        roleIds,
+        creatorIds,
+        assigneeIds,
+        dateRange: [startDate, endDate],
+      });
+      setSortField((query.sortField as string) || 'createdAt');
+      setSortOrder((query.sortOrder as 'asc' | 'desc') || 'desc');
+      setCurrentPage(parseInt(query.page as string, 10) || 1);
+
+      // If a view is specified in the URL, select it.
+      if (query.view) {
+        setSelectedViewId(query.view as string);
+      }
+
+      isInitialLoad.current = false;
+    }
+  }, [router.isReady]);
+
+  // Effect to synchronize component state to URL query params
+  useEffect(() => {
+    if (!router.isReady || isInitialLoad.current) return;
+
+    const query: any = {};
+
+    if (filters.search) query.search = filters.search;
+    if (filters.status.length > 0) query.status = filters.status;
+    if (filters.priority.length > 0) query.priority = filters.priority;
+    if (filters.locationIds.length > 0) query.locationIds = filters.locationIds;
+    if (filters.roleIds.length > 0) query.roleIds = filters.roleIds;
+    if (filters.creatorIds.length > 0) query.creatorIds = filters.creatorIds;
+    if (filters.assigneeIds.length > 0) query.assigneeIds = filters.assigneeIds;
+    if (filters.dateRange[0])
+      query.startDate = filters.dateRange[0].toISOString().split('T')[0];
+    if (filters.dateRange[1])
+      query.endDate = filters.dateRange[1].toISOString().split('T')[0];
+    if (sortField !== 'createdAt' || sortOrder !== 'desc') {
+      query.sortField = sortField;
+      query.sortOrder = sortOrder;
+    }
+    if (currentPage > 1) query.page = currentPage;
+    if (selectedViewId) query.view = selectedViewId;
+
+    router.replace(
+      {
+        pathname: '/tickets',
+        query,
+      },
+      undefined,
+      { shallow: true }
+    );
+  }, [
+    filters,
+    sortField,
+    sortOrder,
+    currentPage,
+    selectedViewId,
+    router.isReady,
+  ]);
 
   const handleSort = (field: string) => {
     const isAsc = sortField === field && sortOrder === 'asc';
@@ -351,8 +460,9 @@ export default function TicketsPage() {
 
   useEffect(() => {
     loadSavedViews();
-    setCurrentPath(window.location.pathname);
   }, [loadSavedViews]);
+
+  
 
   const handleApplyView = useCallback(
     (viewId: string) => {
@@ -421,19 +531,24 @@ export default function TicketsPage() {
         setIsFilterModified(false);
       }
     },
-    [savedViews]
+    [savedViews, allLocations] // allLocations is needed for validation
   );
 
-  // Load default view on initial load
+  // Load default view on initial load if no query params are present
   useEffect(() => {
-    if (isInitialLoad.current && savedViews.length > 0) {
+    if (
+      isInitialLoad.current &&
+      savedViews.length > 0 &&
+      router.isReady &&
+      Object.keys(router.query).length === 0
+    ) {
       const defaultView = savedViews.find((view) => view.isDefault);
       if (defaultView) {
         handleApplyView(defaultView.id);
       }
-      isInitialLoad.current = false;
+      isInitialLoad.current = false; // Mark initial load as done
     }
-  }, [savedViews, handleApplyView]);
+  }, [savedViews, handleApplyView, router.isReady, router.query]);
 
   const formatDate = (date: Date | string) => {
     if (!date) return '-';
@@ -484,6 +599,8 @@ export default function TicketsPage() {
     setSelectedViewId(null);
     setCurrentPage(1);
     setIsFilterModified(false);
+    setSortField('createdAt');
+    setSortOrder('desc');
   };
 
   const handleSaveView = async (viewName: string) => {
@@ -608,7 +725,7 @@ export default function TicketsPage() {
           </PermissionGuard>
           <PermissionGuard required={Permission.CREATE_TICKETS}>
             <Link
-              href={`/tickets/new?returnUrl=${encodeURIComponent(currentPath)}`}
+              href={`/tickets/new?returnUrl=${encodeURIComponent(router.asPath)}`}
               className="inline-flex items-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 md:py-2"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
@@ -975,7 +1092,9 @@ export default function TicketsPage() {
                       key={ticket.id}
                       className="hover:bg-gray-50 cursor-pointer"
                       onClick={() =>
-                        (window.location.href = `/tickets/${ticket.id}`)
+                        (window.location.href = `/tickets/${ticket.id}?returnUrl=${encodeURIComponent(
+                          router.asPath
+                        )}`)
                       }
                     >
                       <td className="p-0">
