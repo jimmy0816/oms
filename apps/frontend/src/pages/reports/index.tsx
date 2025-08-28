@@ -72,6 +72,138 @@ const SortIcon = ({
   return <BarsArrowDownIcon className="h-3 w-3 text-black" />;
 };
 
+interface TooltipCellProps {
+  content: string; // The full content to display in the magnified view
+  children: React.ReactNode; // The original, possibly truncated content for the table cell
+  className?: string; // Classes for the table cell wrapper
+}
+
+const TooltipCell: React.FC<TooltipCellProps> = ({
+  content,
+  children,
+  className,
+}) => {
+  const [showMagnified, setShowMagnified] = useState(false);
+  const [magnifiedStyle, setMagnifiedStyle] = useState<React.CSSProperties>({});
+  const cellRef = useRef<HTMLDivElement>(null);
+  const magnifiedContentRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseEnter = () => {
+    if (cellRef.current) {
+      const rect = cellRef.current.getBoundingClientRect();
+
+      // Define target max dimensions for the magnified box
+      const targetMaxWidth = Math.min(window.innerWidth * 0.8, 400);
+      const targetMaxHeight = window.innerHeight * 0.7;
+
+      // Initial state: positioned at the original cell's location, scaled down, invisible
+      setMagnifiedStyle({
+        position: 'fixed',
+        top: `${rect.top}px`,
+        left: `${rect.left}px`,
+        visibility: 'hidden',
+        // width: `${rect.width}px`,
+        // height: `${rect.height}px`,
+        zIndex: 100,
+        backgroundColor: 'white',
+        padding: '1.5rem',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        borderRadius: '0.25rem',
+        textAlign: 'left',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        whiteSpace: 'normal',
+        maxWidth: '400px',
+        maxHeight: `${window.innerHeight * 0.7}px`,
+        // transition: 'all 0.3s ease-out',
+        transition: 'none',
+        opacity: 0,
+        transform: 'scale(1)',
+        transformOrigin: 'center center',
+      });
+      setShowMagnified(true);
+
+      // After a very short delay, let the content render and then measure it
+      setTimeout(() => {
+        if (magnifiedContentRef.current) {
+          const measuredRect =
+            magnifiedContentRef.current.getBoundingClientRect();
+
+          // Refine final width/height based on actual content and max constraints
+          // const finalWidth = Math.min(measuredRect.width, targetMaxWidth);
+          // const finalHeight = Math.min(measuredRect.height, targetMaxHeight); // Use measured height, capped by max
+
+          const finalWidth = measuredRect.width;
+          const finalHeight = measuredRect.height;
+
+          // Recalculate top/left to center the magnified element over the original cell
+          const newLeft = rect.left + rect.width / 2 - finalWidth / 2;
+          const newTop = rect.top + rect.height / 2 - finalHeight / 2;
+
+          setMagnifiedStyle((prev) => ({
+            ...prev,
+            top: `${newTop}px`,
+            left: `${newLeft}px`,
+            width: `${finalWidth}px`,
+            height: `${finalHeight}px`,
+            // padding: '1.5rem',
+            // boxShadow: '0 10px 20px rgba(0,0,0,0.2)',
+            visibility: 'visible',
+            opacity: 1,
+            transition: 'all .3s ease-out',
+            transform: 'scale(1)',
+            // overflowY: 'auto',
+            // overflowX: 'hidden',
+            // whiteSpace: 'normal',
+          }));
+        }
+      }, 10);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (cellRef.current) {
+      const rect = cellRef.current.getBoundingClientRect();
+      setMagnifiedStyle((prev) => ({
+        ...prev,
+        top: `${rect.top}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+        padding: '0.5rem',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        opacity: 0,
+        transform: 'scale(0.8)',
+        overflowY: 'hidden',
+        overflowX: 'hidden',
+        whiteSpace: 'nowrap',
+      }));
+      setTimeout(() => setShowMagnified(false), 300);
+    }
+  };
+
+  return (
+    <div
+      ref={cellRef}
+      className={`relative ${className}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {children}
+
+      {showMagnified && (
+        <div
+          ref={magnifiedContentRef}
+          style={magnifiedStyle}
+          className="text-base font-medium text-gray-900"
+        >
+          {content}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1001,19 +1133,33 @@ export default function Reports() {
                         (window.location.href = `/reports/${report.id}`)
                       }
                     >
-                      <td
-                        className="px-2 py-3 whitespace-nowrap text-sm text-gray-500"
-                        title={report.id}
-                      >
-                        #{report.id}
+                      <td className="p-0">
+                        <TooltipCell
+                          content={report.id}
+                          className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 w-full h-full flex items-center justify-center"
+                        >
+                          #{report.id}
+                        </TooltipCell>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap md:text-ellipsis md:overflow-hidden">
-                        <div className="text-sm font-medium text-gray-900 md:truncate">
-                          {report.title}
-                        </div>
-                        <div className="text-sm text-gray-500 md:truncate whitespace-normal">
-                          {truncateString(report.description, 30)}
-                        </div>
+                      <td className="p-0">
+                        <TooltipCell
+                          content={
+                            <>
+                              <p className="font-bold">{report.title}</p>
+                              <p className="text-sm text-gray-700 mt-2">
+                                {report.description}
+                              </p>
+                            </>
+                          }
+                          className="px-2 py-3 whitespace-nowrap md:text-ellipsis md:overflow-hidden w-full h-full flex flex-col justify-center"
+                        >
+                          <div className="text-sm font-medium text-gray-900 md:truncate">
+                            {report.title}
+                          </div>
+                          <div className="text-sm text-gray-500 md:truncate whitespace-normal">
+                            {truncateString(report.description, 30)}
+                          </div>
+                        </TooltipCell>
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap">
                         <span
@@ -1034,19 +1180,43 @@ export default function Reports() {
                           {getPriorityText(report.priority as ReportPriority)}
                         </span>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
-                        {report.location?.name}
+                      <td className="p-0">
+                        <TooltipCell
+                          content={report.location?.name || '未知'}
+                          className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden w-full h-full"
+                        >
+                          {report.location?.name}
+                        </TooltipCell>
+                      </td>
+                      <td className="p-0">
+                        <TooltipCell
+                          content={formatDate(report.createdAt)}
+                          className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden w-full h-full"
+                        >
+                          {formatDate(report.createdAt)}
+                        </TooltipCell>
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
-                        {formatDate(report.createdAt)}
+                        <TooltipCell
+                          content={
+                            report.trackingDate
+                              ? formatDateOnly(report.trackingDate)
+                              : '-'
+                          }
+                          className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden w-full h-full"
+                        >
+                          {report.trackingDate
+                            ? formatDateOnly(report.trackingDate)
+                            : '-'}
+                        </TooltipCell>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
-                        {report.trackingDate
-                          ? formatDateOnly(report.trackingDate)
-                          : '-'}
-                      </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
-                        {report.creator?.name || '未知'}
+                      <td className="p-0">
+                        <TooltipCell
+                          content={report.creator?.name || '未知'}
+                          className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden w-full h-full"
+                        >
+                          {report.creator?.name || '未知'}
+                        </TooltipCell>
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center space-x-2">
