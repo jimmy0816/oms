@@ -42,6 +42,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import MultiSelectFilterModal from '@/components/MultiSelectFilterModal';
 import PermissionGuard from '@/components/PermissionGuard';
+import TooltipCell from '@/components/TooltipCell';
 import DatePicker from 'react-datepicker';
 import { zhTW } from 'date-fns/locale';
 
@@ -977,25 +978,39 @@ export default function TicketsPage() {
                         (window.location.href = `/tickets/${ticket.id}`)
                       }
                     >
-                      <td
-                        className="px-2 py-3 whitespace-nowrap text-sm text-gray-500"
-                        title={ticket.id}
-                      >
-                        #{ticket.id}
+                      <td className="p-0">
+                        <TooltipCell
+                          content={ticket.id}
+                          className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 w-full h-full flex items-center"
+                        >
+                          #{ticket.id}
+                        </TooltipCell>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap md:text-ellipsis md:overflow-hidden">
-                        <div
-                          className="text-sm font-medium text-gray-900 md:truncate"
-                          title={ticket.title}
+                      <td className="p-0">
+                        <TooltipCell
+                          content={
+                            <>
+                              <p className="font-bold">{ticket.title}</p>
+                              <p className="text-sm text-gray-700 mt-2">
+                                {ticket.description}
+                              </p>
+                            </>
+                          }
+                          className="px-2 py-3 whitespace-nowrap md:text-ellipsis md:overflow-hidden w-full h-full flex flex-col justify-center"
                         >
-                          {truncateString(ticket.title, 30)}
-                        </div>
-                        <div
-                          className="text-sm text-gray-500 md:truncate whitespace-normal"
-                          title={ticket.description}
-                        >
-                          {truncateString(ticket.description, 30)}
-                        </div>
+                          <div
+                            className="text-sm font-medium text-gray-900 md:truncate"
+                            title={ticket.title}
+                          >
+                            {truncateString(ticket.title, 30)}
+                          </div>
+                          <div
+                            className="text-sm text-gray-500 md:truncate whitespace-normal"
+                            title={ticket.description}
+                          >
+                            {truncateString(ticket.description, 30)}
+                          </div>
+                        </TooltipCell>
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap">
                         <span
@@ -1015,54 +1030,87 @@ export default function TicketsPage() {
                           {getPriorityText(ticket.priority)}
                         </span>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
-                        {(() => {
-                          const locations = [
-                            ...new Set(
-                              ticket.reports
-                                .map((r) => r.report.location?.name)
-                                .filter(Boolean)
-                            ),
-                          ] as string[];
-
-                          if (locations.length === 0) {
-                            return '無';
+                      <td className="p-0">
+                        <TooltipCell
+                          content={
+                            [
+                              ...new Set(
+                                ticket.reports
+                                  .map((r) => r.report.location?.name)
+                                  .filter(Boolean)
+                              ),
+                            ].join(', ') || '無'
                           }
+                          className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 w-full h-full"
+                        >
+                          {(() => {
+                            const locations = [
+                              ...new Set(
+                                ticket.reports
+                                  .map((r) => r.report.location?.name)
+                                  .filter(Boolean)
+                              ),
+                            ] as string[];
 
-                          const displayLocations = locations.slice(0, 2);
-                          const remainingCount =
-                            locations.length - displayLocations.length;
+                            if (locations.length === 0) {
+                              return '無';
+                            }
 
-                          return (
-                            <>
-                              {displayLocations.map((loc) => (
-                                <span
-                                  key={loc}
-                                  className="block md:text-ellipsis md:overflow-hidden"
-                                >
-                                  {loc}
-                                </span>
-                              ))}
-                              {remainingCount > 0 && (
-                                <span className="text-xs text-gray-500">
-                                  ...及其他 {remainingCount} 個地點
-                                </span>
-                              )}
-                            </>
-                          );
-                        })()}
+                            const displayLocations = locations.slice(0, 2);
+                            const remainingCount =
+                              locations.length - displayLocations.length;
+
+                            return (
+                              <>
+                                {displayLocations.map((loc) => (
+                                  <span
+                                    key={loc}
+                                    className="block md:text-ellipsis md:overflow-hidden"
+                                  >
+                                    {loc}
+                                  </span>
+                                ))}
+                                {remainingCount > 0 && (
+                                  <span className="text-xs text-gray-500">
+                                    ...及其他 {remainingCount} 個地點
+                                  </span>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </TooltipCell>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
-                        {formatDate(ticket.createdAt)}
+                      <td className="p-0">
+                        <TooltipCell
+                          content={formatDate(ticket.createdAt)}
+                          className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden w-full h-full"
+                        >
+                          {formatDate(ticket.createdAt)}
+                        </TooltipCell>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
-                        {getRoleName(ticket.role?.name) || '未指派'}
+                      <td className="p-0">
+                        <TooltipCell
+                          content={getRoleName(ticket.role?.name) || '未指派'}
+                          className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden w-full h-full"
+                        >
+                          {getRoleName(ticket.role?.name) || '未指派'}
+                        </TooltipCell>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
-                        {ticket.creator?.name || '未知'}
+                      <td className="p-0">
+                        <TooltipCell
+                          content={ticket.creator?.name || '未知'}
+                          className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden w-full h-full"
+                        >
+                          {ticket.creator?.name || '未知'}
+                        </TooltipCell>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden">
-                        {ticket.assignee?.name || '未指派'}
+                      <td className="p-0">
+                        <TooltipCell
+                          content={ticket.assignee?.name || '未指派'}
+                          className="px-2 py-3 whitespace-nowrap text-sm text-gray-500 md:text-ellipsis md:overflow-hidden w-full h-full"
+                        >
+                          {ticket.assignee?.name || '未指派'}
+                        </TooltipCell>
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center space-x-2">

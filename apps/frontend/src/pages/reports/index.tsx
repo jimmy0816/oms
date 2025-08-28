@@ -44,6 +44,7 @@ import SaveViewModal from '@/components/SaveViewModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
 import CategoryTreeFilter from '@/components/CategoryTreeFilter';
 import ViewTabs from '@/components/ViewTabs';
+import TooltipCell from '@/components/TooltipCell';
 import MultiSelectFilterModal, {
   MultiSelectOption,
 } from '@/components/MultiSelectFilterModal'; // Import MultiSelectOption
@@ -72,137 +73,7 @@ const SortIcon = ({
   return <BarsArrowDownIcon className="h-3 w-3 text-black" />;
 };
 
-interface TooltipCellProps {
-  content: string; // The full content to display in the magnified view
-  children: React.ReactNode; // The original, possibly truncated content for the table cell
-  className?: string; // Classes for the table cell wrapper
-}
 
-const TooltipCell: React.FC<TooltipCellProps> = ({
-  content,
-  children,
-  className,
-}) => {
-  const [showMagnified, setShowMagnified] = useState(false);
-  const [magnifiedStyle, setMagnifiedStyle] = useState<React.CSSProperties>({});
-  const cellRef = useRef<HTMLDivElement>(null);
-  const magnifiedContentRef = useRef<HTMLDivElement>(null);
-
-  const handleMouseEnter = () => {
-    if (cellRef.current) {
-      const rect = cellRef.current.getBoundingClientRect();
-
-      // Define target max dimensions for the magnified box
-      const targetMaxWidth = Math.min(window.innerWidth * 0.8, 400);
-      const targetMaxHeight = window.innerHeight * 0.7;
-
-      // Initial state: positioned at the original cell's location, scaled down, invisible
-      setMagnifiedStyle({
-        position: 'fixed',
-        top: `${rect.top}px`,
-        left: `${rect.left}px`,
-        visibility: 'hidden',
-        // width: `${rect.width}px`,
-        // height: `${rect.height}px`,
-        zIndex: 100,
-        backgroundColor: 'white',
-        padding: '1.5rem',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        borderRadius: '0.25rem',
-        textAlign: 'left',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        whiteSpace: 'normal',
-        maxWidth: '400px',
-        maxHeight: `${window.innerHeight * 0.7}px`,
-        // transition: 'all 0.3s ease-out',
-        transition: 'none',
-        opacity: 0,
-        transform: 'scale(1)',
-        transformOrigin: 'center center',
-      });
-      setShowMagnified(true);
-
-      // After a very short delay, let the content render and then measure it
-      setTimeout(() => {
-        if (magnifiedContentRef.current) {
-          const measuredRect =
-            magnifiedContentRef.current.getBoundingClientRect();
-
-          // Refine final width/height based on actual content and max constraints
-          // const finalWidth = Math.min(measuredRect.width, targetMaxWidth);
-          // const finalHeight = Math.min(measuredRect.height, targetMaxHeight); // Use measured height, capped by max
-
-          const finalWidth = measuredRect.width;
-          const finalHeight = measuredRect.height;
-
-          // Recalculate top/left to center the magnified element over the original cell
-          const newLeft = rect.left + rect.width / 2 - finalWidth / 2;
-          const newTop = rect.top + rect.height / 2 - finalHeight / 2;
-
-          setMagnifiedStyle((prev) => ({
-            ...prev,
-            top: `${newTop}px`,
-            left: `${newLeft}px`,
-            width: `${finalWidth}px`,
-            height: `${finalHeight}px`,
-            // padding: '1.5rem',
-            // boxShadow: '0 10px 20px rgba(0,0,0,0.2)',
-            visibility: 'visible',
-            opacity: 1,
-            transition: 'all .3s ease-out',
-            transform: 'scale(1)',
-            // overflowY: 'auto',
-            // overflowX: 'hidden',
-            // whiteSpace: 'normal',
-          }));
-        }
-      }, 10);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (cellRef.current) {
-      const rect = cellRef.current.getBoundingClientRect();
-      setMagnifiedStyle((prev) => ({
-        ...prev,
-        top: `${rect.top}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
-        height: `${rect.height}px`,
-        padding: '0.5rem',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        opacity: 0,
-        transform: 'scale(0.8)',
-        overflowY: 'hidden',
-        overflowX: 'hidden',
-        whiteSpace: 'nowrap',
-      }));
-      setTimeout(() => setShowMagnified(false), 300);
-    }
-  };
-
-  return (
-    <div
-      ref={cellRef}
-      className={`relative ${className}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      {children}
-
-      {showMagnified && (
-        <div
-          ref={magnifiedContentRef}
-          style={magnifiedStyle}
-          className="text-base font-medium text-gray-900"
-        >
-          {content}
-        </div>
-      )}
-    </div>
-  );
-};
 
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
