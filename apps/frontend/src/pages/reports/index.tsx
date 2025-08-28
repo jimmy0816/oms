@@ -2,6 +2,7 @@ import PermissionGuard from '@/components/PermissionGuard';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import {
   ArrowDownTrayIcon, // Added for export
   MagnifyingGlassIcon,
@@ -77,16 +78,15 @@ const SortIcon = ({
 
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
-  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
-  const [locationFilter, setLocationFilter] = useState<string[]>([]);
-  const [creatorFilter, setCreatorFilter] = useState<string[]>([]); // New state for creator filter
-  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
-    null,
-    null,
-  ]);
+  const [filters, setFilters] = useState({
+    search: '',
+    status: [] as string[],
+    categoryIds: [] as string[],
+    priority: [] as string[],
+    locationIds: [] as string[],
+    creatorIds: [] as string[],
+    dateRange: [null, null] as [Date | null, Date | null],
+  });
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -113,6 +113,106 @@ export default function Reports() {
   const isInitialLoad = useRef(true);
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
+
+  const router = useRouter();
+
+  // Effect to synchronize URL query params to component state on initial load
+  useEffect(() => {
+    if (!router.isReady || !isInitialLoad.current) return;
+
+    const query = router.query;
+
+    if (Object.keys(query).length > 0) {
+      const status = Array.isArray(query.status)
+        ? query.status
+        : query.status
+        ? [query.status]
+        : [];
+      const categoryIds = Array.isArray(query.categoryIds)
+        ? query.categoryIds
+        : query.categoryIds
+        ? [query.categoryIds]
+        : [];
+      const priority = Array.isArray(query.priority)
+        ? query.priority
+        : query.priority
+        ? [query.priority]
+        : [];
+      const locationIds = Array.isArray(query.locationIds)
+        ? query.locationIds
+        : query.locationIds
+        ? [query.locationIds]
+        : [];
+      const creatorIds = Array.isArray(query.creatorIds)
+        ? query.creatorIds
+        : query.creatorIds
+        ? [query.creatorIds]
+        : [];
+      const startDate = query.startDate
+        ? new Date(query.startDate as string)
+        : null;
+      const endDate = query.endDate ? new Date(query.endDate as string) : null;
+
+      setFilters({
+        search: (query.search as string) || '',
+        status,
+        categoryIds,
+        priority,
+        locationIds,
+        creatorIds,
+        dateRange: [startDate, endDate],
+      });
+      setSortField((query.sortField as string) || null);
+      setSortOrder((query.sortOrder as 'asc' | 'desc') || null);
+      setPage(parseInt(query.page as string, 10) || 1);
+
+      // If a view is specified in the URL, select it.
+      if (query.view) {
+        setSelectedViewId(query.view as string);
+      }
+
+      isInitialLoad.current = false;
+    }
+  }, [router.isReady]);
+
+  // Effect to synchronize component state to URL query params
+  useEffect(() => {
+    if (!router.isReady || isInitialLoad.current) return;
+
+    const query: any = {};
+
+    if (filters.search) query.search = filters.search;
+    if (filters.status.length > 0) query.status = filters.status;
+    if (filters.categoryIds.length > 0) query.categoryIds = filters.categoryIds;
+    if (filters.priority.length > 0) query.priority = filters.priority;
+    if (filters.locationIds.length > 0) query.locationIds = filters.locationIds;
+    if (filters.creatorIds.length > 0) query.creatorIds = filters.creatorIds;
+    if (filters.dateRange[0])
+      query.startDate = filters.dateRange[0].toISOString().split('T')[0];
+    if (filters.dateRange[1])
+      query.endDate = filters.dateRange[1].toISOString().split('T')[0];
+    if (sortField) query.sortField = sortField;
+    if (sortOrder) query.sortOrder = sortOrder;
+    if (page > 1) query.page = page;
+    if (selectedViewId) query.view = selectedViewId;
+
+    router.replace(
+      {
+        pathname: '/reports',
+        query,
+      },
+      undefined,
+      { shallow: true }
+    );
+    console.log('URL updated with query:', query);
+  }, [
+    filters,
+    sortField,
+    sortOrder,
+    page,
+    selectedViewId,
+    router.isReady,
+  ]);
 
   const handleDelete = async (reportId: string, reportTitle: string) => {
     if (
@@ -148,20 +248,20 @@ export default function Reports() {
 
   const handleExport = async () => {
     try {
-      const filters = {
-        status: statusFilter,
-        categoryIds: categoryFilter,
-        priority: priorityFilter,
-        search: searchTerm,
-        locationIds: locationFilter,
-        creatorIds: creatorFilter,
-        startDate: dateRange[0]?.toISOString(),
-        endDate: dateRange[1]?.toISOString(),
+      const apiFilters = {
+        status: filters.status,
+        categoryIds: filters.categoryIds,
+        priority: filters.priority,
+        search: filters.search,
+        locationIds: filters.locationIds,
+        creatorIds: filters.creatorIds,
+        startDate: filters.dateRange[0]?.toISOString(),
+        endDate: filters.dateRange[1]?.toISOString(),
         sortField: sortField,
         sortOrder: sortOrder,
       };
 
-      const blob = await reportService.exportReports(filters);
+      const blob = await reportService.exportReports(apiFilters);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -238,7 +338,7 @@ export default function Reports() {
       setError(null);
 
       // 構建過濾條件
-      const filters: {
+      const apiFilters: {
         status?: string[];
         categoryIds?: string[];
         priority?: string[];
@@ -250,28 +350,31 @@ export default function Reports() {
         sortField?: string;
         sortOrder?: 'asc' | 'desc';
       } = {};
-      if (statusFilter.length > 0) filters.status = statusFilter;
-      if (categoryFilter.length > 0) filters.categoryIds = categoryFilter;
-      if (priorityFilter.length > 0) filters.priority = priorityFilter;
-      if (searchTerm) filters.search = searchTerm;
-      if (locationFilter.length > 0) filters.locationIds = locationFilter;
-      if (creatorFilter.length > 0) filters.creatorIds = creatorFilter;
-      if (dateRange[0]) {
-        filters.startDate = dateRange[0].toISOString();
+      if (filters.status.length > 0) apiFilters.status = filters.status;
+      if (filters.categoryIds.length > 0)
+        apiFilters.categoryIds = filters.categoryIds;
+      if (filters.priority.length > 0) apiFilters.priority = filters.priority;
+      if (filters.search) apiFilters.search = filters.search;
+      if (filters.locationIds.length > 0)
+        apiFilters.locationIds = filters.locationIds;
+      if (filters.creatorIds.length > 0)
+        apiFilters.creatorIds = filters.creatorIds;
+      if (filters.dateRange[0]) {
+        apiFilters.startDate = filters.dateRange[0].toISOString();
       }
-      if (dateRange[1]) {
-        filters.endDate = dateRange[1].toISOString();
+      if (filters.dateRange[1]) {
+        apiFilters.endDate = filters.dateRange[1].toISOString();
       }
-      if (sortField) filters.sortField = sortField;
-      if (sortOrder) filters.sortOrder = sortOrder;
+      if (sortField) apiFilters.sortField = sortField;
+      if (sortOrder) apiFilters.sortOrder = sortOrder;
 
-      console.log('Loading reports with filters:', filters); // Debug log
+      console.log('Loading reports with filters:', apiFilters); // Debug log
 
       // 調用 API 獲取報告
       const response = await reportService.getAllReports(
         page,
         pageSize,
-        filters
+        apiFilters
       );
 
       console.log('report with filters', response);
@@ -284,19 +387,7 @@ export default function Reports() {
     } finally {
       setLoading(false);
     }
-  }, [
-    page,
-    pageSize,
-    statusFilter,
-    categoryFilter,
-    priorityFilter,
-    searchTerm,
-    locationFilter,
-    creatorFilter, // Add creatorFilter to dependency array
-    dateRange,
-    sortField,
-    sortOrder,
-  ]);
+  }, [page, pageSize, filters, sortField, sortOrder]);
 
   // 處理搜索和過濾
   const handleSearch = () => {
@@ -320,13 +411,15 @@ export default function Reports() {
 
   // 清除過濾條件
   const clearFilters = () => {
-    setSearchTerm('');
-    setStatusFilter([]);
-    setCategoryFilter([]);
-    setPriorityFilter([]);
-    setLocationFilter([]);
-    setCreatorFilter([]); // Clear creator filter
-    setDateRange([null, null]);
+    setFilters({
+      search: '',
+      status: [],
+      categoryIds: [],
+      priority: [],
+      locationIds: [],
+      creatorIds: [],
+      dateRange: [null, null],
+    });
     setSelectedViewId(null); // Clear selected view
     setPage(1);
     setSortField(null);
@@ -338,13 +431,7 @@ export default function Reports() {
   const handleSaveView = async (viewName: string) => {
     try {
       const currentFilters = {
-        searchTerm,
-        statusFilter,
-        categoryFilter,
-        priorityFilter,
-        locationFilter,
-        creatorFilter, // Include creatorFilter
-        dateRange,
+        ...filters,
         sortField,
         sortOrder,
       };
@@ -386,40 +473,7 @@ export default function Reports() {
     (viewId: string) => {
       const viewToApply = savedViews.find((view) => view.id === viewId);
       if (viewToApply) {
-        const newStatusFilter = Array.isArray(viewToApply.filters.statusFilter)
-          ? viewToApply.filters.statusFilter
-          : viewToApply.filters.statusFilter
-          ? [viewToApply.filters.statusFilter]
-          : [];
-        const newCategoryFilter = Array.isArray(
-          viewToApply.filters.categoryFilter
-        )
-          ? viewToApply.filters.categoryFilter
-          : viewToApply.filters.categoryFilter
-          ? [viewToApply.filters.categoryFilter]
-          : [];
-        const newPriorityFilter = Array.isArray(
-          viewToApply.filters.priorityFilter
-        )
-          ? viewToApply.filters.priorityFilter
-          : viewToApply.filters.priorityFilter
-          ? [viewToApply.filters.priorityFilter]
-          : [];
-        const newLocationFilter = Array.isArray(
-          viewToApply.filters.locationFilter
-        )
-          ? viewToApply.filters.locationFilter
-          : viewToApply.filters.locationFilter
-          ? [viewToApply.filters.locationFilter]
-          : [];
-        const newCreatorFilter = Array.isArray(
-          viewToApply.filters.creatorFilter
-        )
-          ? viewToApply.filters.creatorFilter
-          : viewToApply.filters.creatorFilter
-          ? [viewToApply.filters.creatorFilter]
-          : [];
-
+        console.log('Applying view:', viewToApply.name, viewToApply.filters);
         const newDateRange = viewToApply.filters.dateRange
           ? [
               viewToApply.filters.dateRange[0]
@@ -431,13 +485,16 @@ export default function Reports() {
             ]
           : [null, null];
 
-        setSearchTerm(viewToApply.filters.searchTerm || '');
-        setStatusFilter(newStatusFilter);
-        setCategoryFilter(newCategoryFilter);
-        setPriorityFilter(newPriorityFilter);
-        setLocationFilter(newLocationFilter);
-        setCreatorFilter(newCreatorFilter);
-        setDateRange(newDateRange as [Date | null, Date | null]);
+        setFilters({
+          search: viewToApply.filters.search || '',
+          status: viewToApply.filters.status || [],
+          categoryIds: viewToApply.filters.categoryIds || [],
+          priority: viewToApply.filters.priority || [],
+          locationIds: viewToApply.filters.locationIds || [],
+          creatorIds: viewToApply.filters.creatorIds || [],
+          dateRange: newDateRange as [Date | null, Date | null],
+        });
+
         setSelectedViewId(viewId);
         setPage(1);
         setSortField(viewToApply.filters.sortField || null);
@@ -453,16 +510,21 @@ export default function Reports() {
     loadReports();
   }, [loadReports]);
 
-  // Load default view on initial load
+  // Load default view on initial load if no query params are present
   useEffect(() => {
-    if (isInitialLoad.current && savedViews.length > 0) {
+    if (
+      isInitialLoad.current &&
+      savedViews.length > 0 &&
+      router.isReady &&
+      Object.keys(router.query).length === 0
+    ) {
       const defaultView = savedViews.find((view) => view.isDefault);
       if (defaultView) {
         handleApplyView(defaultView.id);
       }
-      isInitialLoad.current = false;
+      isInitialLoad.current = false; // Mark initial load as done
     }
-  }, [savedViews, handleApplyView]);
+  }, [savedViews, handleApplyView, router.isReady, router.query]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -540,7 +602,7 @@ export default function Reports() {
               </PermissionGuard>
               <PermissionGuard required={Permission.CREATE_REPORTS}>
                 <Link
-                  href="/reports/new"
+                  href={`/reports/new?returnUrl=${encodeURIComponent(router.asPath)}`}
                   className="btn-primary px-4 py-2.5 text-sm font-medium rounded-md flex items-center md:py-2"
                 >
                   <PlusIcon className="h-4 w-4 mr-1" />
@@ -591,9 +653,9 @@ export default function Reports() {
                 type="text"
                 placeholder="搜尋通報..."
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm placeholder:text-sm"
-                value={searchTerm}
+                value={filters.search}
                 onChange={(e) => {
-                  setSearchTerm(e.target.value);
+                  setFilters((prev) => ({ ...prev, search: e.target.value }));
                   setIsFilterModified(true);
                 }}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -634,8 +696,8 @@ export default function Reports() {
                 onClick={() => setIsStatusModalOpen(true)}
                 className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
-                {statusFilter.length > 0
-                  ? `已選 ${statusFilter.length} 個狀態`
+                {filters.status.length > 0
+                  ? `已選 ${filters.status.length} 個狀態`
                   : '選擇狀態...'}
               </button>
             </div>
@@ -653,8 +715,8 @@ export default function Reports() {
                 onClick={() => setIsCategoryModalOpen(true)}
                 className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
-                {categoryFilter.length > 0
-                  ? `已選 ${categoryFilter.length} 個類別`
+                {filters.categoryIds.length > 0
+                  ? `已選 ${filters.categoryIds.length} 個類別`
                   : '選擇類別...'}
               </button>
             </div>
@@ -672,8 +734,8 @@ export default function Reports() {
                 onClick={() => setIsPriorityModalOpen(true)}
                 className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
-                {priorityFilter.length > 0
-                  ? `已選 ${priorityFilter.length} 個優先級`
+                {filters.priority.length > 0
+                  ? `已選 ${filters.priority.length} 個優先級`
                   : '選擇優先級...'}
               </button>
             </div>
@@ -691,8 +753,8 @@ export default function Reports() {
                 onClick={() => setIsLocationModalOpen(true)}
                 className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
-                {locationFilter.length > 0
-                  ? `已選 ${locationFilter.length} 個地點`
+                {filters.locationIds.length > 0
+                  ? `已選 ${filters.locationIds.length} 個地點`
                   : '選擇地點...'}
               </button>
             </div>
@@ -710,8 +772,8 @@ export default function Reports() {
                 onClick={() => setIsCreatorModalOpen(true)}
                 className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
-                {creatorFilter.length > 0
-                  ? `已選 ${creatorFilter.length} 個建立者`
+                {filters.creatorIds.length > 0
+                  ? `已選 ${filters.creatorIds.length} 個建立者`
                   : '選擇建立者...'}
               </button>
             </div>
@@ -726,10 +788,10 @@ export default function Reports() {
               </label>
               <DatePicker
                 selectsRange={true}
-                startDate={dateRange[0]}
-                endDate={dateRange[1]}
+                startDate={filters.dateRange[0]}
+                endDate={filters.dateRange[1]}
                 onChange={(update) => {
-                  setDateRange(update);
+                  setFilters((prev) => ({ ...prev, dateRange: update }));
                   setIsFilterModified(true);
                 }}
                 isClearable={true}
@@ -748,12 +810,12 @@ export default function Reports() {
         isOpen={isLocationModalOpen}
         onClose={() => setIsLocationModalOpen(false)}
         onConfirm={(selectedIds) => {
-          setLocationFilter(selectedIds as string[]); // Cast to string[]
+          setFilters((prev) => ({ ...prev, locationIds: selectedIds as string[] }));
           setIsLocationModalOpen(false);
           setPage(1); // Reset page when filter changes
           setIsFilterModified(true); // Set filter modified when location changes
         }}
-        initialSelectedIds={locationFilter}
+        initialSelectedIds={filters.locationIds}
         options={allLocations.map((loc) => ({ id: loc.id, name: loc.name }))} // Pass locations as options
         title="選擇地點"
       />
@@ -763,12 +825,12 @@ export default function Reports() {
         isOpen={isStatusModalOpen}
         onClose={() => setIsStatusModalOpen(false)}
         onConfirm={(selectedIds) => {
-          setStatusFilter(selectedIds as string[]);
+          setFilters((prev) => ({ ...prev, status: selectedIds as string[] }));
           setIsStatusModalOpen(false);
           setPage(1);
           setIsFilterModified(true);
         }}
-        initialSelectedIds={statusFilter}
+        initialSelectedIds={filters.status}
         options={Object.values(ReportStatus).map((status) => ({
           id: status,
           name: getStatusName(status),
@@ -781,12 +843,12 @@ export default function Reports() {
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
         onConfirm={(selectedIds) => {
-          setCategoryFilter(selectedIds as string[]);
+          setFilters((prev) => ({ ...prev, categoryIds: selectedIds as string[] }));
           setIsCategoryModalOpen(false);
           setPage(1);
           setIsFilterModified(true);
         }}
-        initialSelectedIds={categoryFilter}
+        initialSelectedIds={filters.categoryIds}
         categories={categories}
         title="選擇類別"
       />
@@ -796,12 +858,12 @@ export default function Reports() {
         isOpen={isPriorityModalOpen}
         onClose={() => setIsPriorityModalOpen(false)}
         onConfirm={(selectedIds) => {
-          setPriorityFilter(selectedIds as string[]);
+          setFilters((prev) => ({ ...prev, priority: selectedIds as string[] }));
           setIsPriorityModalOpen(false);
           setPage(1);
           setIsFilterModified(true);
         }}
-        initialSelectedIds={priorityFilter}
+        initialSelectedIds={filters.priority}
         options={Object.values(ReportPriority).map((priority) => ({
           id: priority,
           name: getPriorityText(priority as ReportPriority),
@@ -814,12 +876,12 @@ export default function Reports() {
         isOpen={isCreatorModalOpen}
         onClose={() => setIsCreatorModalOpen(false)}
         onConfirm={(selectedIds) => {
-          setCreatorFilter(selectedIds as string[]);
+          setFilters((prev) => ({ ...prev, creatorIds: selectedIds as string[] }));
           setIsCreatorModalOpen(false);
           setPage(1);
           setIsFilterModified(true);
         }}
-        initialSelectedIds={creatorFilter}
+        initialSelectedIds={filters.creatorIds}
         options={allCreators.map((creator) => ({
           id: creator.id,
           name: creator.name,
@@ -1001,7 +1063,9 @@ export default function Reports() {
                       key={report.id}
                       className="hover:bg-gray-50 cursor-pointer"
                       onClick={() =>
-                        (window.location.href = `/reports/${report.id}`)
+                        (window.location.href = `/reports/${report.id}?returnUrl=${encodeURIComponent(
+                          router.asPath
+                        )}`)
                       }
                     >
                       <td className="p-0">
