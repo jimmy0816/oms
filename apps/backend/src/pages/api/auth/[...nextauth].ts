@@ -55,7 +55,6 @@ async function refreshAccessToken(token: any) {
 const cookiePrefix = 'oms-';
 
 export const authOptions: NextAuthOptions = {
-  url: process.env.NEXTAUTH_URL,
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
@@ -292,7 +291,7 @@ export const authOptions: NextAuthOptions = {
         secure: true,
         domain:
           process.env.NODE_ENV === 'production'
-            ? new URL(process.env.NEXTAUTH_URL as string).hostname
+            ? '.asia-east1.run.app'
             : 'localhost',
       },
     },

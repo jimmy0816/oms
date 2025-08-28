@@ -23,6 +23,7 @@ export async function middleware(req: NextRequest) {
   const loginUrl = new URL('/login', req.url);
 
   // This is the original URL the user tried to access
+  console.log('req.nextUrl.href', req);
   const callbackUrl = req.nextUrl.href;
   loginUrl.searchParams.set('callbackUrl', callbackUrl);
   return NextResponse.redirect(loginUrl);
