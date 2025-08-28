@@ -6,11 +6,9 @@ console.log('DEBUG: NEXT_PUBLIC_BASE_URL is', process.env.NEXT_PUBLIC_BASE_URL);
 
 async function handleResponse(response: Response) {
   if (response.status === 401) {
-    const frontendLogoutUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/login`;
-
-    await signOut({ redirect: false });
-
-    window.location.href = frontendLogoutUrl;
+    // The next-auth middleware should handle redirects, but as a fallback,
+    // we can force a client-side sign-out.
+    return Promise.reject(new Error('Unauthorized'));
   }
 
   if (response.status === 204) {
