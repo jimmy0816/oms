@@ -342,7 +342,10 @@ export default function ReportDetail() {
                   <div className="flex gap-2">
                     <button
                       className="btn-primary"
-                      onClick={() => setIsDatePickerOpen(true)}
+                      onClick={() => {
+                        setIsDatePickerOpen(true);
+                        setTrackingDate(new Date());
+                      }}
                       disabled={processing}
                     >
                       {processing ? '處理中...' : '開始處理'}

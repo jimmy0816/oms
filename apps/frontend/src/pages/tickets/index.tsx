@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { 
+import {
   ArrowDownTrayIcon, // Added for export
   FunnelIcon,
   MagnifyingGlassIcon,
@@ -906,7 +906,7 @@ export default function TicketsPage() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-32 min-w-max whitespace-nowrap"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-48 min-w-max whitespace-nowrap"
                       onClick={() => handleSort('createdAt')}
                     >
                       <div className="flex items-center space-x-1">
@@ -962,7 +962,7 @@ export default function TicketsPage() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider w-20 min-w-max whitespace-nowrap"
+                      className="px-2 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider w-16 min-w-max whitespace-nowrap"
                     >
                       操作
                     </th>
