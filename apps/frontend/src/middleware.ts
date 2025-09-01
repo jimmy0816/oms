@@ -19,7 +19,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // If no token, and it's a protected route, redirect to login
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
   const loginUrl = new URL('/login', baseUrl); // Use baseUrl here
 
   // This is the original URL the user tried to access
