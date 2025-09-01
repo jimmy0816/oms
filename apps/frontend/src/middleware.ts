@@ -20,11 +20,12 @@ export async function middleware(req: NextRequest) {
   }
 
   // If no token, and it's a protected route, redirect to login
-  const loginUrl = new URL('/login', req.url);
+  const loginUrl = new URL('/login', baseUrl); // Use baseUrl here
 
   // This is the original URL the user tried to access
-  console.log('req.nextUrl.href', req, loginUrl);
-  const callbackUrl = req.nextUrl.href;
+  console.log('req.nextUrl.href', req.nextUrl.href); // Log the actual incoming URL
+  console.log('loginUrl constructed:', loginUrl.toString()); // Log the constructed login URL
+  const callbackUrl = req.nextUrl.href; // This should be the actual Cloud Run URL
   loginUrl.searchParams.set('callbackUrl', callbackUrl);
   return NextResponse.redirect(loginUrl);
 }
