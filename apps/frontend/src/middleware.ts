@@ -20,12 +20,11 @@ export async function middleware(req: NextRequest) {
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
-  const loginUrl = new URL('/login', baseUrl); // Use baseUrl here
+  const loginUrl = new URL('/login', baseUrl);
 
-  // This is the original URL the user tried to access
-  console.log('req.nextUrl.href', req.nextUrl.href); // Log the actual incoming URL
-  console.log('loginUrl constructed:', loginUrl.toString()); // Log the constructed login URL
-  const callbackUrl = req.nextUrl.href; // This should be the actual Cloud Run URL
+  console.log('req.nextUrl.href', req.nextUrl.href);
+  console.log('loginUrl constructed:', loginUrl.toString());
+  const callbackUrl = `${baseUrl}${req.nextUrl.pathname}${req.nextUrl.search}`;
   loginUrl.searchParams.set('callbackUrl', callbackUrl);
   return NextResponse.redirect(loginUrl);
 }
