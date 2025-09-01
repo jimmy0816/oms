@@ -15,7 +15,7 @@ steps:
       - |
         apk add --no-cache postgresql-client openssl
 
-        export DATABASE_URL="postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/oms"
+        export DATABASE_URL="postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/${_DB_NAME}"
 
         npm install -g pnpm
 
@@ -34,7 +34,7 @@ steps:
         pnpm --filter backend db:sync-permissions
         echo "Permission sync completed."
     env:
-      - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/oms"
+      - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/${_DB_NAME}"
     id: "Run Prisma Operations and Permission Sync"
     waitFor: ["proxy-install"]
 
@@ -60,7 +60,7 @@ steps:
     args:
       - "run"
       - "deploy"
-      - "oms-backend-service" # Cloud Run 服務名稱
+      - "${_SERVICE_NAME}" # Cloud Run 服務名稱
       - "--image"
       - "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA"
       - "--region"
@@ -69,7 +69,7 @@ steps:
       - "managed"
       - "--allow-unauthenticated" # 如果是公開 API，允許未經驗證的存取 (可根據需求調整)
       - "--set-env-vars"
-      - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}/oms?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME},JWT_SECRET=${_JWT_SECRET},DEFAULT_ADMIN_EMAIL=${_DEFAULT_ADMIN_EMAIL},DEFAULT_ADMIN_PASSWORD=${_DEFAULT_ADMIN_PASSWORD},R2_ACCOUNT_ID=${_R2_ACCOUNT_ID},R2_ACCESS_KEY_ID=${_R2_ACCESS_KEY_ID},R2_SECRET_ACCESS_KEY=${_R2_SECRET_ACCESS_KEY},R2_BUCKET_NAME=${_R2_BUCKET_NAME},R2_PUBLIC_URL_PREFIX=${_R2_PUBLIC_URL_PREFIX},PUBLIC_FRONTEND_URL=${_PUBLIC_FRONTEND_URL},OIDC_CLIENT_ID=${_OIDC_CLIENT_ID},OIDC_CLIENT_SECRET=${_OIDC_CLIENT_SECRET},OIDC_ISSUER=${_OIDC_ISSUER},NEXTAUTH_URL=${_NEXTAUTH_URL},NEXTAUTH_SECRET=${_NEXTAUTH_SECRET}"
+      - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}/${_DB_NAME}?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME},JWT_SECRET=${_JWT_SECRET},DEFAULT_ADMIN_EMAIL=${_DEFAULT_ADMIN_EMAIL},DEFAULT_ADMIN_PASSWORD=${_DEFAULT_ADMIN_PASSWORD},R2_ACCOUNT_ID=${_R2_ACCOUNT_ID},R2_ACCESS_KEY_ID=${_R2_ACCESS_KEY_ID},R2_SECRET_ACCESS_KEY=${_R2_SECRET_ACCESS_KEY},R2_BUCKET_NAME=${_R2_BUCKET_NAME},R2_PUBLIC_URL_PREFIX=${_R2_PUBLIC_URL_PREFIX},PUBLIC_FRONTEND_URL=${_PUBLIC_FRONTEND_URL},OIDC_CLIENT_ID=${_OIDC_CLIENT_ID},OIDC_CLIENT_SECRET=${_OIDC_CLIENT_SECRET},OIDC_ISSUER=${_OIDC_ISSUER},NEXTAUTH_URL=${_NEXTAUTH_URL},NEXTAUTH_SECRET=${_NEXTAUTH_SECRET}"
       - "--add-cloudsql-instances"
       - "${_CLOUD_SQL_CONNECTION_NAME}"
     # 其他可選配置：
@@ -89,6 +89,7 @@ images:
 # 替換變數，用於敏感資訊或環境特定配置
 substitutions:
   _DB_HOST: "localhost"
+  _DB_NAME: "oms"
   _DB_USER: "prisma_user"
   _DB_PASSWORD: "your_actual_database_password"
   _CLOUD_SQL_CONNECTION_NAME: "your_actual_database_connection_string_here" # <-- 在 Cloud Build Trigger 中設定
@@ -106,6 +107,7 @@ substitutions:
   _OIDC_ISSUER: "your_actual_oidc_issuer"
   _NEXTAUTH_URL: "your_actual_nextauth_url"
   _NEXTAUTH_SECRET: "your_actual_nextauth_secret"
+  _SERVICE_NAME: "oms-backend-service"
 
 options:
   logging: CLOUD_LOGGING_ONLY

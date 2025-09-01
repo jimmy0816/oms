@@ -32,7 +32,7 @@ steps:
     args:
       - "run"
       - "deploy"
-      - "oms-frontend-service"
+      - "${_SERVICE_NAME}"
       - "--image=asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA"
       - "--region=asia-east1"
       - "--platform=managed"
@@ -44,6 +44,7 @@ substitutions:
   _FRONTEND_URL: "https://oms-frontend-url.run.app" # 將在 Cloud Build 觸發器中設置為前端服務的 URL
   _NEXTAUTH_URL: "https://oms-nextauth-url.run.app" # 將在 Cloud Build 觸發器中設置為 NextAuth 服務的 URL
   _NEXTAUTH_SECRET: "nextauth-secret" # 將在 Cloud Build 觸發器中設置為 NextAuth 密鑰
+  _SERVICE_NAME: "oms-frontend-service"
 
 # 構建的鏡像
 images:
