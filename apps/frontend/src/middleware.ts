@@ -19,15 +19,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  return token;
+  // If the user is not authenticated, redirect to the login page.
+  // We pass the original URL as a callbackUrl query parameter.
+  const loginUrl = new URL('/login', req.nextUrl.origin);
+  loginUrl.searchParams.set('callbackUrl', req.nextUrl.href);
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
-  const loginUrl = new URL('/login', baseUrl);
-
-  // console.log('req.nextUrl.href', req.nextUrl.href);
-  // console.log('loginUrl constructed:', loginUrl.toString());
-  // const callbackUrl = `${baseUrl}${req.nextUrl.pathname}${req.nextUrl.search}`;
-  // loginUrl.searchParams.set('callbackUrl', callbackUrl);
   return NextResponse.redirect(loginUrl);
 }
 
