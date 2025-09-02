@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "next lint",
-    "db:sync-permissions": "tsc ./src/scripts/sync-permissions.ts --outDir dist/scripts && node dist/scripts/sync-permissions.js"
+    "db:sync-permissions": "ts-node ./src/scripts/sync-permissions.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.842.0",
@@ -23,8 +23,8 @@
     "next": "^14.0.0",
     "next-auth": "^4.24.11",
     "pg": "^8.16.3",
-    "prisma-client": "file:../../packages/prisma-client",
-    "shared-types": "file:../../packages/shared-types",
+    "prisma-client": "workspace:*",
+    "shared-types": "workspace:*",
     "zod": "^3.22.4"
   },
   "devDependencies": {
