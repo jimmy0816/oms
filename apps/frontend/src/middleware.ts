@@ -19,6 +19,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  return token;
+
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
   const loginUrl = new URL('/login', baseUrl);
 
