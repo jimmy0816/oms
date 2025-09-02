@@ -60,11 +60,11 @@ importers:
         specifier: ^8.16.3
         version: 8.16.3
       prisma-client:
-        specifier: file:../../packages/prisma-client
-        version: file:packages/prisma-client
+        specifier: workspace:*
+        version: link:../../packages/prisma-client
       shared-types:
-        specifier: file:../../packages/shared-types
-        version: file:packages/shared-types
+        specifier: workspace:*
+        version: link:../../packages/shared-types
       zod:
         specifier: ^3.22.4
         version: 3.22.4
@@ -6178,18 +6178,4 @@ packages:
 
   /zod@3.22.4:
     resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
-    dev: false
-
-  file:packages/prisma-client:
-    resolution: {directory: packages/prisma-client, type: directory}
-    name: prisma-client
-    dependencies:
-      '@prisma/client': 5.5.2(prisma@5.5.2)
-    transitivePeerDependencies:
-      - prisma
-    dev: false
-
-  file:packages/shared-types:
-    resolution: {directory: packages/shared-types, type: directory}
-    name: shared-types
     dev: false
