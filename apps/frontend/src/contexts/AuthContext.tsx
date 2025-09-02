@@ -40,11 +40,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       return;
     }
     try {
-      // const fetchedNotifications = await notificationService.getNotifications();
-      // setNotifications(fetchedNotifications);
+      const fetchedNotifications = await notificationService.getNotifications();
+      setNotifications(fetchedNotifications);
     } catch (error) {
-      // console.error('Failed to fetch notifications:', error);
-      // setNotifications([]);
+      console.error('Failed to fetch notifications:', error);
+      setNotifications([]);
     }
   }, [session]);
 
