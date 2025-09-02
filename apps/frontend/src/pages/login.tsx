@@ -12,23 +12,27 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
+  const [isLoginInProgress, setIsLoginInProgress] = useState(false);
 
-  // Redirect if already logged in
+  // Redirect if already logged in, but not while a login is in progress
   useEffect(() => {
-    if (user) {
-      router.push('/');
+    if (user && !isLoginInProgress) {
+      const { callbackUrl } = router.query;
+      router.push((callbackUrl as string) || '/');
     }
-  }, [user, router]);
+  }, [user, router, isLoginInProgress, router.query]);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null); // Clear previous errors
     setLoading(true);
+    setIsLoginInProgress(true); // Signal that a login process has started
 
     try {
       if (!email || !password) {
         showToast('請輸入電子郵件和密碼', 'error');
         setLoading(false);
+        setIsLoginInProgress(false); // Reset on validation failure
         return;
       }
 
@@ -42,8 +46,10 @@ const LoginPage: React.FC = () => {
 
       if (result?.error) {
         showToast(result.error, 'error');
+        setIsLoginInProgress(false); // Reset on auth failure
       } else if (result?.ok) {
         // If signIn is successful, manually redirect to the callbackUrl or home.
+        // The useEffect is blocked by isLoginInProgress=true, so no race condition.
         const { callbackUrl } = router.query;
         router.push((callbackUrl as string) || '/');
       }
@@ -52,6 +58,7 @@ const LoginPage: React.FC = () => {
         err instanceof Error ? err.message : '登入失敗，請檢查您的憑證',
         'error'
       );
+      setIsLoginInProgress(false); // Reset on unexpected error
     } finally {
       setLoading(false);
     }
@@ -59,6 +66,7 @@ const LoginPage: React.FC = () => {
 
   const handleOidcLogin = () => {
     setLoading(true);
+    setIsLoginInProgress(true); // Also signal for OIDC login
     const { callbackUrl } = router.query;
     // Let next-auth automatically handle the callbackUrl from the query string.
     signIn('oidc', {
@@ -67,6 +75,7 @@ const LoginPage: React.FC = () => {
     }).catch((err) => {
       showToast(err instanceof Error ? err.message : 'OIDC 登入失敗', 'error');
       setLoading(false);
+      setIsLoginInProgress(false);
     });
   };
 
