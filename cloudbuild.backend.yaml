@@ -32,6 +32,9 @@ steps:
         pnpm --filter prisma-client db:migrate
         echo "Prisma Migrate completed."
 
+        pnpm --filter prisma-client db:generate
+        echo "Prisma db generate completed."
+
         # 3. 在執行 backend 腳本前，先建置它依賴的 shared-types
         pnpm --filter shared-types build
         echo "shared-types build completed."
