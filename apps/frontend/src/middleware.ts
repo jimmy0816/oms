@@ -14,6 +14,9 @@ export async function middleware(req: NextRequest) {
   // Check for a valid session token
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
+  console.log('[middleware req]', req);
+  console.log('[middleware nextauth secret]', process.env.NEXTAUTH_SECRET);
+  console.log('[middleware token]', token);
   // If a token exists, the user is authenticated, let them proceed
   if (token) {
     return NextResponse.next();
