@@ -8,25 +8,24 @@ steps:
       - "wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O /workspace/cloud_sql_proxy && chmod +x /workspace/cloud_sql_proxy"
     waitFor: ["-"]
 
-  - name: "node:18-alpine" # 或其他你使用的 Node.js 映像
+  - name: "node:18-alpine"
+    id: "Run DB Operations"
     entrypoint: sh
     args:
       - "-c"
       - |
         apk add --no-cache postgresql-client openssl
-
         export DATABASE_URL="postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/${_DB_NAME}"
 
         npm install -g pnpm
 
-        cp -R . /tmp/monorepo
-        cd /tmp/monorepo
-
-        pnpm install --frozen-lockfile
+        pnpm install --frozen-lockfile --filter prisma-client
+        pnpm install --frozen-lockfile --filter backend
+        pnpm install --frozen-lockfile --filter shared-types
 
         /workspace/cloud_sql_proxy -dir=/workspace -instances=${_CLOUD_SQL_CONNECTION_NAME}=tcp:5432&
         echo "Waiting for Cloud SQL Proxy to start..."
-        sleep 5
+        timeout 30s bash -c 'until pg_isready -h ${_DB_HOST} -p 5432 -U ${_DB_USER}; do sleep 1; done'
 
         pnpm --filter prisma-client db:migrate
         echo "Prisma Migrate completed."
@@ -35,64 +34,56 @@ steps:
         echo "Permission sync completed."
     env:
       - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/${_DB_NAME}"
-    id: "Run Prisma Operations and Permission Sync"
     waitFor: ["proxy-install"]
 
-  # 步驟 1: 建構 Docker 映像
   - name: "gcr.io/cloud-builders/docker"
+    id: "Build Image"
     args:
       - "build"
       - "-t"
-      - "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA" # 映像名稱和標籤
+      - "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA"
       - "-f"
-      - "apps/backend/Dockerfile" # 指定 Dockerfile 路徑
-      - "." # Docker Build Context 為 monorepo 根目錄 (非常重要)
-  # 步驟 2: 推送 Docker 映像到 Google Container Registry (GCR)
+      - "apps/backend/Dockerfile"
+      - "."
+    waitFor: ["Run DB Operations"]
+
   - name: "gcr.io/cloud-builders/docker"
+    id: "Push Image"
     args:
       [
         "push",
         "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA",
       ]
-  # 步驟 3: 部署到 Cloud Run
+    waitFor: ["Build Image"]
+
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "Deploy"
     entrypoint: gcloud
     args:
       - "run"
       - "deploy"
-      - "${_SERVICE_NAME}" # Cloud Run 服務名稱
+      - "${_SERVICE_NAME}"
       - "--image"
       - "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA"
       - "--region"
-      - "asia-east1" # 替換為你的 GCP 區域 (例如 asia-east1, us-central1)
+      - "asia-east1"
       - "--platform"
       - "managed"
-      - "--allow-unauthenticated" # 如果是公開 API，允許未經驗證的存取 (可根據需求調整)
+      - "--allow-unauthenticated"
       - "--set-env-vars"
       - "DATABASE_URL=postgresql://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}/${_DB_NAME}?host=/cloudsql/${_CLOUD_SQL_CONNECTION_NAME},JWT_SECRET=${_JWT_SECRET},DEFAULT_ADMIN_EMAIL=${_DEFAULT_ADMIN_EMAIL},DEFAULT_ADMIN_PASSWORD=${_DEFAULT_ADMIN_PASSWORD},R2_ACCOUNT_ID=${_R2_ACCOUNT_ID},R2_ACCESS_KEY_ID=${_R2_ACCESS_KEY_ID},R2_SECRET_ACCESS_KEY=${_R2_SECRET_ACCESS_KEY},R2_BUCKET_NAME=${_R2_BUCKET_NAME},R2_PUBLIC_URL_PREFIX=${_R2_PUBLIC_URL_PREFIX},PUBLIC_FRONTEND_URL=${_PUBLIC_FRONTEND_URL},OIDC_CLIENT_ID=${_OIDC_CLIENT_ID},OIDC_CLIENT_SECRET=${_OIDC_CLIENT_SECRET},OIDC_ISSUER=${_OIDC_ISSUER},NEXTAUTH_URL=${_NEXTAUTH_URL},NEXTAUTH_SECRET=${_NEXTAUTH_SECRET},NEXTAUTH_COOKIE_DOMAIN=${_NEXTAUTH_COOKIE_DOMAIN}"
       - "--add-cloudsql-instances"
       - "${_CLOUD_SQL_CONNECTION_NAME}"
-    # 其他可選配置：
-    # - '--cpu' # CPU 配置 (例如: 1 或 2)
-    # - '1'
-    # - '--memory' # 記憶體配置 (例如: 512Mi, 1Gi)
-    # - '512Mi'
-    # - '--min-instances' # 最小執行個體數 (防止冷啟動，會產生費用)
-    # - '0' # 0 表示按需啟動
-    # - '--max-instances' # 最大執行個體數
-    # - '10'
-    # - '--timeout' # 請求超時時間 (例如: 300s)
-    # - '300'
+    waitFor: ["Run DB Operations", "Push Image"]
 images:
   - "asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-backend:$COMMIT_SHA"
 
-# 替換變數，用於敏感資訊或環境特定配置
 substitutions:
   _DB_HOST: "localhost"
   _DB_NAME: "oms"
   _DB_USER: "prisma_user"
   _DB_PASSWORD: "your_actual_database_password"
-  _CLOUD_SQL_CONNECTION_NAME: "your_actual_database_connection_string_here" # <-- 在 Cloud Build Trigger 中設定
+  _CLOUD_SQL_CONNECTION_NAME: "your_actual_database_connection_string_here"
   _JWT_SECRET: "your_actual_jwt_secret"
   _DEFAULT_ADMIN_EMAIL: "your_actual_default_admin_email"
   _DEFAULT_ADMIN_PASSWORD: "your_actual_default_admin_password"
