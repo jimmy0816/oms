@@ -12,7 +12,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Check for a valid session token
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET, cookieName: 'next-auth.session-token' });
 
   console.log('[middleware req]', req);
   console.log('[middleware nextauth secret]', process.env.NEXTAUTH_SECRET);
