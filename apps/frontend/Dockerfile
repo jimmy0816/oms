@@ -55,6 +55,9 @@ ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 
+# Print the content of package.json for debugging
+RUN echo "--- Reading frontend package.json before build ---" && cat /app/apps/frontend/package.json
+
 # Run the build command using turbo, which respects the dependency graph
 RUN pnpm turbo build --filter=frontend
 
