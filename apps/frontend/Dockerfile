@@ -1,4 +1,4 @@
-# A new, robust Dockerfile for frontend (non-standalone)
+# A new, robust Dockerfile for frontend (non-standalone) - CORRECTED
 
 # ---- 1. Base ----
 # Base stage with Node.js and pnpm
@@ -20,13 +20,12 @@ COPY packages/shared-types/package.json packages/shared-types/package.json
 RUN pnpm install --frozen-lockfile
 
 # ---- 3. Builder ----
-# Build the application using the pre-installed dependencies
-FROM base AS builder
+# Build the application, starting from the deps stage to preserve the context
+FROM deps AS builder
 WORKDIR /app
 
-# Copy dependencies from the deps stage
-COPY --from=deps /app/node_modules ./node_modules
-# Copy the entire source code
+# The deps stage already has node_modules and package.json files.
+# We only need to copy the rest of the source code.
 COPY . .
 
 # Pass build arguments
