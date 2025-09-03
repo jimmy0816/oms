@@ -1,51 +1,35 @@
-# Dockerfile for frontend using turbo prune - FINAL
+# A new, robust Dockerfile for frontend
 
 # ---- 1. Base ----
-# A base stage with node and pnpm installed
+# Base stage with Node.js and pnpm
 FROM node:18-alpine AS base
 WORKDIR /app
 RUN npm install -g pnpm
 
-# ---- 2. Pruner ----
-# Prune the monorepo to only include files needed for the 'frontend' app
-FROM base AS pruner
+# ---- 2. Dependencies ----
+# Install all dependencies in a separate, cacheable layer
+FROM base AS deps
 WORKDIR /app
-
-# Copy the root dependency files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
-
-# Copy the full source code to allow turbo to analyze the dependency graph
-COPY . .
-
-# Generate a pruned monorepo subset for 'frontend'
-RUN npx turbo prune --scope=frontend --docker
-
-# ---- 3. Installer ----
-# Install dependencies for the pruned subset of the monorepo
-FROM base AS installer
-WORKDIR /app
-
-# Copy the pruned package.json files and lockfile
-COPY --from=pruner /app/out/json/ .
-COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-
-# Install dependencies
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# Copy all package.json files to understand the workspace structure
+COPY apps/backend/package.json apps/backend/package.json
+COPY apps/frontend/package.json apps/frontend/package.json
+COPY packages/prisma-client/package.json packages/prisma-client/package.json
+COPY packages/shared-types/package.json packages/shared-types/package.json
+# Install all dependencies (including devDependencies for the build)
 RUN pnpm install --frozen-lockfile
 
-# ---- 4. Builder ----
-# Build the 'frontend' application
+# ---- 3. Builder ----
+# Build the application using the pre-installed dependencies
 FROM base AS builder
 WORKDIR /app
 
-# First, copy the full pruned source code
-COPY --from=pruner /app/out/full/ .
+# Copy dependencies from the deps stage
+COPY --from=deps /app/node_modules ./node_modules
+# Copy the entire source code
+COPY . .
 
-# Then, copy the entire workspace from the installer stage.
-# This includes node_modules AND the package.json files that pnpm needs to understand the workspace.
-# This is the critical fix.
-COPY --from=installer /app/ .
-
-# Pass build arguments for environment variables
+# Pass build arguments
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_BASE_URL
 ARG NEXTAUTH_URL
@@ -55,27 +39,35 @@ ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 
-# Manually build dependencies first, then the app itself.
-# This is a robust workaround for the turbo/pnpm issue in this environment.
+# Manually build dependencies first, then the app
 RUN pnpm --filter=shared-types build
 RUN pnpm --filter=frontend build
 
-# ---- 5. Runner ----
-# The final, minimal image for running the application
+# ---- 4. Runner ----
+# The final production image
 FROM base AS runner
 WORKDIR /app
-
 ENV NODE_ENV=production
 
-# Copy the standalone output from the builder
-COPY --from=builder /app/apps/frontend/.next/standalone ./
+# Copy dependency manifests
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/backend/package.json apps/backend/package.json
+COPY apps/frontend/package.json apps/frontend/package.json
+COPY packages/prisma-client/package.json packages/prisma-client/package.json
+COPY packages/shared-types/package.json packages/shared-types/package.json
 
-# Copy the public and static assets
-COPY --from=builder /app/apps/frontend/public ./public
-COPY --from=builder /app/apps/frontend/.next/static ./.next/static
+# Install ONLY production dependencies to keep the image smaller
+RUN pnpm install --prod --frozen-lockfile
+
+# Copy the build output from the builder stage
+COPY --from=builder /app/apps/frontend/.next ./apps/frontend/.next
+COPY --from=builder /app/apps/frontend/public ./apps/frontend/public
+
+# Set the working directory to the app
+WORKDIR /app/apps/frontend
 
 EXPOSE 8080
 
-# This is the correct command to run the standalone server.
-# It will automatically listen on the PORT environment variable provided by Cloud Run.
-CMD ["node", "server.js"]
+# Use the familiar next start command.
+# It automatically respects the PORT environment variable set by Cloud Run.
+CMD ["npx", "next", "start"]
