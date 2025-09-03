@@ -1,41 +1,47 @@
-# apps/frontend/Dockerfile
+# Dockerfile for frontend using turbo prune
 
 # ---- 1. Base ----
-# 基礎映像，包含 Node.js 和 pnpm
+# A base stage with node and pnpm installed
 FROM node:18-alpine AS base
 WORKDIR /app
 RUN npm install -g pnpm
 
 # ---- 2. Pruner ----
-# 負責從整個 monorepo 中，只提取出建置 frontend 所需的檔案
+# Prune the monorepo to only include files needed for the 'frontend' app
 FROM base AS pruner
 WORKDIR /app
 
-# 只複製建構依賴圖譜所需的檔案
-COPY turbo.json turbo.json
-COPY pnpm-lock.yaml pnpm-lock.yaml
-COPY pnpm-workspace.yaml pnpm-workspace.yaml
-COPY package.json package.json
+# Copy the root dependency files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 
-# 複製所有專案的 package.json，以便 turbo 計算依賴
-COPY apps/backend/package.json apps/backend/package.json
-COPY apps/frontend/package.json apps/frontend/package.json
-COPY packages/prisma-client/package.json packages/prisma-client/package.json
-COPY packages/shared-types/package.json packages/shared-types/package.json
+# Copy the full source code to allow turbo to analyze the dependency graph
+COPY . .
 
-# 複製建置 frontend 所需的原始碼
-# 這裡我們只複製 shared-types 和 frontend 的程式碼
-COPY packages/shared-types/src packages/shared-types/src
-COPY packages/shared-types/tsconfig.json packages/shared-types/tsconfig.json
-COPY apps/frontend/src apps/frontend/src
-COPY apps/frontend/public apps/frontend/public
-COPY apps/frontend/next.config.js apps/frontend/next.config.js
-COPY apps/frontend/tsconfig.json apps/frontend/tsconfig.json
+# Generate a pruned monorepo subset for 'frontend'
+RUN npx turbo prune --scope=frontend --docker
 
-# 執行 prune，產生一個只包含 frontend 及其依賴的精簡版 monorepo
+# ---- 3. Installer ----
+# Install dependencies for the pruned subset of the monorepo
+FROM base AS installer
+WORKDIR /app
+
+# Copy the pruned package.json files and lockfile
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+
+# Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# 接收來自 Cloud Build 的環境變數
+# ---- 4. Builder ----
+# Build the 'frontend' application
+FROM base AS builder
+WORKDIR /app
+
+# Copy the pruned source code and installed node_modules
+COPY --from=pruner /app/out/full/ .
+COPY --from=installer /app/node_modules ./node_modules
+
+# Pass build arguments for environment variables
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_BASE_URL
 ARG NEXTAUTH_URL
@@ -45,23 +51,25 @@ ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 
-RUN pnpm --filter=frontend... build
+# Run the build command using turbo
+RUN pnpm turbo build --filter=frontend
 
-# ---- 3. Runner ----
-# 最終執行環境，非常輕量
+# ---- 5. Runner ----
+# The final, minimal image for running the application
 FROM base AS runner
 WORKDIR /app
 
-# 設定環境變數
 ENV NODE_ENV=production
 
-# 從 Pruner 階段複製建置好的 standalone 輸出
-# 這需要你在 next.config.js 中設定 output: 'standalone'
-COPY --from=pruner /app/apps/frontend/.next/standalone ./
-COPY --from=pruner /app/apps/frontend/.next/static ./.next/static
+# Copy the standalone output from the builder
+COPY --from=builder /app/apps/frontend/.next/standalone ./
 
-# 暴露端口
+# Copy the public and static assets
+COPY --from=builder /app/apps/frontend/public ./public
+COPY --from=builder /app/apps/frontend/.next/static ./.next/static
+
 EXPOSE 8080
 
-# 啟動伺服器
-CMD node server.js
+# This is the correct command to run the standalone server.
+# It will automatically listen on the PORT environment variable provided by Cloud Run.
+CMD ["node", "server.js"]
