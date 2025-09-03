@@ -1,4 +1,4 @@
-# Dockerfile for frontend using turbo prune
+# Dockerfile for frontend using turbo prune - FINAL
 
 # ---- 1. Base ----
 # A base stage with node and pnpm installed
@@ -37,9 +37,13 @@ RUN pnpm install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 
-# Copy the pruned source code and installed node_modules
+# First, copy the full pruned source code
 COPY --from=pruner /app/out/full/ .
-COPY --from=installer /app/node_modules ./node_modules
+
+# Then, copy the entire workspace from the installer stage.
+# This includes node_modules AND the package.json files that pnpm needs to understand the workspace.
+# This is the critical fix.
+COPY --from=installer /app/ .
 
 # Pass build arguments for environment variables
 ARG NEXT_PUBLIC_API_URL
@@ -53,10 +57,6 @@ ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 
 # Run the build command using pnpm's workspace runner
 RUN pnpm --filter=frontend build
-
-# --- DEBUG --- 
-# List the content of the .next directory to debug the build output
-RUN echo "--- Listing .next directory contents ---" && ls -R /app/apps/frontend/.next || echo "--- .next directory not found ---"
 
 # ---- 5. Runner ----
 # The final, minimal image for running the application
