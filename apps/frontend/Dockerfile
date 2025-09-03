@@ -55,8 +55,8 @@ ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 
-# Run the build command using pnpm's workspace runner
-RUN pnpm --filter=frontend build
+# Run the build command using turbo, which respects the dependency graph
+RUN pnpm turbo build --filter=frontend
 
 # ---- 5. Runner ----
 # The final, minimal image for running the application
