@@ -2,6 +2,7 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   typescript: {
     // ⚠️ 禁用 TypeScript 檢查以解決構建問題
     ignoreBuildErrors: true,

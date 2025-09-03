@@ -37,6 +37,8 @@ steps:
       - "--region=asia-east1"
       - "--platform=managed"
       - "--allow-unauthenticated"
+      # 使用 --set-env-vars 來設置執行階段的環境變數
+      - "--set-env-vars=NEXT_PUBLIC_API_URL=${_BACKEND_URL},NEXT_PUBLIC_BASE_URL=${_FRONTEND_URL},NEXTAUTH_URL=${_NEXTAUTH_URL},NEXTAUTH_SECRET=${_NEXTAUTH_SECRET}"
 
 # 替換變數
 substitutions:
