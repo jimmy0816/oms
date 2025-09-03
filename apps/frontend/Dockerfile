@@ -55,11 +55,10 @@ ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 
-# Print the content of package.json for debugging
-RUN echo "--- Reading frontend package.json before build ---" && cat /app/apps/frontend/package.json
-
-# Run the build command using turbo, which respects the dependency graph
-RUN pnpm turbo build --filter=frontend
+# Manually build dependencies first, then the app itself.
+# This is a robust workaround for the turbo/pnpm issue in this environment.
+RUN pnpm --filter=shared-types build
+RUN pnpm --filter=frontend build
 
 # ---- 5. Runner ----
 # The final, minimal image for running the application
