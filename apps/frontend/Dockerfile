@@ -76,4 +76,8 @@ EXPOSE 8080
 
 # This is the correct command to run the standalone server.
 # It will automatically listen on the PORT environment variable provided by Cloud Run.
-CMD ["node", "server.js"]
+# CMD ["node", "server.js"]
+
+# --- DEBUG COMMAND ---
+# Temporarily override the CMD to list files in the /app directory for debugging.
+CMD ["ls", "-la", "/app"]
