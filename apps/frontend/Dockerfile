@@ -66,7 +66,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Copy the standalone output from the builder
-COPY --from=builder /app/apps/frontend/.next/standalone ./
+COPY --from=builder /app/apps/frontend/.next/standalone/ ./
 
 # Copy the public and static assets
 COPY --from=builder /app/apps/frontend/public ./public
