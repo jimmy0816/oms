@@ -34,6 +34,17 @@ COPY apps/frontend/tsconfig.json apps/frontend/tsconfig.json
 
 # 執行 prune，產生一個只包含 frontend 及其依賴的精簡版 monorepo
 RUN pnpm install --frozen-lockfile
+
+# 接收來自 Cloud Build 的環境變數
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_BASE_URL
+ARG NEXTAUTH_URL
+ARG NEXTAUTH_SECRET
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
+ENV NEXTAUTH_URL=$NEXTAUTH_URL
+ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
+
 RUN pnpm --filter=frontend... build
 
 # ---- 3. Runner ----
