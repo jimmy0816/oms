@@ -51,8 +51,12 @@ ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 
-# Run the build command using turbo
-RUN pnpm turbo build --filter=frontend
+# Run the build command using pnpm's workspace runner
+RUN pnpm --filter=frontend build
+
+# --- DEBUG --- 
+# List the content of the .next directory to debug the build output
+RUN echo "--- Listing .next directory contents ---" && ls -R /app/apps/frontend/.next || echo "--- .next directory not found ---"
 
 # ---- 5. Runner ----
 # The final, minimal image for running the application
