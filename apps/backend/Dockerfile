@@ -44,7 +44,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Prisma runtime requires OpenSSL
-RUN apk add --no-cache openssl
+RUN apk add --no-cache postgresql-client openssl
 
 # Copy dependency manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
