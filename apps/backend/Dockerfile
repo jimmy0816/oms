@@ -31,19 +31,16 @@ WORKDIR /app
 
 RUN corepack enable
 
-# 只複製運行 backend 所需的 package.json
-COPY --from=builder /app/package.json /app/pnpm-workspace.yaml ./
+# 【修正點】在這裡補上複製 pnpm-lock.yaml
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-client/
 COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/
 
-# 【關鍵】只安裝 Production 依賴
-# 因為我們只複製了相關的 package.json，pnpm 會建立一個乾淨的、只含 production 依賴的 node_modules
 RUN pnpm install --prod --frozen-lockfile --filter=backend...
 
 # 從 builder stage 複製建置好的產物到這個乾淨的環境中
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
-COPY --from=builder /app/apps/backend/public ./apps/backend/public
 COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
 COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
