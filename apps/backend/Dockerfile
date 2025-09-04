@@ -43,7 +43,6 @@ COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-c
 COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/
 
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
-COPY --from=builder /app/apps/backend/public ./apps/backend/public
 COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
 COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
