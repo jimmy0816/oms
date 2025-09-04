@@ -63,4 +63,4 @@ WORKDIR /app/apps/frontend
 
 EXPOSE 8080
 
-CMD ["pnpm", "start"]
+CMD ["npx", "next", "start"]
