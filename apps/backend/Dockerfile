@@ -1,4 +1,4 @@
-# A new, robust Dockerfile for backend (non-standalone)
+# A new, robust Dockerfile for backend (non-standalone) - FINAL CORRECTED
 
 # ---- 1. Base ----
 # Base stage with Node.js and pnpm
@@ -10,13 +10,18 @@ RUN npm install -g pnpm
 # Install all dependencies in a separate, cacheable layer
 FROM base AS deps
 WORKDIR /app
-# Copy all package.json files to understand the workspace structure
+
+# FIRST: Install OS-level dependencies like OpenSSL, so Prisma can detect it.
+RUN apk add --no-cache openssl
+
+# THEN: Copy package manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/backend/package.json apps/backend/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
 COPY packages/prisma-client/package.json packages/prisma-client/package.json
 COPY packages/shared-types/package.json packages/shared-types/package.json
-# Install all dependencies (including devDependencies for the build)
+
+# NOW: Install all dependencies. Prisma will correctly detect the OpenSSL version.
 RUN pnpm install --frozen-lockfile
 
 # ---- 3. Builder ----
@@ -24,10 +29,7 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS builder
 WORKDIR /app
 
-# Prisma runtime requires OpenSSL
-RUN apk add --no-cache postgresql-client openssl
-
-# The deps stage already has node_modules and package.json files.
+# The deps stage already has a consistent environment.
 # We only need to copy the rest of the source code.
 COPY . .
 
@@ -46,6 +48,9 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
+# Prisma runtime requires OpenSSL, which is also needed for other crypto operations.
+RUN apk add --no-cache openssl
+
 # Copy dependency manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/backend/package.json apps/backend/package.json
@@ -61,8 +66,8 @@ COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
 COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
 COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
-# IMPORTANT: Copy the generated Prisma client which is needed at runtime
-COPY --from=builder /app/node_modules /app/node_modules
+# IMPORTANT: Copy the correctly generated Prisma client which is needed at runtime
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Set the working directory to the app
 WORKDIR /app/apps/backend
