@@ -1,79 +1,65 @@
-# 使用多階段構建，解決 pnpm 和 Prisma 的問題
-FROM node:18.18-alpine AS builder
+# ---- 1. Builder Stage: 專注於建置，並精確控制快取 ----
+FROM node:18-alpine AS builder
 WORKDIR /app
 
-# 設置環境變數以避免 react-native.js 的問題
-ENV PRISMA_CLIENT_ENGINE_TYPE=binary
-ENV NODE_ENV=production
-ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/oms
+RUN corepack enable
 
-# 安裝必要的套件和全局工具
-RUN apk add --no-cache postgresql-client openssl
-RUN npm install -g pnpm
-
-# 複製所有 package.json 和 workspace 配置
-# 這是為了讓 pnpm 能夠正確解析所有依賴
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/shared-types/package.json ./packages/shared-types/
-COPY packages/prisma-client/package.json ./packages/prisma-client/
 COPY apps/backend/package.json ./apps/backend/
+COPY packages/prisma-client/package.json ./packages/prisma-client/
+COPY packages/shared-types/package.json ./packages/shared-types/
 
-RUN pnpm install --production=false
+RUN --mount=type=cache,id=pnpm_dev,target=/pnpm/store \
+    chown -R node:node /pnpm/store && \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --frozen-lockfile --filter=backend... --package-import-method=copy
 
-# 複製所有源代碼
-COPY . .
+COPY packages/prisma-client/ ./packages/prisma-client/
+COPY packages/shared-types/ ./packages/shared-types/
+COPY apps/backend/ ./apps/backend/
 
-# 建立 shared-types 包
-RUN pnpm --filter shared-types build
+ENV PRISMA_CLIENT_ENGINE_TYPE=binary
 
-# 生成 Prisma 客戶端
-RUN pnpm --filter prisma-client db:generate
+RUN pnpm --filter=backend... build
 
-# 建立 prisma-client 包
-RUN pnpm --filter prisma-client build
-
-# 構建 backend 應用
-RUN pnpm --filter backend build
-
-# 運行階段
-FROM node:18-alpine3.15 AS runner
+FROM node:18-alpine AS packager
 WORKDIR /app
 
-# 安裝 PostgreSQL 客戶端和 OpenSSL 依賴
-RUN apk add --no-cache postgresql-client openssl
+RUN corepack enable
 
-# 複製所有的 package.json 和 pnpm-lock.yaml，以便 pnpm 能正確識別 workspace 結構
-COPY package.json ./
-COPY pnpm-lock.yaml ./
-COPY pnpm-workspace.yaml ./
+# 【修正點】在這裡補上複製 pnpm-lock.yaml
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/apps/backend/package.json ./apps/backend/
+COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-client/
+COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/
 
-# 複製各個 packages 的 package.json，確保 pnpm 的 workspace 結構完整
-COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/package.json
-COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-client/package.json
-COPY --from=builder /app/apps/backend/package.json ./apps/backend/package.json
+RUN --mount=type=cache,id=pnpm_prod,target=/pnpm/store \
+    chown -R node:node /pnpm/store && \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --prod --frozen-lockfile --filter=backend... --package-import-method=copy
 
-RUN npm install -g pnpm
-RUN pnpm install --prod
+COPY --from=builder /app/node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/ ./node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/
 
-# 複製構建輸出
+# 從 builder stage 複製建置好的產物到這個乾淨的環境中
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
 COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
 COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
-# COPY --from=builder /app/node_modules/.pnpm /app/node_modules/.pnpm
-# COPY --from=builder /app/packages/prisma-client/node_modules/.prisma /app/node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/node_modules/.prisma
-COPY --from=builder /app/node_modules /app/node_modules
+# ---- 2. Runner Stage: 最終運行的映像檔，追求極致輕量 ----
+FROM node:18-alpine AS runner
+WORKDIR /app
 
-# 設置環境變數
-ENV NODE_ENV=production
-ENV PORT=8080
-ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/oms
+# 安裝 runtime 需要的最小依賴
+RUN apk add --no-cache openssl
 
-# 暴露端口
-EXPOSE 8080
+COPY --from=packager /app .
 
-# 將工作目錄設置為後端應用目錄
+# 設定工作目錄
 WORKDIR /app/apps/backend
 
-# 啟動應用
-CMD ["npx", "next", "start", "-p", "8080"]
+# Cloud Run 會自動注入 PORT 環境變數，Next.js 會自動讀取
+EXPOSE 8080
+
+# 9. 使用 pnpm 啟動，更符合 monorepo 的習慣
+# 請確保 backend/package.json 中有 "start": "next start"
+CMD ["npx", "next", "start"]

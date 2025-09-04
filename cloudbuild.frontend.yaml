@@ -1,6 +1,7 @@
 steps:
   # 構建 Docker 鏡像
   - name: "gcr.io/cloud-builders/docker"
+    id: "Image build"
     args:
       [
         "build",
@@ -18,8 +19,11 @@ steps:
         "--build-arg",
         "NEXTAUTH_SECRET=${_NEXTAUTH_SECRET}",
       ]
+    env:
+      - "DOCKER_BUILDKIT=1"
   # 推送 Docker 鏡像
   - name: "gcr.io/cloud-builders/docker"
+    id: "Image push"
     args:
       [
         "push",
@@ -28,15 +32,18 @@ steps:
 
   # 部署到 Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
+    id: "Deployment"
     entrypoint: gcloud
     args:
       - "run"
       - "deploy"
-      - "oms-frontend-service"
+      - "${_SERVICE_NAME}"
       - "--image=asia-east1-docker.pkg.dev/$PROJECT_ID/oms/oms-frontend:$COMMIT_SHA"
       - "--region=asia-east1"
       - "--platform=managed"
       - "--allow-unauthenticated"
+      # 使用 --set-env-vars 來設置執行階段的環境變數
+      - "--set-env-vars=NEXT_PUBLIC_API_URL=${_BACKEND_URL},NEXT_PUBLIC_BASE_URL=${_FRONTEND_URL},NEXTAUTH_URL=${_NEXTAUTH_URL},NEXTAUTH_SECRET=${_NEXTAUTH_SECRET}"
 
 # 替換變數
 substitutions:
@@ -44,6 +51,7 @@ substitutions:
   _FRONTEND_URL: "https://oms-frontend-url.run.app" # 將在 Cloud Build 觸發器中設置為前端服務的 URL
   _NEXTAUTH_URL: "https://oms-nextauth-url.run.app" # 將在 Cloud Build 觸發器中設置為 NextAuth 服務的 URL
   _NEXTAUTH_SECRET: "nextauth-secret" # 將在 Cloud Build 觸發器中設置為 NextAuth 密鑰
+  _SERVICE_NAME: "oms-frontend-service"
 
 # 構建的鏡像
 images:

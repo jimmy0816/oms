@@ -1,89 +1,66 @@
-# 構建階段
+# ---- 1. Builder Stage: 專注於建置，並精確控制快取 ----
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# 安裝 pnpm
-RUN npm install -g pnpm
+RUN corepack enable
 
-# 複製 package.json 和 workspace 配置
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/shared-types/package.json ./packages/shared-types/
 COPY apps/frontend/package.json ./apps/frontend/
+COPY packages/shared-types/package.json ./packages/shared-types/
 
-# 安裝依賴
-RUN pnpm install
+RUN --mount=type=cache,id=pnpm_dev,target=/pnpm/store \
+    chown -R node:node /pnpm/store && \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --frozen-lockfile --filter=frontend... --package-import-method=copy
 
-# 複製源代碼
-COPY . .
+COPY packages/shared-types/ ./packages/shared-types/
+COPY apps/frontend/ ./apps/frontend/
 
-# 安裝 TypeScript
-RUN npm install -g typescript
-
-# 清除 node_modules 並重新安裝依賴
-RUN rm -rf node_modules
-RUN pnpm install
-
-# 建立 shared-types 包
-RUN cd packages/shared-types && tsc
-
-# 安裝 Next.js 構建所需的 TypeScript 依賴
-RUN cd apps/frontend && pnpm add -D typescript@5.2.2 @types/react@18.2.21 @types/node@20.8.10
-
-# 設置 Docker 構建環境變數
-ENV DOCKER_BUILD=true
-
-# --- START MODIFICATION ---
-# 1. 定義一個建置參數，用於接收來自 Cloud Build 的 API URL
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_BASE_URL
 ARG NEXTAUTH_URL
 ARG NEXTAUTH_SECRET
-
-# 2. 將這個建置參數設定為環境變數，供 Next.js 建置時使用
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
-# --- END MODIFICATION ---
 
-# 只移除 disabled 目錄，保留 tickets 目錄
-RUN rm -rf apps/frontend/src/pages/disabled
+RUN pnpm --filter=frontend... build
 
-# 構建應用
-ENV NEXT_SKIP_TYPE_CHECK=1
-# 這裡的 NEXT_PUBLIC_API_URL 現在會是從 ARG 傳入的正確值
-RUN cd apps/frontend && pnpm next build --no-lint
-
-# 運行階段
-FROM node:18-alpine AS runner
+# ---- 2. Packager Stage: 建立一個獨立、乾淨的 Production 環境 ----
+FROM node:18-alpine AS packager
 WORKDIR /app
 
-# 安裝生產依賴
-RUN npm install -g pnpm
-COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
-COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/
-COPY --from=builder /app/apps/frontend/package.json ./apps/frontend/
-RUN pnpm install --prod --frozen-lockfile
+RUN corepack enable
 
-# 複製構建輸出
+# 同樣只複製運行 frontend 所需的 package manifests
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/frontend/package.json ./apps/frontend/
+COPY packages/shared-types/package.json ./packages/shared-types/
+
+# 【優化】再次利用快取，並只安裝 "production" 依賴
+RUN --mount=type=cache,id=pnpm_prod,target=/pnpm/store \
+    chown -R node:node /pnpm/store && \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --prod --frozen-lockfile --filter=frontend... --package-import-method=copy
+
+# 從 builder stage 複製建置好的產物到這個乾淨的環境中
 COPY --from=builder /app/apps/frontend/.next ./apps/frontend/.next
-# 創建 public 目錄
-RUN mkdir -p /app/apps/frontend/public
 COPY --from=builder /app/apps/frontend/public ./apps/frontend/public
-# 複製必要的依賴
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
-# 設置環境變數
+
+# ---- 3. Runner Stage: 最終運行的映像檔，追求極致輕量 ----
+FROM node:18-alpine AS runner
+WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=8080
-# 確保運行時環境也有這個變數，以防 SSR 時需要
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
-ENV NEXTAUTH_URL=$NEXTAUTH_URL
-ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
-# 暴露端口
+
+# 【優化】直接複製 packager stage 準備好的一切，無需任何安裝
+COPY --from=packager /app .
+
+# 設定工作目錄
+WORKDIR /app/apps/frontend
+
 EXPOSE 8080
 
-# 啟動應用
-WORKDIR /app/apps/frontend
-CMD ["npx", "next", "start", "-p", "8080"]
+CMD ["npx", "next", "start"]

@@ -1,13 +1,11 @@
 import { signOut } from 'next-auth/react';
 
-const API_URL = process.env.NEXT_PUBLIC_BASE_URL || '/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 async function handleResponse(response: Response) {
   if (response.status === 401) {
     const frontendLogoutUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/login`;
-
     await signOut({ redirect: false });
-
     window.location.href = frontendLogoutUrl;
   }
 

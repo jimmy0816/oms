@@ -34,9 +34,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const router = useRouter();
 
-  console.log('DEBUG: NEXT_PUBLIC_BASE_URL is', process.env.NEXT_PUBLIC_BASE_URL);
-  console.log('user', user);
-
   const fetchNotifications = useCallback(async () => {
     if (!session) {
       setNotifications([]);

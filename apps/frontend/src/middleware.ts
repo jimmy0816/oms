@@ -12,20 +12,27 @@ export async function middleware(req: NextRequest) {
   }
 
   // Check for a valid session token
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET, cookieName: 'next-auth.session-token' });
 
+  console.log('[middleware req]', req);
+  console.log('[middleware nextauth secret]', process.env.NEXTAUTH_SECRET);
+  console.log('[middleware token]', token);
   // If a token exists, the user is authenticated, let them proceed
   if (token) {
     return NextResponse.next();
   }
 
-  // If no token, and it's a protected route, redirect to login
-  const loginUrl = new URL('/login', req.url);
+  // If the user is not authenticated, redirect to the login page.
+  // We use NEXTAUTH_URL as the reliable base URL because req.nextUrl can be incorrect behind a proxy.
+  const baseUrl = process.env.NEXTAUTH_URL;
 
-  // This is the original URL the user tried to access
-  console.log('req.nextUrl.href', req);
-  const callbackUrl = req.nextUrl.href;
+  // The URL the user was trying to access.
+  const callbackUrl = new URL(req.nextUrl.pathname + req.nextUrl.search, baseUrl).href;
+
+  // The login page URL.
+  const loginUrl = new URL('/login', baseUrl);
   loginUrl.searchParams.set('callbackUrl', callbackUrl);
+
   return NextResponse.redirect(loginUrl);
 }
 
