@@ -6,6 +6,8 @@
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+RUN apk add --no-cache postgresql-client openssl
+
 # Install pnpm
 RUN npm install -g pnpm
 
@@ -37,7 +39,7 @@ FROM node:18-alpine AS runner
 WORKDIR /app
 
 # Install OS dependencies needed for runtime
-RUN apk add --no-cache openssl
+RUN apk add --no-cache postgresql-client openssl
 
 # Install pnpm
 RUN npm install -g pnpm
