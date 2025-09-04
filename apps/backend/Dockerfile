@@ -8,23 +8,12 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/prisma-client/package.json ./packages/prisma-client/
 COPY packages/shared-types/package.json ./packages/shared-types/
+
 RUN pnpm install --frozen-lockfile --filter=backend...
 
-# 3. 只安裝 backend 及其依賴項目的 production dependencies
-# --prod: 避免安裝 devDependencies
-# --filter: pnpm monorepo 的精髓，只處理指定專案及其依賴
-RUN pnpm install --frozen-lockfile --filter=backend...
-
-# 4. 複製所有原始碼 (現在依賴已經安裝完畢)
-# 將原始碼複製步驟放在 'pnpm install' 之後，最大化利用快取
 COPY . .
 
-# 設定 Prisma 引擎類型
 ENV PRISMA_CLIENT_ENGINE_TYPE=binary
-
-# 5. 依序執行建置
-# 這裡我們利用 pnpm 的依賴圖來自動建置，更簡潔
-RUN pnpm --filter prisma-client db:generate
 
 RUN pnpm --filter=backend... build
 
@@ -41,13 +30,7 @@ COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-ty
 
 RUN pnpm install --prod --frozen-lockfile --filter=backend...
 
-# ========================= 驗證步驟 START =========================
-RUN echo "--- [Verification Step] Checking for prisma-client using 'ls' ---" && \
-    ls -l node_modules | grep prisma-client
-
-RUN echo "--- [Verification Step] Checking for @prisma/client using 'pnpm list' (Recommended) ---" && \
-    pnpm list --depth=3 | grep "@prisma/client" || echo "@prisma/client not found by pnpm list"
-# ========================== 驗證步驟 END ==========================
+COPY --from=builder /app/packages/prisma-client/node_modules/.prisma/client ./node_modules/.prisma/client
 
 # 從 builder stage 複製建置好的產物到這個乾淨的環境中
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
