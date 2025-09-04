@@ -8,7 +8,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/shared-types/package.json ./packages/shared-types/
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm config set store-dir /pnpm/store && \
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    chown -R node:node /pnpm/store && \
+    pnpm config set store-dir /pnpm/store && \
     pnpm install --frozen-lockfile --filter=frontend...
 
 COPY packages/shared-types/ ./packages/shared-types/
@@ -37,7 +39,9 @@ COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/shared-types/package.json ./packages/shared-types/
 
 # 【優化】再次利用快取，並只安裝 "production" 依賴
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm config set store-dir /pnpm/store && \
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    chown -R node:node /pnpm/store && \
+    pnpm config set store-dir /pnpm/store && \
     pnpm install --prod --frozen-lockfile --filter=frontend...
 
 # 從 builder stage 複製建置好的產物到這個乾淨的環境中
