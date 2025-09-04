@@ -9,7 +9,7 @@ COPY apps/backend/package.json ./apps/backend/
 COPY packages/prisma-client/package.json ./packages/prisma-client/
 COPY packages/shared-types/package.json ./packages/shared-types/
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+RUN --mount=type=cache,id=pnpm_dev,target=/pnpm/store \
     chown -R node:node /pnpm/store && \
     pnpm config set store-dir /pnpm/store && \
     pnpm install --frozen-lockfile --filter=backend...
@@ -33,7 +33,7 @@ COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-client/
 COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+RUN --mount=type=cache,id=pnpm_prod,target=/pnpm/store \
     chown -R node:node /pnpm/store && \
     pnpm config set store-dir /pnpm/store && \
     pnpm install --prod --frozen-lockfile --filter=backend...

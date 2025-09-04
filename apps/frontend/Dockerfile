@@ -8,7 +8,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/shared-types/package.json ./packages/shared-types/
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+RUN --mount=type=cache,id=pnpm_dev,target=/pnpm/store \
     chown -R node:node /pnpm/store && \
     pnpm config set store-dir /pnpm/store && \
     pnpm install --frozen-lockfile --filter=frontend... --package-import-method=copy
@@ -39,7 +39,7 @@ COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/shared-types/package.json ./packages/shared-types/
 
 # 【優化】再次利用快取，並只安裝 "production" 依賴
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+RUN --mount=type=cache,id=pnpm_prod,target=/pnpm/store \
     chown -R node:node /pnpm/store && \
     pnpm config set store-dir /pnpm/store && \
     pnpm install --prod --frozen-lockfile --filter=frontend... --package-import-method=copy
