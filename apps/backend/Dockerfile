@@ -28,7 +28,7 @@ ENV PRISMA_CLIENT_ENGINE_TYPE=binary
 # 這裡我們利用 pnpm 的依賴圖來自動建置，更簡潔
 RUN pnpm --filter=backend... build
 
-RUN pnpm deploy --filter=backend... --prod /app/deploy/apps/backend
+RUN pnpm prune --prod
 
 # ---- 2. Runner Stage: 最終運行的映像檔，追求極致輕量 ----
 FROM node:18-alpine AS runner
@@ -37,7 +37,17 @@ WORKDIR /app
 # 安裝 runtime 需要的最小依賴
 RUN apk add --no-cache openssl
 
-COPY --from=builder /app/deploy/apps/backend ./apps/backend
+COPY --from=builder /app/package.json /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/apps/backend/package.json ./apps/backend/
+COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-client/
+COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/
+
+COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
+COPY --from=builder /app/apps/backend/public ./apps/backend/public
+COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
+COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
+
+COPY --from=builder /app/node_modules ./node_modules
 
 # 設定工作目錄
 WORKDIR /app/apps/backend
