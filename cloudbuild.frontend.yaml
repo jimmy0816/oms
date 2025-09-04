@@ -1,6 +1,7 @@
 steps:
   # 構建 Docker 鏡像
   - name: "gcr.io/cloud-builders/docker"
+    id: "Image build"
     args:
       [
         "build",
@@ -18,8 +19,11 @@ steps:
         "--build-arg",
         "NEXTAUTH_SECRET=${_NEXTAUTH_SECRET}",
       ]
+    env:
+      - "DOCKER_BUILDKIT=1"
   # 推送 Docker 鏡像
   - name: "gcr.io/cloud-builders/docker"
+    id: "Image push"
     args:
       [
         "push",
@@ -28,6 +32,7 @@ steps:
 
   # 部署到 Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
+    id: "Deployment"
     entrypoint: gcloud
     args:
       - "run"
