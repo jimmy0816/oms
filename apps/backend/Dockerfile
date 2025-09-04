@@ -1,4 +1,4 @@
-# A new, robust Dockerfile for backend (non-standalone) - FINAL CORRECTED
+# A new, robust Dockerfile for backend (non-standalone) - FINAL STRATEGY
 
 # ---- 1. Base ----
 # Base stage with Node.js and pnpm
@@ -25,7 +25,7 @@ COPY packages/shared-types/package.json packages/shared-types/package.json
 RUN pnpm install --frozen-lockfile
 
 # ---- 3. Builder ----
-# Build the application, starting from the deps stage to preserve the context
+# This stage ONLY builds the TypeScript source code to JavaScript
 FROM deps AS builder
 WORKDIR /app
 
@@ -36,19 +36,18 @@ COPY . .
 # Set prisma engine type for build
 ENV PRISMA_CLIENT_ENGINE_TYPE=binary
 
-# Build dependencies and the app itself in order
+# Build all TS code into JS, but skip generate
 RUN pnpm --filter=shared-types build
-RUN pnpm --filter=prisma-client generate
 RUN pnpm --filter=prisma-client build
 RUN pnpm --filter=backend build
 
 # ---- 4. Runner ----
-# The final production image
+# The final production image, which will generate its own Prisma client
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Prisma runtime requires OpenSSL, which is also needed for other crypto operations.
+# Install OS dependencies needed for runtime
 RUN apk add --no-cache openssl
 
 # Copy dependency manifests
@@ -58,16 +57,19 @@ COPY apps/frontend/package.json apps/frontend/package.json
 COPY packages/prisma-client/package.json packages/prisma-client/package.json
 COPY packages/shared-types/package.json packages/shared-types/package.json
 
+# IMPORTANT: Copy the prisma schema, which is needed for the generate command
+COPY packages/prisma-client/prisma ./packages/prisma-client/prisma
+
 # Install ONLY production dependencies to keep the image smaller
 RUN pnpm install --prod --frozen-lockfile
 
-# Copy the build output from the builder stage
+# NOW, generate the prisma client inside the final runtime environment
+RUN pnpm --filter=prisma-client generate
+
+# Copy the BUILT JS code from the builder stage
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
 COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
 COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
-
-# IMPORTANT: Copy the correctly generated Prisma client which is needed at runtime
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Set the working directory to the app
 WORKDIR /app/apps/backend
