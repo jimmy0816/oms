@@ -9,9 +9,12 @@ COPY apps/backend/package.json ./apps/backend/
 COPY packages/prisma-client/package.json ./packages/prisma-client/
 COPY packages/shared-types/package.json ./packages/shared-types/
 
-RUN pnpm install --frozen-lockfile --filter=backend...
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm config set store-dir /pnpm/store && \
+    pnpm install --frozen-lockfile --filter=backend...
 
-COPY . .
+COPY packages/prisma-client/ ./packages/prisma-client/
+COPY packages/shared-types/ ./packages/shared-types/
+COPY apps/backend/ ./apps/backend/
 
 ENV PRISMA_CLIENT_ENGINE_TYPE=binary
 
