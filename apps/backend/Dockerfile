@@ -26,7 +26,7 @@ WORKDIR /app
 COPY . .
 ENV PRISMA_CLIENT_ENGINE_TYPE=binary
 RUN pnpm --filter=shared-types build
-RUN pnpm --filter=prisma-client generate
+RUN pnpm --filter=prisma-client db:generate
 RUN pnpm --filter=prisma-client build
 RUN pnpm --filter=backend build
 
@@ -38,7 +38,7 @@ ENV NODE_ENV=production
 RUN apk add --no-cache openssl
 
 # Copy metadata files and build artifacts
-COPY --from=builder /app/package.json /app/pnpm-workspace.yaml ./ 
+COPY --from=builder /app/package.json /app/pnpm-workspace.yaml ./
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
 
