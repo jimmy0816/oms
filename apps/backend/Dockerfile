@@ -24,6 +24,8 @@ ENV PRISMA_CLIENT_ENGINE_TYPE=binary
 
 # 5. 依序執行建置
 # 這裡我們利用 pnpm 的依賴圖來自動建置，更簡潔
+RUN pnpm --filter prisma-client db:generate
+
 RUN pnpm --filter=backend... build
 
 FROM node:18-alpine AS packager
