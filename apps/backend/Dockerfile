@@ -24,6 +24,9 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS builder
 WORKDIR /app
 
+# Prisma runtime requires OpenSSL
+RUN apk add --no-cache postgresql-client openssl
+
 # The deps stage already has node_modules and package.json files.
 # We only need to copy the rest of the source code.
 COPY . .
@@ -42,9 +45,6 @@ RUN pnpm --filter=backend build
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-
-# Prisma runtime requires OpenSSL
-RUN apk add --no-cache postgresql-client openssl
 
 # Copy dependency manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
