@@ -42,7 +42,7 @@ COPY packages/shared-types/package.json ./packages/shared-types/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     chown -R node:node /pnpm/store && \
     pnpm config set store-dir /pnpm/store && \
-    pnpm install --prod --frozen-lockfile --filter=frontend...
+    pnpm install --prod --frozen-lockfile --filter=frontend... --package-import-method=copy
 
 # 從 builder stage 複製建置好的產物到這個乾淨的環境中
 COPY --from=builder /app/apps/frontend/.next ./apps/frontend/.next
