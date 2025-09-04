@@ -62,7 +62,7 @@ COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/di
 COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
 # IMPORTANT: Copy the generated Prisma client which is needed at runtime
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Set the working directory to the app
 WORKDIR /app/apps/backend
