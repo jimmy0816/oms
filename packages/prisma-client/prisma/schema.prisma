@@ -1,6 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl"]
+  binaryTargets = ["native", "linux-musl", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -37,28 +37,27 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-
 // --- Your Existing Models (with User model updated) ---
 
 model User {
-  id              String         @id @default(uuid())
-  email           String         @unique
-  name            String
-  password        String? // Made optional for OIDC users
-  emailVerified   DateTime?      // Added for next-auth
-  image           String?        // Added for next-auth
-  isOidcLinked    Boolean        @default(false) // Added to indicate if the account is linked to OIDC
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  password      String? // Made optional for OIDC users
+  emailVerified DateTime? // Added for next-auth
+  image         String? // Added for next-auth
+  isOidcLinked  Boolean   @default(false) // Added to indicate if the account is linked to OIDC
 
   // Your existing fields
-  role            String         @default("USER")
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  deletedAt       DateTime?      
+  role      String    @default("USER")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   // Relations
-  accounts        Account[]      // Added for next-auth
-  sessions        Session[]      // Added for next-auth
-  
+  accounts Account[] // Added for next-auth
+  sessions Session[] // Added for next-auth
+
   comments        Comment[]
   notifications   Notification[]
   reportsAssigned Report[]       @relation("AssignedReports")

@@ -30,7 +30,7 @@ COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-ty
 
 RUN pnpm install --prod --frozen-lockfile --filter=backend...
 
-COPY --from=builder /app/node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/ ./node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/
+COPY --from=builder /app/node_modules/.pnpm/@prisma+client@*/ ./node_modules/.pnpm/@prisma+client@*/
 
 # 從 builder stage 複製建置好的產物到這個乾淨的環境中
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
