@@ -1,75 +1,73 @@
-# 使用多階段構建，解決 pnpm 和 Prisma 的問題
-FROM node:18.18-alpine AS builder
+# A new, robust Dockerfile for backend (non-standalone)
+
+# ---- 1. Base ----
+# Base stage with Node.js and pnpm
+FROM node:18-alpine AS base
 WORKDIR /app
-
-# 設置環境變數以避免 react-native.js 的問題
-ENV PRISMA_CLIENT_ENGINE_TYPE=binary
-ENV NODE_ENV=production
-
-# 安裝必要的套件和全局工具
-RUN apk add --no-cache postgresql-client openssl
 RUN npm install -g pnpm
 
-# 複製所有 package.json 和 workspace 配置
-# 這是為了讓 pnpm 能夠正確解析所有依賴
+# ---- 2. Dependencies ----
+# Install all dependencies in a separate, cacheable layer
+FROM base AS deps
+WORKDIR /app
+# Copy all package.json files to understand the workspace structure
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/shared-types/package.json ./packages/shared-types/
-COPY packages/prisma-client/package.json ./packages/prisma-client/
-COPY apps/backend/package.json ./apps/backend/
+COPY apps/backend/package.json apps/backend/package.json
+COPY apps/frontend/package.json apps/frontend/package.json
+COPY packages/prisma-client/package.json packages/prisma-client/package.json
+COPY packages/shared-types/package.json packages/shared-types/package.json
+# Install all dependencies (including devDependencies for the build)
+RUN pnpm install --frozen-lockfile
 
-RUN pnpm install --production=false
+# ---- 3. Builder ----
+# Build the application, starting from the deps stage to preserve the context
+FROM deps AS builder
+WORKDIR /app
 
-# 複製所有源代碼
+# The deps stage already has node_modules and package.json files.
+# We only need to copy the rest of the source code.
 COPY . .
 
-# 建立 shared-types 包
-RUN pnpm --filter shared-types build
+# Set prisma engine type for build
+ENV PRISMA_CLIENT_ENGINE_TYPE=binary
 
-# 生成 Prisma 客戶端
-RUN pnpm --filter prisma-client db:generate
+# Build dependencies and the app itself in order
+RUN pnpm --filter=shared-types build
+RUN pnpm --filter=prisma-client generate
+RUN pnpm --filter=prisma-client build
+RUN pnpm --filter=backend build
 
-# 建立 prisma-client 包
-RUN pnpm --filter prisma-client build
-
-# 構建 backend 應用
-RUN pnpm --filter backend build
-
-# 運行階段
-FROM node:18-alpine3.15 AS runner
+# ---- 4. Runner ----
+# The final production image
+FROM base AS runner
 WORKDIR /app
+ENV NODE_ENV=production
 
-# 安裝 PostgreSQL 客戶端和 OpenSSL 依賴
-RUN apk add --no-cache postgresql-client openssl
+# Prisma runtime requires OpenSSL
+RUN apk add --no-cache openssl
 
-# 複製所有的 package.json 和 pnpm-lock.yaml，以便 pnpm 能正確識別 workspace 結構
-COPY package.json ./
-COPY pnpm-lock.yaml ./
-COPY pnpm-workspace.yaml ./
+# Copy dependency manifests
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/backend/package.json apps/backend/package.json
+COPY apps/frontend/package.json apps/frontend/package.json
+COPY packages/prisma-client/package.json packages/prisma-client/package.json
+COPY packages/shared-types/package.json packages/shared-types/package.json
 
-# 複製各個 packages 的 package.json，確保 pnpm 的 workspace 結構完整
-COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/package.json
-COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-client/package.json
-COPY --from=builder /app/apps/backend/package.json ./apps/backend/package.json
+# Install ONLY production dependencies to keep the image smaller
+RUN pnpm install --prod --frozen-lockfile
 
-RUN npm install -g pnpm
-RUN pnpm install --prod
-
-# 複製構建輸出
+# Copy the build output from the builder stage
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
 COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
 COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
-COPY --from=builder /app/node_modules /app/node_modules
+# IMPORTANT: Copy the generated Prisma client which is needed at runtime
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# 設置環境變數
-ENV NODE_ENV=production
-ENV PORT=8080
-
-# 暴露端口
-EXPOSE 8080
-
-# 將工作目錄設置為後端應用目錄
+# Set the working directory to the app
 WORKDIR /app/apps/backend
 
-# 啟動應用
-CMD ["npx", "next", "start", "-p", "8080"]
+EXPOSE 8080
+
+# Use the standard next start command
+CMD ["npx", "next", "start"]
