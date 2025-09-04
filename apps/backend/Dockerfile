@@ -41,6 +41,14 @@ COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-ty
 
 RUN pnpm install --prod --frozen-lockfile --filter=backend...
 
+# ========================= 驗證步驟 START =========================
+RUN echo "--- [Verification Step] Checking for prisma-client using 'ls' ---" && \
+    ls -l node_modules | grep prisma-client
+
+RUN echo "--- [Verification Step] Checking for @prisma/client using 'pnpm list' (Recommended) ---" && \
+    pnpm list --depth=3 | grep "@prisma/client" || echo "@prisma/client not found by pnpm list"
+# ========================== 驗證步驟 END ==========================
+
 # 從 builder stage 複製建置好的產物到這個乾淨的環境中
 COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
 COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
