@@ -31,7 +31,8 @@ COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-client/
 COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/
 
-RUN pnpm install --prod --frozen-lockfile --filter=backend...
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm config set store-dir /pnpm/store && \
+    pnpm install --prod --frozen-lockfile --filter=backend...
 
 COPY --from=builder /app/node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/ ./node_modules/.pnpm/@prisma+client@5.5.2_prisma@5.5.2/
 
