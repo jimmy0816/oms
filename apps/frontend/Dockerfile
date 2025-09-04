@@ -11,7 +11,7 @@ COPY packages/shared-types/package.json ./packages/shared-types/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     chown -R node:node /pnpm/store && \
     pnpm config set store-dir /pnpm/store && \
-    pnpm install --frozen-lockfile --filter=frontend...
+    pnpm install --frozen-lockfile --filter=frontend... --package-import-method=copy
 
 COPY packages/shared-types/ ./packages/shared-types/
 COPY apps/frontend/ ./apps/frontend/
