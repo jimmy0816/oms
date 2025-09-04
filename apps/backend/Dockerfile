@@ -37,13 +37,22 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN apk add --no-cache openssl
 
-# Copy metadata files and build artifacts
+# Copy all package manifests to provide the full workspace context to pnpm at runtime.
+# THIS IS THE CRITICAL FIX.
 COPY --from=builder /app/package.json /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/pnpm-lock.yaml ./
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/
-COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
+COPY --from=builder /app/apps/frontend/package.json ./apps/frontend/
+COPY --from=builder /app/packages/prisma-client/package.json ./packages/prisma-client/
+COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/
 
-# THE KEY: Copy the exact node_modules from the builder stage to ensure consistency.
-COPY --from=builder /app/node_modules ./node_modules
+# Copy the EXACT node_modules from the builder stage to ensure consistency.
+COPY --from=builder /app/node_modules /app/node_modules
+
+# Copy the built code artifacts
+COPY --from=builder /app/apps/backend/.next ./apps/backend/.next
+COPY --from=builder /app/packages/prisma-client/dist ./packages/prisma-client/dist
+COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
 # Set the working directory to the app
 WORKDIR /app/apps/backend
