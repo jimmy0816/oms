@@ -457,8 +457,57 @@ export default function Reports() {
     const activeView = savedViews.find((v) => v.id === selectedViewId);
     if (!activeView) return false;
 
-    const viewFilters = activeView.filters;
-    const currentFilters = {
+    // Helper to create a canonical, stringified version of filters for reliable comparison.
+    const createCanonicalString = (filters: any) => {
+      const cleaned: Record<string, any> = {};
+      const allKeys = [
+        'search',
+        'status',
+        'categoryIds',
+        'priority',
+        'locationIds',
+        'creatorIds',
+        'sortField',
+        'sortOrder',
+        'dateRange',
+      ];
+
+      allKeys.forEach((key) => {
+        const value = filters[key];
+
+        if (value === null || value === undefined) return;
+
+        if (Array.isArray(value)) {
+          if (value.length > 0) {
+            if (key === 'dateRange') {
+              const [start, end] = value;
+              const normalizedRange = [
+                start ? new Date(start).toISOString().split('T')[0] : null,
+                end ? new Date(end).toISOString().split('T')[0] : null,
+              ];
+              // Only include dateRange if at least one date is valid
+              if (normalizedRange[0] || normalizedRange[1]) {
+                cleaned[key] = normalizedRange;
+              }
+            } else {
+              // Sort arrays of strings/numbers for consistent order
+              cleaned[key] = [...value].sort();
+            }
+          }
+        } else if (typeof value === 'string') {
+          if (value !== '') {
+            cleaned[key] = value;
+          }
+        } else {
+          cleaned[key] = value;
+        }
+      });
+
+      return JSON.stringify(cleaned);
+    };
+
+    const viewFiltersString = createCanonicalString(activeView.filters);
+    const currentFiltersString = createCanonicalString({
       search,
       status,
       categoryIds,
@@ -467,14 +516,10 @@ export default function Reports() {
       creatorIds,
       sortField,
       sortOrder,
-      dateRange: [
-        dateRange[0] ? new Date(dateRange[0]) : null,
-        dateRange[1] ? new Date(dateRange[1]) : null,
-      ],
-    };
+      dateRange,
+    });
 
-    // Simple string comparison is sufficient here
-    return JSON.stringify(viewFilters) !== JSON.stringify(currentFilters);
+    return viewFiltersString !== currentFiltersString;
   }, [
     selectedViewId,
     savedViews,
