@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { ArrowLeftIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowLeftIcon,
+  PencilIcon,
+  TrashIcon,
+} from '@heroicons/react/24/outline';
 import {
   ticketService,
   getStatusText,
@@ -21,7 +25,8 @@ import PermissionGuard from '@/components/PermissionGuard';
 
 export default function TicketDetail() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, returnUrl } = router.query;
+  const backPath = (returnUrl as string) || '/tickets';
   const [loading, setLoading] = useState(true);
   const [ticket, setTicket] = useState<any>(null);
   const [newCommentContent, setNewCommentContent] = useState('');
@@ -29,7 +34,9 @@ export default function TicketDetail() {
   const { user, hasPermission } = useAuth();
   const { showToast } = useToast();
   const [isReviewFormOpen, setIsReviewFormOpen] = useState(false);
-  const [reviewType, setReviewType] = useState<'COMPLETED' | 'FAILED'>('COMPLETED');
+  const [reviewType, setReviewType] = useState<'COMPLETED' | 'FAILED'>(
+    'COMPLETED'
+  );
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [selectedReview, setSelectedReview] = useState<any>(null);
   const [showAllActivityLogs, setShowAllActivityLogs] = useState(false);
@@ -129,7 +136,7 @@ export default function TicketDetail() {
       try {
         await ticketService.deleteTicket(ticketId);
         showToast('工單已成功刪除！', 'success');
-        router.push('/tickets');
+        router.push(backPath);
       } catch (error) {
         console.error('刪除工單失敗:', error);
         showToast('刪除工單失敗，請稍後再試。', 'error');
@@ -188,7 +195,12 @@ export default function TicketDetail() {
     if (!ticket?.id) return;
     setIsSubmittingReview(true);
     try {
-      await ticketService.submitTicketReview(ticket.id, content, attachments, reviewType);
+      await ticketService.submitTicketReview(
+        ticket.id,
+        content,
+        attachments,
+        reviewType
+      );
       setIsReviewFormOpen(false);
       await fetchTicket();
       showToast('審核已成功送出', 'success');
