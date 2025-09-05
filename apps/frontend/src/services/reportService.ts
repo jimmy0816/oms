@@ -29,6 +29,7 @@ export interface Report {
   createdAt: Date;
   updatedAt: Date;
   creatorId: string;
+  trackingDate: Date;
   assigneeId?: string | null;
   images: string[];
   categoryId?: string | null;
@@ -213,8 +214,10 @@ export const reportService = {
       categoryIds?: string[];
       priority?: string[];
       search?: string;
-      locationIds?: number[];
+      locationIds?: string[];
       creatorIds?: string[];
+      startDate?: string;
+      endDate?: string;
       sortField?: string;
       sortOrder?: 'asc' | 'desc';
     } = {}
@@ -258,10 +261,14 @@ export const reportService = {
    */
   async exportReports(filters: any): Promise<Blob> {
     try {
-      const response = await apiClient.post<Blob>('/api/reports/export', filters, {
-        responseType: 'blob',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await apiClient.post<Blob>(
+        '/api/reports/export',
+        filters,
+        {
+          responseType: 'blob',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
       return response;
     } catch (error) {
       console.error('匯出報表失敗:', error);

@@ -21,18 +21,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const [isAuthorized, setIsAuthorized] = useState(false); // 新增狀態來追蹤是否已授權渲染子組件
 
   useEffect(() => {
-    console.log(
-      'protected route effect:',
-      'loading:',
-      loading,
-      'user:',
-      user ? 'present' : 'null',
-      'hasPermission:',
-      hasPermission(requiredPermission),
-      'current path:',
-      router.asPath
-    );
-
     if (typeof window === 'undefined') {
       // 服務器端渲染，此處不執行任何操作。
       return;
@@ -45,14 +33,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
 
     if (!user) {
-      console.log('Redirecting to login: User not authenticated');
       router.push('/login');
       setIsAuthorized(false); // 未授權，將重定向
       return;
     }
 
     if (!hasPermission(requiredPermission)) {
-      console.log('Redirecting to home: Insufficient permissions');
       router.push('/'); // 考慮導向到一個 403 (Forbidden) 頁面，而不是首頁
       setIsAuthorized(false); // 未授權，將重定向
       return;
