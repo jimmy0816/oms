@@ -42,7 +42,9 @@ import { zhTW } from 'date-fns/locale';
 
 export default function ReportDetail() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, returnUrl } = router.query;
+  const backPath = (returnUrl as string) || '/reports';
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<Report | null>(null);
@@ -88,7 +90,9 @@ export default function ReportDetail() {
 
   useEffect(() => {
     fetchReport();
-    setCurrentPath(window.location.pathname + window.location.search);
+    if (typeof window !== 'undefined') {
+      setCurrentPath(window.location.pathname + window.location.search);
+    }
   }, [fetchReport]);
 
   const handleDelete = async () => {
@@ -102,7 +106,7 @@ export default function ReportDetail() {
       try {
         await reportService.deleteReport(report.id);
         showToast('通報已刪除成功', 'success');
-        router.push('/reports');
+        router.push(backPath);
       } catch (error) {
         console.error('Error deleting report:', error);
         showToast('刪除失敗，請稍後再試', 'error');
@@ -244,7 +248,7 @@ export default function ReportDetail() {
           >
             重新載入
           </button>
-          <Link href="/reports" className="btn-secondary">
+          <Link href={backPath} className="btn-secondary">
             返回通報列表
           </Link>
         </div>
@@ -258,7 +262,7 @@ export default function ReportDetail() {
         <h2 className="text-xl font-medium text-gray-900">找不到通報</h2>
         <p className="mt-2 text-gray-600">找不到 ID 為 {id} 的通報</p>
         <div className="mt-6">
-          <Link href="/reports" className="btn-primary">
+          <Link href={backPath} className="btn-primary">
             返回通報列表
           </Link>
         </div>
@@ -277,7 +281,7 @@ export default function ReportDetail() {
           {/* 返回按鈕 */}
           <div className="mb-4">
             <Link
-              href="/reports"
+              href={backPath}
               className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
             >
               <ArrowLeftIcon className="h-4 w-4 mr-1" />

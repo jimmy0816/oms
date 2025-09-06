@@ -62,4 +62,4 @@ EXPOSE 8080
 
 # 9. 使用 pnpm 啟動，更符合 monorepo 的習慣
 # 請確保 backend/package.json 中有 "start": "next start"
-CMD ["npx", "next", "start"]
+CMD ["npx", "next", "start", "-p", "8080"]

@@ -121,8 +121,8 @@ const ViewTabs: React.FC<ViewTabsProps> = ({
             </div>
 
             {views.map((view) => (
-              <div 
-                key={view.id} 
+              <div
+                key={view.id}
                 className="relative inline-block text-left"
                 onContextMenu={(e) => handleContextMenu(e, view)}
               >
@@ -215,7 +215,6 @@ const ViewTabs: React.FC<ViewTabsProps> = ({
                       setIsMenuOpen(false);
                     }}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                    disabled={!isFilterModified}
                   >
                     另存為新視圖
                   </button>
@@ -245,8 +244,8 @@ const ViewTabs: React.FC<ViewTabsProps> = ({
             onClick={handleSetDefault}
             className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
           >
-            {contextMenu.view?.isDefault 
-              ? <StarIconSolid className="h-5 w-5 text-yellow-400 mr-2" /> 
+            {contextMenu.view?.isDefault
+              ? <StarIconSolid className="h-5 w-5 text-yellow-400 mr-2" />
               : <StarIconOutline className="h-5 w-5 text-gray-400 mr-2" />}
             設為預設
           </button>

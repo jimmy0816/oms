@@ -63,4 +63,4 @@ WORKDIR /app/apps/frontend
 
 EXPOSE 8080
 
-CMD ["npx", "next", "start"]
+CMD ["npx", "next", "start", "-p", "8080"]

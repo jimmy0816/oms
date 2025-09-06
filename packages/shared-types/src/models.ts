@@ -151,11 +151,15 @@ export interface SavedView {
   name: string;
   userId: string;
   filters: {
-    searchTerm?: string;
-    statusFilter?: string;
-    categoryFilter?: string;
-    priorityFilter?: string;
-    locationFilter?: number[];
+    search?: string;
+    status?: string[];
+    priority?: string[];
+    creatorIds?: string[];
+    assigneeIds?: string[];
+    locationIds?: string[];
+    categoryIds?: string[];
+    roleIds?: string[];
+    dateRange?: (string | Date)[];
     sortField?: string;
     sortOrder?: 'asc' | 'desc';
   }; // This will be a JSON object storing filter criteria

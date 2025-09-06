@@ -1,10 +1,10 @@
 import PermissionGuard from '@/components/PermissionGuard';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import {
-  ArrowDownTrayIcon, // Added for export
+  ArrowDownTrayIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
   PlusIcon,
@@ -13,7 +13,6 @@ import {
   TrashIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  ChevronDownIcon, // Added ChevronDownIcon
   Bars3Icon,
   BarsArrowDownIcon,
   BarsArrowUpIcon,
@@ -34,24 +33,32 @@ import {
   ReportPriority,
   Permission,
   User,
+  Location,
 } from 'shared-types';
 import { userService } from '@/services/userService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { categoryService, getCategoryPath } from '@/services/categoryService';
+import { categoryService } from '@/services/categoryService';
 import { savedViewService } from '@/services/savedViewService';
-import { locationService, Location } from '@/services/locationService'; // Import Location and locationService
+import { locationService } from '@/services/locationService';
 import SaveViewModal from '@/components/SaveViewModal';
 import ManageViewsModal from '@/components/ManageViewsModal';
 import CategoryTreeFilter from '@/components/CategoryTreeFilter';
 import ViewTabs from '@/components/ViewTabs';
 import TooltipCell from '@/components/TooltipCell';
-import MultiSelectFilterModal, {
-  MultiSelectOption,
-} from '@/components/MultiSelectFilterModal'; // Import MultiSelectOption
+import MultiSelectFilterModal from '@/components/MultiSelectFilterModal';
 import DatePicker from 'react-datepicker';
 import { zhTW } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
+import { ParsedUrlQuery } from 'querystring';
+
+// Helper to parse array from query
+const getQueryArray = (query: ParsedUrlQuery, key: string): string[] => {
+  const value = query[key];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') return [value];
+  return [];
+};
 
 const SortIcon = ({
   field,
@@ -62,170 +69,311 @@ const SortIcon = ({
   sortField: string | null;
   sortOrder: 'asc' | 'desc' | null;
 }) => {
-  // When column is not being sorted, show both up and down arrows in gray
   if (sortField !== field) {
-    return <Bars3Icon className="h3 w-3 text-gray-400" />;
+    return <Bars3Icon className="h-3 w-3 text-gray-400" />;
   }
-  // When column is sorted ascending, show black up arrow
   if (sortOrder === 'asc') {
     return <BarsArrowUpIcon className="h-3 w-3 text-black" />;
   }
-  // When column is sorted descending, show black down arrow
   return <BarsArrowDownIcon className="h-3 w-3 text-black" />;
 };
 
-
-
 export default function Reports() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { showToast } = useToast();
+
+  // --- STATE DERIVED FROM URL ---
+  const {
+    page,
+    search,
+    status,
+    categoryIds,
+    priority,
+    locationIds,
+    creatorIds,
+    dateRange,
+    sortField,
+    sortOrder,
+    selectedViewId,
+  } = useMemo(() => {
+    const query = router.query;
+    const startDate = query.startDate
+      ? new Date(query.startDate as string)
+      : null;
+    const endDate = query.endDate ? new Date(query.endDate as string) : null;
+    return {
+      page: parseInt(query.page as string, 10) || 1,
+      search: (query.search as string) || '',
+      status: getQueryArray(query, 'status'),
+      categoryIds: getQueryArray(query, 'categoryIds'),
+      priority: getQueryArray(query, 'priority'),
+      locationIds: getQueryArray(query, 'locationIds'),
+      creatorIds: getQueryArray(query, 'creatorIds'),
+      dateRange: [startDate, endDate] as [Date | null, Date | null],
+      sortField: (query.sortField as string) || null,
+      sortOrder: (query.sortOrder as 'asc' | 'desc') || null,
+      selectedViewId: (query.view as string) || null,
+    };
+  }, [router.query]);
+
+  // --- LOCAL UI STATE ---
   const [reports, setReports] = useState<Report[]>([]);
-  const [filters, setFilters] = useState({
-    search: '',
-    status: [] as string[],
-    categoryIds: [] as string[],
-    priority: [] as string[],
-    locationIds: [] as string[],
-    creatorIds: [] as string[],
-    dateRange: [null, null] as [Date | null, Date | null],
-  });
+  const [totalReports, setTotalReports] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
+  const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
+  const [saveViewError, setSaveViewError] = useState<string | null>(null);
+  const [localSearch, setLocalSearch] = useState(search);
+
+  // --- MODAL STATES ---
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isPriorityModalOpen, setIsPriorityModalOpen] = useState(false);
-  const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false); // New state for creator modal
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(20);
-  const [totalReports, setTotalReports] = useState(0);
-  const { user } = useAuth();
+  const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false);
+
+  // --- STATIC DATA FETCHED ONCE ---
   const [categories, setCategories] = useState<Category[]>([]);
-  const [allLocations, setAllLocations] = useState<Location[]>([]); // New state for all locations
-  const [allCreators, setAllCreators] = useState<User[]>([]); // New state for all creators
+  const [allLocations, setAllLocations] = useState<Location[]>([]);
+  const [allCreators, setAllCreators] = useState<User[]>([]);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
-  const [isSaveViewModalOpen, setIsSaveViewModalOpen] = useState(false);
-  const [isManageViewsModalOpen, setIsManageViewsModalOpen] = useState(false);
-  const [isFilterVisible, setIsFilterVisible] = useState(false);
 
-  const [saveViewError, setSaveViewError] = useState<string | null>(null);
-  const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
-  const [isFilterModified, setIsFilterModified] = useState(false);
-  const { showToast } = useToast();
-  const isInitialLoad = useRef(true);
-  const [sortField, setSortField] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
+  // Function to update URL query parameters
+  const updateQuery = useCallback(
+    (newQuery: Partial<Record<string, any>>) => {
+      const query = { ...router.query, ...newQuery };
 
-  const router = useRouter();
+      // Reset page to 1 on any filter/sort change
+      if (Object.keys(newQuery).some((k) => k !== 'page')) {
+        query.page = '1';
+      }
 
-  // Effect to synchronize URL query params to component state on initial load
+      // Clean up null/undefined/empty values
+      Object.keys(query).forEach((key) => {
+        if (
+          query[key] === null ||
+          query[key] === undefined ||
+          query[key] === '' ||
+          (Array.isArray(query[key]) && (query[key] as string[]).length === 0)
+        ) {
+          delete query[key];
+        }
+      });
+
+      router.push({ pathname: '/reports', query }, undefined, {
+        shallow: true,
+      });
+    },
+    [router]
+  );
+
+  // --- DATA FETCHING ---
+
+  // Fetch static data (categories, locations, users) on mount
   useEffect(() => {
-    if (!router.isReady || !isInitialLoad.current) return;
+    const fetchData = async () => {
+      try {
+        const [fetchedCategories, fetchedLocations, fetchedUsers] =
+          await Promise.all([
+            categoryService.getAllCategories(),
+            locationService.getActiveLocations(),
+            userService.getAllUsers(),
+          ]);
+        setCategories(fetchedCategories);
+        setAllLocations(fetchedLocations);
+        setAllCreators(fetchedUsers);
+      } catch (err) {
+        console.error('Error fetching static data:', err);
+        showToast('無法載入篩選選項，請重試', 'error');
+      }
+    };
+    fetchData();
+  }, [showToast]);
 
-    const query = router.query;
+  // Fetch saved views
+  const loadSavedViews = useCallback(async () => {
+    if (!user) return;
+    try {
+      const views = await savedViewService.getAllSavedViews('REPORT');
+      setSavedViews(views);
+    } catch (error) {
+      console.error('Failed to load saved views:', error);
+    }
+  }, [user]);
 
-    if (Object.keys(query).length > 0) {
-      const status = Array.isArray(query.status)
-        ? query.status
-        : query.status
-        ? [query.status]
-        : [];
-      const categoryIds = Array.isArray(query.categoryIds)
-        ? query.categoryIds
-        : query.categoryIds
-        ? [query.categoryIds]
-        : [];
-      const priority = Array.isArray(query.priority)
-        ? query.priority
-        : query.priority
-        ? [query.priority]
-        : [];
-      const locationIds = Array.isArray(query.locationIds)
-        ? query.locationIds
-        : query.locationIds
-        ? [query.locationIds]
-        : [];
-      const creatorIds = Array.isArray(query.creatorIds)
-        ? query.creatorIds
-        : query.creatorIds
-        ? [query.creatorIds]
-        : [];
-      const startDate = query.startDate
-        ? new Date(query.startDate as string)
-        : null;
-      const endDate = query.endDate ? new Date(query.endDate as string) : null;
+  useEffect(() => {
+    loadSavedViews();
+  }, [loadSavedViews]);
 
-      setFilters({
-        search: (query.search as string) || '',
+  // Main effect to fetch reports when URL query changes
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const fetchReports = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const pageSize = 20;
+        const apiFilters = {
+          search,
+          status,
+          categoryIds,
+          priority,
+          locationIds,
+          creatorIds,
+          startDate: dateRange[0]?.toISOString(),
+          endDate: dateRange[1]?.toISOString(),
+          sortField,
+          sortOrder,
+        };
+        const response = await reportService.getAllReports(
+          page,
+          pageSize,
+          apiFilters
+        );
+
+        console.log('fetch reports:', apiFilters, response);
+        setReports(response.items);
+        setTotalReports(response.total);
+      } catch (e) {
+        console.error('Error loading reports:', e);
+        setError('加載通報數據失敗，請稍後重試');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, [
+    router.isReady,
+    page,
+    search,
+    status,
+    categoryIds,
+    priority,
+    locationIds,
+    creatorIds,
+    dateRange,
+    sortField,
+    sortOrder,
+  ]);
+
+  // Apply default view on initial load if no other query params are present
+  useEffect(() => {
+    if (
+      router.isReady &&
+      savedViews.length > 0 &&
+      Object.keys(router.query).length === 0
+    ) {
+      const defaultView = savedViews.find((v) => v.isDefault);
+      if (defaultView) {
+        handleApplyView(defaultView.id);
+      }
+    }
+  }, [router.isReady, savedViews]);
+
+  // Sync local search input with URL state
+  useEffect(() => {
+    setLocalSearch(search);
+  }, [search]);
+
+  // --- EVENT HANDLERS ---
+
+  const handleSort = (field: string) => {
+    const isAsc = sortField === field && sortOrder === 'asc';
+    updateQuery({ sortField: field, sortOrder: isAsc ? 'desc' : 'asc' });
+  };
+
+  const clearFilters = () => {
+    setLocalSearch('');
+    updateQuery({
+      search: undefined,
+      status: undefined,
+      categoryIds: undefined,
+      priority: undefined,
+      locationIds: undefined,
+      creatorIds: undefined,
+      startDate: undefined,
+      endDate: undefined,
+      sortField: undefined,
+      sortOrder: undefined,
+      view: undefined,
+      page: undefined,
+    });
+  };
+
+  const handleApplyView = useCallback(
+    (viewId: string) => {
+      const view = savedViews.find((v) => v.id === viewId);
+      if (!view) return;
+
+      const { filters } = view;
+      const startDate = filters.dateRange?.[0]
+        ? new Date(filters.dateRange[0]).toISOString().split('T')[0]
+        : undefined;
+      const endDate = filters.dateRange?.[1]
+        ? new Date(filters.dateRange[1]).toISOString().split('T')[0]
+        : undefined;
+
+      updateQuery({
+        search: filters.search || undefined,
+        status: filters.status || undefined,
+        categoryIds: filters.categoryIds || undefined,
+        priority: filters.priority || undefined,
+        locationIds: filters.locationIds || undefined,
+        creatorIds: filters.creatorIds || undefined,
+        sortField: filters.sortField || undefined,
+        sortOrder: filters.sortOrder || undefined,
+        startDate,
+        endDate,
+        view: viewId,
+        page: 1, // Always reset to page 1 when applying a view
+      });
+    },
+    [savedViews, updateQuery]
+  );
+
+  const handleSaveView = async (viewName: string) => {
+    try {
+      const currentFilters = {
+        search,
         status,
         categoryIds,
         priority,
         locationIds,
         creatorIds,
-        dateRange: [startDate, endDate],
-      });
-      setSortField((query.sortField as string) || null);
-      setSortOrder((query.sortOrder as 'asc' | 'desc') || null);
-      setPage(parseInt(query.page as string, 10) || 1);
+        dateRange,
+        sortField,
+        sortOrder,
+      };
 
-      // If a view is specified in the URL, select it.
-      if (query.view) {
-        setSelectedViewId(query.view as string);
+      let savedView: SavedView;
+      if (selectedViewId) {
+        savedView = await savedViewService.updateSavedView(
+          selectedViewId,
+          viewName,
+          currentFilters
+        );
+        showToast('視圖已成功更新！', 'success');
+      } else {
+        savedView = await savedViewService.createSavedView(
+          viewName,
+          currentFilters,
+          'REPORT'
+        );
+        showToast('視圖已成功儲存！', 'success');
       }
 
-      isInitialLoad.current = false;
-    }
-  }, [router.isReady]);
-
-  // Effect to synchronize component state to URL query params
-  useEffect(() => {
-    if (!router.isReady || isInitialLoad.current) return;
-
-    const query: any = {};
-
-    if (filters.search) query.search = filters.search;
-    if (filters.status.length > 0) query.status = filters.status;
-    if (filters.categoryIds.length > 0) query.categoryIds = filters.categoryIds;
-    if (filters.priority.length > 0) query.priority = filters.priority;
-    if (filters.locationIds.length > 0) query.locationIds = filters.locationIds;
-    if (filters.creatorIds.length > 0) query.creatorIds = filters.creatorIds;
-    if (filters.dateRange[0])
-      query.startDate = filters.dateRange[0].toISOString().split('T')[0];
-    if (filters.dateRange[1])
-      query.endDate = filters.dateRange[1].toISOString().split('T')[0];
-    if (sortField) query.sortField = sortField;
-    if (sortOrder) query.sortOrder = sortOrder;
-    if (page > 1) query.page = page;
-    if (selectedViewId) query.view = selectedViewId;
-
-    router.replace(
-      {
-        pathname: '/reports',
-        query,
-      },
-      undefined,
-      { shallow: true }
-    );
-    console.log('URL updated with query:', query);
-  }, [
-    filters,
-    sortField,
-    sortOrder,
-    page,
-    selectedViewId,
-    router.isReady,
-  ]);
-
-  const handleDelete = async (reportId: string, reportTitle: string) => {
-    if (
-      window.confirm(`您確定要刪除通報「${reportTitle}」嗎？此操作無法復原。`)
-    ) {
-      try {
-        await reportService.deleteReport(reportId);
-        showToast('通報已成功刪除！', 'success');
-        loadReports(); // 重新加載通報列表
-      } catch (error) {
-        console.error('刪除通報失敗:', error);
-        showToast('刪除通報失敗，請稍後再試。', 'error');
-      }
+      await loadSavedViews();
+      updateQuery({ view: savedView.id }); // Select the newly saved/updated view
+      setIsSaveViewModalOpen(false);
+      setSaveViewError(null);
+    } catch (error: any) {
+      console.error('Failed to save view:', error);
+      setSaveViewError(error.message || '儲存視圖失敗');
     }
   };
 
@@ -234,9 +382,8 @@ export default function Reports() {
       try {
         await savedViewService.deleteSavedView(viewId);
         showToast('視圖已成功刪除！', 'success');
-        loadSavedViews(); // 重新加載儲存的視圖
+        await loadSavedViews();
         if (selectedViewId === viewId) {
-          // 如果刪除的是當前選中的視圖，則清除篩選
           clearFilters();
         }
       } catch (error) {
@@ -246,21 +393,48 @@ export default function Reports() {
     }
   };
 
+  const handleSetDefaultView = async (viewId: string) => {
+    try {
+      await savedViewService.setDefaultSavedView(viewId, 'REPORT');
+      showToast('預設視圖已設定！', 'success');
+      await loadSavedViews();
+    } catch (error) {
+      console.error('設定預設視圖失敗:', error);
+      showToast('設定預設視圖失敗，請稍後再試。', 'error');
+    }
+  };
+
+  const handleDeleteReport = async (reportId: string, reportTitle: string) => {
+    if (
+      window.confirm(`您確定要刪除通報「${reportTitle}」嗎？此操作無法復原。`)
+    ) {
+      try {
+        await reportService.deleteReport(reportId);
+        showToast('通報已成功刪除！', 'success');
+        // Re-trigger fetch by slightly changing the query, then removing it
+        // This is a trick to force re-validation if the data on the current page changes
+        updateQuery({ timestamp: Date.now() });
+      } catch (error) {
+        console.error('刪除通報失敗:', error);
+        showToast('刪除通報失敗，請稍後再試。', 'error');
+      }
+    }
+  };
+
   const handleExport = async () => {
     try {
       const apiFilters = {
-        status: filters.status,
-        categoryIds: filters.categoryIds,
-        priority: filters.priority,
-        search: filters.search,
-        locationIds: filters.locationIds,
-        creatorIds: filters.creatorIds,
-        startDate: filters.dateRange[0]?.toISOString(),
-        endDate: filters.dateRange[1]?.toISOString(),
-        sortField: sortField,
-        sortOrder: sortOrder,
+        status,
+        categoryIds,
+        priority,
+        search,
+        locationIds,
+        creatorIds,
+        startDate: dateRange[0]?.toISOString(),
+        endDate: dateRange[1]?.toISOString(),
+        sortField,
+        sortOrder,
       };
-
       const blob = await reportService.exportReports(apiFilters);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -270,7 +444,6 @@ export default function Reports() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-
       showToast('報表已成功匯出！', 'success');
     } catch (error) {
       console.error('匯出報表失敗:', error);
@@ -278,261 +451,97 @@ export default function Reports() {
     }
   };
 
-  const handleSetDefaultView = async (viewId: string) => {
-    try {
-      await savedViewService.setDefaultSavedView(viewId, 'REPORT');
-      showToast('預設視圖已設定！', 'success');
-      await loadSavedViews(); // Reload saved views to reflect new default
-    } catch (error) {
-      console.error('設定預設視圖失敗:', error);
-      showToast('設定預設視圖失敗，請稍後再試。', 'error');
-    }
-  };
+  // --- DERIVED UI STATE ---
+  const isFilterModified = useMemo(() => {
+    if (!selectedViewId) return false;
+    const activeView = savedViews.find((v) => v.id === selectedViewId);
+    if (!activeView) return false;
 
-  // Fetch categories and locations on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const fetchedCategories = await categoryService.getAllCategories();
-        setCategories(fetchedCategories);
-        const fetchedLocations = await locationService.getActiveLocations(); // Fetch only active locations
-        setAllLocations(fetchedLocations); // Set locations
-        const fetchedUsers = await userService.getAllUsers(); // Fetch users
-        setAllCreators(fetchedUsers); // Set creators
-      } catch (err) {
-        console.error('Error fetching data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+    // Helper to create a canonical, stringified version of filters for reliable comparison.
+    const createCanonicalString = (filters: any) => {
+      const cleaned: Record<string, any> = {};
+      const allKeys = [
+        'search',
+        'status',
+        'categoryIds',
+        'priority',
+        'locationIds',
+        'creatorIds',
+        'sortField',
+        'sortOrder',
+        'dateRange',
+      ];
 
-  useEffect(() => {
-    const checkSize = () => {
-      if (window.innerWidth >= 768) {
-        setIsFilterVisible(true);
-      }
+      allKeys.forEach((key) => {
+        const value = filters[key];
+
+        if (value === null || value === undefined) return;
+
+        if (Array.isArray(value)) {
+          if (value.length > 0) {
+            if (key === 'dateRange') {
+              const [start, end] = value;
+              const normalizedRange = [
+                start ? new Date(start).toISOString().split('T')[0] : null,
+                end ? new Date(end).toISOString().split('T')[0] : null,
+              ];
+              // Only include dateRange if at least one date is valid
+              if (normalizedRange[0] || normalizedRange[1]) {
+                cleaned[key] = normalizedRange;
+              }
+            } else {
+              // Sort arrays of strings/numbers for consistent order
+              cleaned[key] = [...value].sort();
+            }
+          }
+        } else if (typeof value === 'string') {
+          if (value !== '') {
+            cleaned[key] = value;
+          }
+        } else {
+          cleaned[key] = value;
+        }
+      });
+
+      return JSON.stringify(cleaned);
     };
+
+    const viewFiltersString = createCanonicalString(activeView.filters);
+    const currentFiltersString = createCanonicalString({
+      search,
+      status,
+      categoryIds,
+      priority,
+      locationIds,
+      creatorIds,
+      sortField,
+      sortOrder,
+      dateRange,
+    });
+
+    return viewFiltersString !== currentFiltersString;
+  }, [
+    selectedViewId,
+    savedViews,
+    search,
+    status,
+    categoryIds,
+    priority,
+    locationIds,
+    creatorIds,
+    dateRange,
+    sortField,
+    sortOrder,
+  ]);
+
+  // --- RENDER LOGIC ---
+  useEffect(() => {
+    const checkSize = () => setIsFilterVisible(window.innerWidth >= 768);
     checkSize();
     window.addEventListener('resize', checkSize);
     return () => window.removeEventListener('resize', checkSize);
   }, []);
 
-  // Fetch saved views on component mount
-  const loadSavedViews = useCallback(async () => {
-    if (!user) return; // Only load if user is authenticated
-    try {
-      const views = await savedViewService.getAllSavedViews('REPORT');
-      setSavedViews(views);
-    } catch (error) {
-      console.error('Failed to load saved views:', error);
-    }
-  }, [user]);
-
-  // 從 API 加載報告數據
-  const loadReports = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // 構建過濾條件
-      const apiFilters: {
-        status?: string[];
-        categoryIds?: string[];
-        priority?: string[];
-        search?: string;
-        locationIds?: string[];
-        creatorIds?: string[]; // Add creatorIds to filters
-        startDate?: string;
-        endDate?: string;
-        sortField?: string;
-        sortOrder?: 'asc' | 'desc';
-      } = {};
-      if (filters.status.length > 0) apiFilters.status = filters.status;
-      if (filters.categoryIds.length > 0)
-        apiFilters.categoryIds = filters.categoryIds;
-      if (filters.priority.length > 0) apiFilters.priority = filters.priority;
-      if (filters.search) apiFilters.search = filters.search;
-      if (filters.locationIds.length > 0)
-        apiFilters.locationIds = filters.locationIds;
-      if (filters.creatorIds.length > 0)
-        apiFilters.creatorIds = filters.creatorIds;
-      if (filters.dateRange[0]) {
-        apiFilters.startDate = filters.dateRange[0].toISOString();
-      }
-      if (filters.dateRange[1]) {
-        apiFilters.endDate = filters.dateRange[1].toISOString();
-      }
-      if (sortField) apiFilters.sortField = sortField;
-      if (sortOrder) apiFilters.sortOrder = sortOrder;
-
-      console.log('Loading reports with filters:', apiFilters); // Debug log
-
-      // 調用 API 獲取報告
-      const response = await reportService.getAllReports(
-        page,
-        pageSize,
-        apiFilters
-      );
-
-      console.log('report with filters', response);
-
-      setReports(response.items);
-      setTotalReports(response.total);
-    } catch (e) {
-      console.error('Error loading reports:', e);
-      setError('加載通報數據失敗，請稍後重試');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, filters, sortField, sortOrder]);
-
-  // 處理搜索和過濾
-  const handleSearch = () => {
-    // 重置頁碼並觸發重新加載
-    setPage(1);
-    loadReports(); // 直接調用 loadReports 立即執行搜尋
-  };
-
-  // 處理頁碼變化
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleSort = (field: string) => {
-    const isAsc = sortField === field && sortOrder === 'asc';
-    setSortOrder(isAsc ? 'desc' : 'asc');
-    setSortField(field);
-    setIsFilterModified(true);
-    setPage(1); // Reset page to 1 when sorting changes
-  };
-
-  // 清除過濾條件
-  const clearFilters = () => {
-    setFilters({
-      search: '',
-      status: [],
-      categoryIds: [],
-      priority: [],
-      locationIds: [],
-      creatorIds: [],
-      dateRange: [null, null],
-    });
-    setSelectedViewId(null); // Clear selected view
-    setPage(1);
-    setSortField(null);
-    setSortOrder(null);
-    setIsFilterModified(false);
-  };
-
-  // 處理儲存視圖
-  const handleSaveView = async (viewName: string) => {
-    try {
-      const currentFilters = {
-        ...filters,
-        sortField,
-        sortOrder,
-      };
-
-      if (selectedViewId) {
-        // 如果有選中的視圖，則更新它
-        await savedViewService.updateSavedView(
-          selectedViewId,
-          viewName,
-          currentFilters
-        );
-        showToast('視圖已成功更新！', 'success');
-      } else {
-        // 否則創建一個新的視圖
-        await savedViewService.createSavedView(
-          viewName,
-          currentFilters,
-          'REPORT'
-        );
-        showToast('視圖已成功儲存！', 'success');
-      }
-
-      await loadSavedViews(); // Reload saved views after saving/updating
-      setIsSaveViewModalOpen(false);
-      setSaveViewError(null);
-      setIsFilterModified(false);
-    } catch (error: any) {
-      console.error('Failed to save view:', error);
-      setSaveViewError(error.message || '儲存視圖失敗');
-    }
-  };
-
-  useEffect(() => {
-    loadSavedViews();
-  }, [loadSavedViews]);
-
-  // 處理套用視圖
-  const handleApplyView = useCallback(
-    (viewId: string) => {
-      const viewToApply = savedViews.find((view) => view.id === viewId);
-      if (viewToApply) {
-        console.log('Applying view:', viewToApply.name, viewToApply.filters);
-        const newDateRange = viewToApply.filters.dateRange
-          ? [
-              viewToApply.filters.dateRange[0]
-                ? new Date(viewToApply.filters.dateRange[0])
-                : null,
-              viewToApply.filters.dateRange[1]
-                ? new Date(viewToApply.filters.dateRange[1])
-                : null,
-            ]
-          : [null, null];
-
-        setFilters({
-          search: viewToApply.filters.search || '',
-          status: viewToApply.filters.status || [],
-          categoryIds: viewToApply.filters.categoryIds || [],
-          priority: viewToApply.filters.priority || [],
-          locationIds: viewToApply.filters.locationIds || [],
-          creatorIds: viewToApply.filters.creatorIds || [],
-          dateRange: newDateRange as [Date | null, Date | null],
-        });
-
-        setSelectedViewId(viewId);
-        setPage(1);
-        setSortField(viewToApply.filters.sortField || null);
-        setSortOrder(viewToApply.filters.sortOrder || null);
-        setIsFilterModified(false);
-      }
-    },
-    [savedViews]
-  );
-
-  // 初始化時加載數據
-  useEffect(() => {
-    loadReports();
-  }, [loadReports]);
-
-  // Load default view on initial load if no query params are present
-  useEffect(() => {
-    if (
-      isInitialLoad.current &&
-      savedViews.length > 0 &&
-      router.isReady &&
-      Object.keys(router.query).length === 0
-    ) {
-      const defaultView = savedViews.find((view) => view.isDefault);
-      if (defaultView) {
-        handleApplyView(defaultView.id);
-      }
-      isInitialLoad.current = false; // Mark initial load as done
-    }
-  }, [savedViews, handleApplyView, router.isReady, router.query]);
-
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('目前 user 權限:', user?.permissions);
-    }
-  }, [user]);
-
-  // 格式化日期
   const formatDate = (date: Date | string) => {
     if (!date) return '-';
     return new Date(date).toLocaleString('zh-TW', {
@@ -546,14 +555,9 @@ export default function Reports() {
 
   const formatDateOnly = (date: Date | string) => {
     if (!date) return '-';
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = (d.getMonth() + 1).toString().padStart(2, '0');
-    const day = d.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return new Date(date).toISOString().split('T')[0];
   };
 
-  // 取得狀態顏色和圖標
   const getStatusInfo = (status: string) => {
     const IconComponent = getStatusIcon(status);
     return {
@@ -563,15 +567,11 @@ export default function Reports() {
   };
 
   const truncateString = (str: string, num: number) => {
-    if (str.length > num) {
-      return str.slice(0, num) + '...';
-    }
+    if (str.length > num) return str.slice(0, num) + '...';
     return str;
   };
 
-  const currentViewName = selectedViewId
-    ? savedViews.find((view) => view.id === selectedViewId)?.name
-    : '所有通報'; // Changed from '新增視圖' to '所有通報' for clarity when no view is selected
+  const totalPages = Math.ceil(totalReports / 20);
 
   return (
     <>
@@ -580,7 +580,6 @@ export default function Reports() {
       </Head>
 
       <div className="space-y-6">
-        {/* 頁面標題 */}
         <div className="mx-auto">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-2xl font-semibold text-gray-900">通報管理</h1>
@@ -602,7 +601,9 @@ export default function Reports() {
               </PermissionGuard>
               <PermissionGuard required={Permission.CREATE_REPORTS}>
                 <Link
-                  href={`/reports/new?returnUrl=${encodeURIComponent(router.asPath)}`}
+                  href={`/reports/new?returnUrl=${encodeURIComponent(
+                    router.asPath
+                  )}`}
                   className="btn-primary px-4 py-2.5 text-sm font-medium rounded-md flex items-center md:py-2"
                 >
                   <PlusIcon className="h-4 w-4 mr-1" />
@@ -614,25 +615,16 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Saved Views Section */}
       <ViewTabs
         views={savedViews}
         activeViewId={selectedViewId}
         isFilterModified={isFilterModified}
-        onSelectView={(view) => {
-          if (view && view.id) {
-            handleApplyView(view.id);
-          } else {
-            clearFilters();
-          }
-        }}
-        onSaveView={() => {
-          // If a view is selected and filters are modified, it's an update.
-          // Otherwise, it's saving a new view.
-          setIsSaveViewModalOpen(true);
-        }}
+        onSelectView={(view) =>
+          view ? handleApplyView(view.id) : clearFilters()
+        }
+        onSaveView={() => setIsSaveViewModalOpen(true)}
         onSaveAsNewView={() => {
-          setSelectedViewId(null); // Clear selected view to force save as new
+          updateQuery({ view: undefined });
           setIsSaveViewModalOpen(true);
         }}
         onManageViews={() => setIsManageViewsModalOpen(true)}
@@ -640,10 +632,8 @@ export default function Reports() {
         onDeleteView={handleDeleteView}
       />
 
-      {/* 篩選和搜尋 */}
       <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-          {/* Search Input and Button */}
           <div className="flex-grow flex items-center">
             <div className="relative flex-grow">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -653,17 +643,16 @@ export default function Reports() {
                 type="text"
                 placeholder="搜尋通報..."
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm placeholder:text-sm"
-                value={filters.search}
-                onChange={(e) => {
-                  setFilters((prev) => ({ ...prev, search: e.target.value }));
-                  setIsFilterModified(true);
-                }}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
+                onKeyPress={(e) =>
+                  e.key === 'Enter' && updateQuery({ search: localSearch })
+                }
               />
             </div>
             <button
               type="button"
-              onClick={handleSearch}
+              onClick={() => updateQuery({ search: localSearch })}
               className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-r-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
             >
               <MagnifyingGlassIcon className="h-4 w-4 mr-1" />
@@ -696,8 +685,8 @@ export default function Reports() {
                 onClick={() => setIsStatusModalOpen(true)}
                 className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
-                {filters.status.length > 0
-                  ? `已選 ${filters.status.length} 個狀態`
+                {status.length > 0
+                  ? `已選 ${status.length} 個狀態`
                   : '選擇狀態...'}
               </button>
             </div>
@@ -715,8 +704,8 @@ export default function Reports() {
                 onClick={() => setIsCategoryModalOpen(true)}
                 className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
-                {filters.categoryIds.length > 0
-                  ? `已選 ${filters.categoryIds.length} 個類別`
+                {categoryIds.length > 0
+                  ? `已選 ${categoryIds.length} 個類別`
                   : '選擇類別...'}
               </button>
             </div>
@@ -734,8 +723,8 @@ export default function Reports() {
                 onClick={() => setIsPriorityModalOpen(true)}
                 className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
-                {filters.priority.length > 0
-                  ? `已選 ${filters.priority.length} 個優先級`
+                {priority.length > 0
+                  ? `已選 ${priority.length} 個優先級`
                   : '選擇優先級...'}
               </button>
             </div>
@@ -753,8 +742,8 @@ export default function Reports() {
                 onClick={() => setIsLocationModalOpen(true)}
                 className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
-                {filters.locationIds.length > 0
-                  ? `已選 ${filters.locationIds.length} 個地點`
+                {locationIds.length > 0
+                  ? `已選 ${locationIds.length} 個地點`
                   : '選擇地點...'}
               </button>
             </div>
@@ -772,27 +761,29 @@ export default function Reports() {
                 onClick={() => setIsCreatorModalOpen(true)}
                 className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
               >
-                {filters.creatorIds.length > 0
-                  ? `已選 ${filters.creatorIds.length} 個建立者`
+                {creatorIds.length > 0
+                  ? `已選 ${creatorIds.length} 個建立者`
                   : '選擇建立者...'}
               </button>
             </div>
-
-            {/* 日期範圍篩選 */}
-            <div className="col-span-2">
+            <div className="">
               <label
                 htmlFor="date-range-filter"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                建立日期範圍
+                建立區間
               </label>
               <DatePicker
                 selectsRange={true}
-                startDate={filters.dateRange[0]}
-                endDate={filters.dateRange[1]}
-                onChange={(update) => {
-                  setFilters((prev) => ({ ...prev, dateRange: update }));
-                  setIsFilterModified(true);
+                startDate={dateRange[0]}
+                endDate={dateRange[1]}
+                onChange={(update: [Date | null, Date | null]) => {
+                  updateQuery({
+                    startDate:
+                      update[0]?.toISOString().split('T')[0] || undefined,
+                    endDate:
+                      update[1]?.toISOString().split('T')[0] || undefined,
+                  });
                 }}
                 isClearable={true}
                 locale={zhTW}
@@ -805,105 +796,80 @@ export default function Reports() {
         )}
       </div>
 
-      {/* Location Filter Modal */}
-      <MultiSelectFilterModal
-        isOpen={isLocationModalOpen}
-        onClose={() => setIsLocationModalOpen(false)}
-        onConfirm={(selectedIds) => {
-          setFilters((prev) => ({ ...prev, locationIds: selectedIds as string[] }));
-          setIsLocationModalOpen(false);
-          setPage(1); // Reset page when filter changes
-          setIsFilterModified(true); // Set filter modified when location changes
-        }}
-        initialSelectedIds={filters.locationIds}
-        options={allLocations.map((loc) => ({ id: loc.id, name: loc.name }))} // Pass locations as options
-        title="選擇地點"
-      />
-
-      {/* Status Filter Modal */}
+      {/* Modals */}
       <MultiSelectFilterModal
         isOpen={isStatusModalOpen}
         onClose={() => setIsStatusModalOpen(false)}
-        onConfirm={(selectedIds) => {
-          setFilters((prev) => ({ ...prev, status: selectedIds as string[] }));
+        onConfirm={(selected) => {
+          updateQuery({ status: selected });
           setIsStatusModalOpen(false);
-          setPage(1);
-          setIsFilterModified(true);
         }}
-        initialSelectedIds={filters.status}
-        options={Object.values(ReportStatus).map((status) => ({
-          id: status,
-          name: getStatusName(status),
+        initialSelectedIds={status}
+        options={Object.values(ReportStatus).map((s) => ({
+          id: s,
+          name: getStatusName(s),
         }))}
         title="選擇狀態"
       />
-
-      {/* Category Filter Modal */}
       <CategoryTreeFilter
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
-        onConfirm={(selectedIds) => {
-          setFilters((prev) => ({ ...prev, categoryIds: selectedIds as string[] }));
+        onConfirm={(selected) => {
+          updateQuery({ categoryIds: selected });
           setIsCategoryModalOpen(false);
-          setPage(1);
-          setIsFilterModified(true);
         }}
-        initialSelectedIds={filters.categoryIds}
+        initialSelectedIds={categoryIds}
         categories={categories}
         title="選擇類別"
       />
-
-      {/* Priority Filter Modal */}
       <MultiSelectFilterModal
         isOpen={isPriorityModalOpen}
         onClose={() => setIsPriorityModalOpen(false)}
-        onConfirm={(selectedIds) => {
-          setFilters((prev) => ({ ...prev, priority: selectedIds as string[] }));
+        onConfirm={(selected) => {
+          updateQuery({ priority: selected });
           setIsPriorityModalOpen(false);
-          setPage(1);
-          setIsFilterModified(true);
         }}
-        initialSelectedIds={filters.priority}
-        options={Object.values(ReportPriority).map((priority) => ({
-          id: priority,
-          name: getPriorityText(priority as ReportPriority),
+        initialSelectedIds={priority}
+        options={Object.values(ReportPriority).map((p) => ({
+          id: p,
+          name: getPriorityText(p as ReportPriority),
         }))}
         title="選擇優先級"
       />
-
-      {/* Creator Filter Modal */}
+      <MultiSelectFilterModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        onConfirm={(selected) => {
+          updateQuery({ locationIds: selected });
+          setIsLocationModalOpen(false);
+        }}
+        initialSelectedIds={locationIds}
+        options={allLocations.map((loc) => ({ id: loc.id, name: loc.name }))}
+        title="選擇地點"
+      />
       <MultiSelectFilterModal
         isOpen={isCreatorModalOpen}
         onClose={() => setIsCreatorModalOpen(false)}
-        onConfirm={(selectedIds) => {
-          setFilters((prev) => ({ ...prev, creatorIds: selectedIds as string[] }));
+        onConfirm={(selected) => {
+          updateQuery({ creatorIds: selected });
           setIsCreatorModalOpen(false);
-          setPage(1);
-          setIsFilterModified(true);
         }}
-        initialSelectedIds={filters.creatorIds}
-        options={allCreators.map((creator) => ({
-          id: creator.id,
-          name: creator.name,
-        }))}
+        initialSelectedIds={creatorIds}
+        options={allCreators.map((c) => ({ id: c.id, name: c.name }))}
         title="選擇建立者"
       />
-
-      {/* Save View Modal */}
       <SaveViewModal
         isOpen={isSaveViewModalOpen}
         onClose={() => setIsSaveViewModalOpen(false)}
         onSave={handleSaveView}
         errorMessage={saveViewError}
-        isUpdate={!!selectedViewId}
+        isUpdate={!!selectedViewId && !isFilterModified}
         initialViewName={
           selectedViewId
             ? savedViews.find((v) => v.id === selectedViewId)?.name || ''
             : ''
         }
       />
-
-      {/* Manage Views Modal */}
       <ManageViewsModal
         isOpen={isManageViewsModalOpen}
         onClose={() => setIsManageViewsModalOpen(false)}
@@ -912,7 +878,7 @@ export default function Reports() {
         onSetDefaultView={handleSetDefaultView}
       />
 
-      {/* 通報列表 */}
+      {/* Table */}
       <div className="bg-white shadow-sm rounded-lg overflow-hidden w-full border border-gray-200">
         {loading ? (
           <div className="flex justify-center items-center h-64">
@@ -922,14 +888,6 @@ export default function Reports() {
           <div className="text-center py-12">
             <ExclamationCircleIcon className="mx-auto h-12 w-12 text-red-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">{error}</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              請稍後重試或聯繫管理員。
-            </p>
-            <div className="mt-6">
-              <button onClick={loadReports} className="btn-primary">
-                重試
-              </button>
-            </div>
           </div>
         ) : reports.length > 0 ? (
           <div>
@@ -1063,11 +1021,14 @@ export default function Reports() {
                       key={report.id}
                       className="hover:bg-gray-50 cursor-pointer"
                       onClick={() =>
-                        (window.location.href = `/reports/${report.id}?returnUrl=${encodeURIComponent(
-                          router.asPath
-                        )}`)
+                        router.push(
+                          `/reports/${report.id}?returnUrl=${encodeURIComponent(
+                            router.asPath
+                          )}`
+                        )
                       }
                     >
+                      {/* Table Cells */}
                       <td className="p-0">
                         <TooltipCell
                           content={report.id}
@@ -1153,14 +1114,15 @@ export default function Reports() {
                           {report.creator?.name || '未知'}
                         </TooltipCell>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
+                      {/* ... other cells */}
+                      <td>
                         <div className="flex items-center space-x-2">
                           <PermissionGuard required={Permission.EDIT_REPORTS}>
                             <Link
                               href={`/reports/${report.id}/edit`}
                               className="text-blue-600 hover:text-blue-900"
                               title="編輯"
-                              onClick={(e) => e.stopPropagation()} // 阻止行點擊事件
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <PencilIcon className="h-5 w-5" />
                             </Link>
@@ -1168,8 +1130,8 @@ export default function Reports() {
                           <PermissionGuard required={Permission.DELETE_REPORTS}>
                             <button
                               onClick={(e) => {
-                                e.stopPropagation(); // 阻止行點擊事件
-                                handleDelete(report.id, report.title);
+                                e.stopPropagation();
+                                handleDeleteReport(report.id, report.title);
                               }}
                               className="text-red-600 hover:text-red-900"
                               title="刪除"
@@ -1184,27 +1146,25 @@ export default function Reports() {
                 </tbody>
               </table>
             </div>
-
-            {/* 分頁控制 */}
+            {/* Pagination */}
             <div className="flex justify-between items-center mt-4 p-4">
               <p className="text-sm text-gray-700">
                 顯示{' '}
                 <span className="font-medium">
-                  {totalReports > 0 ? (page - 1) * pageSize + 1 : 0}
+                  {totalReports > 0 ? (page - 1) * 20 + 1 : 0}
                 </span>{' '}
                 到{' '}
                 <span className="font-medium">
-                  {Math.min(page * pageSize, totalReports)}
+                  {Math.min(page * 20, totalReports)}
                 </span>{' '}
                 筆，共 <span className="font-medium">{totalReports}</span> 筆
               </p>
-
               <nav
                 className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
                 aria-label="Pagination"
               >
                 <button
-                  onClick={() => handlePageChange(page - 1)}
+                  onClick={() => updateQuery({ page: page - 1 })}
                   disabled={page === 1}
                   className="relative inline-flex items-center px-3 py-2.5 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 md:px-2 md:py-2"
                 >
@@ -1212,14 +1172,12 @@ export default function Reports() {
                   <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
                 </button>
 
-                {/* 頁碼顯示 */}
-                {Array.from({
-                  length: Math.ceil(totalReports / pageSize) || 1,
-                })
+                {/* Page numbers */}
+                {Array.from({ length: totalPages })
                   .map((_, i) => (
                     <button
                       key={i}
-                      onClick={() => handlePageChange(i + 1)}
+                      onClick={() => updateQuery({ page: i + 1 })}
                       className={`relative inline-flex items-center px-5 py-2.5 border border-gray-300 bg-white text-sm font-medium ${
                         page === i + 1
                           ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
@@ -1229,14 +1187,11 @@ export default function Reports() {
                       {i + 1}
                     </button>
                   ))
-                  .slice(
-                    Math.max(0, page - 3),
-                    Math.min(Math.ceil(totalReports / pageSize) || 1, page + 2)
-                  )}
+                  .slice(Math.max(0, page - 3), Math.min(totalPages, page + 2))}
 
                 <button
-                  onClick={() => handlePageChange(page + 1)}
-                  disabled={page >= Math.ceil(totalReports / pageSize)}
+                  onClick={() => updateQuery({ page: page + 1 })}
+                  disabled={page >= totalPages}
                   className="relative inline-flex items-center px-3 py-2.5 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 md:px-2 md:py-2"
                 >
                   <span className="sr-only">下一頁</span>
@@ -1248,17 +1203,7 @@ export default function Reports() {
         ) : (
           <div className="text-center py-12">
             <FunnelIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">
-              沒有符合條件的通報
-            </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              請嘗試調整篩選條件或建立新通報。
-            </p>
-            <div className="mt-6">
-              <Link href="/reports/new" className="btn-primary">
-                建立通報
-              </Link>
-            </div>
+            <h3>沒有符合條件的通報</h3>
           </div>
         )}
       </div>
