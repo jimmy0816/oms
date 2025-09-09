@@ -169,6 +169,50 @@ export const authOptions: NextAuthOptions = {
           });
           // Allow sign in for existing user
           return true;
+        } else {
+          // New user via OIDC
+          const housekeeperRole = await prisma.role.findUnique({
+            where: { name: 'STAFF' },
+          });
+
+          if (!housekeeperRole) {
+            throw new Error('The "管家" role was not found in the database.');
+          }
+
+          // Create the new user and link the role in one transaction
+          const newUser = await prisma.user.create({
+            data: {
+              email: user.email as string,
+              name: user.name || (user.email as string),
+              image: user.image,
+              isOidcLinked: true,
+              userRoles: {
+                create: {
+                  roleId: housekeeperRole.id,
+                },
+              },
+            },
+          });
+
+          // Manually create the account to link the OIDC provider
+          await prisma.account.create({
+            data: {
+              userId: newUser.id,
+              type: account.type,
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              access_token: account.access_token,
+              refresh_token: account.refresh_token,
+              expires_at: account.expires_at,
+              token_type: account.token_type,
+              scope: account.scope,
+              id_token: account.id_token,
+              session_state: account.session_state,
+            },
+          });
+
+          // Update the user object for the rest of the NextAuth flow
+          user.id = newUser.id;
         }
       }
       // For new users or credential provider, allow default sign-in behavior
