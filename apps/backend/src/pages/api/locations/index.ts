@@ -34,16 +34,29 @@ const handler: AuthenticatedLocationHandler = async (req, res) => {
         // PUT /api/locations - Update an existing location
         const { id: putId, ...updateData } = req.body;
         if (!putId) {
-          return res.status(400).json({ success: false, error: 'Location ID is required for PUT request.' });
+          return res
+            .status(400)
+            .json({
+              success: false,
+              error: 'Location ID is required for PUT request.',
+            });
         }
-        const updatedLocation = await locationService.updateLocation(putId as string, updateData);
+        const updatedLocation = await locationService.updateLocation(
+          putId as string,
+          updateData
+        );
         return res.status(200).json({ success: true, data: updatedLocation });
 
       case 'DELETE':
         // DELETE /api/locations - Delete a location
         const { id: deleteId } = req.body;
         if (!deleteId) {
-          return res.status(400).json({ success: false, error: 'Location ID is required for DELETE request.' });
+          return res
+            .status(400)
+            .json({
+              success: false,
+              error: 'Location ID is required for DELETE request.',
+            });
         }
         await locationService.deleteLocation(deleteId as string);
         return res.status(204).end();
@@ -55,18 +68,36 @@ const handler: AuthenticatedLocationHandler = async (req, res) => {
         if (updates && Array.isArray(updates)) {
           // Reorder operation
           await locationService.reorderLocations(updates);
-          return res.status(200).json({ success: true, message: 'Locations reordered successfully.' });
+          return res
+            .status(200)
+            .json({
+              success: true,
+              message: 'Locations reordered successfully.',
+            });
         } else if (patchId) {
           // Partial update for a single location
-          const partialUpdatedLocation = await locationService.updateLocation(patchId as string, patchData);
-          return res.status(200).json({ success: true, data: partialUpdatedLocation });
+          const partialUpdatedLocation = await locationService.updateLocation(
+            patchId as string,
+            patchData
+          );
+          return res
+            .status(200)
+            .json({ success: true, data: partialUpdatedLocation });
         } else {
-          return res.status(400).json({ success: false, error: 'Invalid PATCH request. Expecting "updates" array for reorder or "id" for partial update.' });
+          return res
+            .status(400)
+            .json({
+              success: false,
+              error:
+                'Invalid PATCH request. Expecting "updates" array for reorder or "id" for partial update.',
+            });
         }
 
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']);
-        return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
+        return res
+          .status(405)
+          .json({ success: false, error: `Method ${req.method} Not Allowed` });
     }
   } catch (error: any) {
     // Handle errors from service or other parts
@@ -77,7 +108,12 @@ const handler: AuthenticatedLocationHandler = async (req, res) => {
       return res.status(409).json({ success: false, error: error.message });
     }
     console.error('API Error:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Internal Server Error' });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        error: error.message || 'Internal Server Error',
+      });
   }
 };
 
@@ -85,9 +121,12 @@ const handler: AuthenticatedLocationHandler = async (req, res) => {
 export default async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET' && req.query.active === 'true') {
     // Public endpoint for active locations
-    return handler(req as AuthenticatedRequest, res);
+    return handler(req, res);
   } else {
     // All other methods and GET (without active=true) require MANAGE_LOCATIONS permission
-    return withPermission(Permission.MANAGE_LOCATIONS)(handler)(req as AuthenticatedRequest, res);
+    return withPermission(Permission.MANAGE_LOCATIONS)(handler)(
+      req as AuthenticatedRequest,
+      res
+    );
   }
 };
