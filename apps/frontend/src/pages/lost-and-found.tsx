@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { reportService } from '@/services/reportService';
-import { locationService, Location } from '@/services/locationService';
-import type { PublicReport } from 'shared-types';
+import { locationService } from '@/services/locationService';
+import type { PublicReport, Location } from 'shared-types';
 import MultiSelectFilterModal from '@/components/MultiSelectFilterModal';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -140,7 +140,7 @@ const LostAndFoundPageContent = () => {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const fetchedLocations = await locationService.getAllLocations();
+        const fetchedLocations = await locationService.getActiveLocations();
         setAllLocations(fetchedLocations);
       } catch (error) {
         console.error('Failed to fetch locations:', error);
@@ -236,12 +236,6 @@ const LostAndFoundPageContent = () => {
                       scope="col"
                       className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
-                      標題
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
                       描述
                     </th>
                     <th
@@ -297,9 +291,6 @@ const LostAndFoundPageContent = () => {
                             <span className="text-gray-400">無照片</span>
                           )}
                         </div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {report.title}
                       </td>
                       <td
                         className="px-4 py-4 text-sm text-gray-500 truncate"
