@@ -152,6 +152,12 @@ export default function ReportDetail() {
         finalUpdateData.assigneeId = finalUpdateData.assigneeId.toString();
       }
 
+      if (finalUpdateData.trackingDate) {
+        const date = new Date(finalUpdateData.trackingDate);
+        const offset = date.getTimezoneOffset() * 60000;
+        (finalUpdateData.trackingDate as any) = new Date(date.getTime() - offset);
+      }
+
       await reportService.updateReport(id.toString(), finalUpdateData);
 
       if (log) {

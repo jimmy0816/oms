@@ -48,6 +48,7 @@ import ViewTabs from '@/components/ViewTabs';
 import TooltipCell from '@/components/TooltipCell';
 import MultiSelectFilterModal from '@/components/MultiSelectFilterModal';
 import DatePicker from 'react-datepicker';
+import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ParsedUrlQuery } from 'querystring';
@@ -224,8 +225,12 @@ export default function Reports() {
           priority,
           locationIds,
           creatorIds,
-          startDate: dateRange[0]?.toISOString(),
-          endDate: dateRange[1]?.toISOString(),
+          startDate: dateRange[0]
+            ? format(dateRange[0], 'yyyy-MM-dd')
+            : undefined,
+          endDate: dateRange[1]
+            ? format(dateRange[1], 'yyyy-MM-dd')
+            : undefined,
           sortField,
           sortOrder,
         };
@@ -312,10 +317,10 @@ export default function Reports() {
 
       const { filters } = view;
       const startDate = filters.dateRange?.[0]
-        ? new Date(filters.dateRange[0]).toISOString().split('T')[0]
+        ? format(new Date(filters.dateRange[0]), 'yyyy-MM-dd')
         : undefined;
       const endDate = filters.dateRange?.[1]
-        ? new Date(filters.dateRange[1]).toISOString().split('T')[0]
+        ? format(new Date(filters.dateRange[1]), 'yyyy-MM-dd')
         : undefined;
 
       updateQuery({
@@ -430,8 +435,10 @@ export default function Reports() {
         search,
         locationIds,
         creatorIds,
-        startDate: dateRange[0]?.toISOString(),
-        endDate: dateRange[1]?.toISOString(),
+        startDate: dateRange[0]
+          ? format(dateRange[0], 'yyyy-MM-dd')
+          : undefined,
+        endDate: dateRange[1] ? format(dateRange[1], 'yyyy-MM-dd') : undefined,
         sortField,
         sortOrder,
       };
@@ -777,14 +784,18 @@ export default function Reports() {
                 selectsRange={true}
                 startDate={dateRange[0]}
                 endDate={dateRange[1]}
-                onChange={(update: [Date | null, Date | null]) => {
-                  updateQuery({
-                    startDate:
-                      update[0]?.toISOString().split('T')[0] || undefined,
-                    endDate:
-                      update[1]?.toISOString().split('T')[0] || undefined,
-                  });
-                }}
+                  onChange={(update: [Date | null, Date | null]) => {
+                    updateQuery({
+                      startDate:
+                        update[0]
+                          ? format(update[0], 'yyyy-MM-dd')
+                          : undefined,
+                      endDate:
+                        update[1]
+                          ? format(update[1], 'yyyy-MM-dd')
+                          : undefined,
+                    });
+                  }}
                 isClearable={true}
                 locale={zhTW}
                 dateFormat="yyyy/MM/dd"

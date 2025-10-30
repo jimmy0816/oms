@@ -106,13 +106,17 @@ export default function EditReport() {
 
     setSaving(true);
     try {
+      const trackingDateToSend = trackingDate
+        ? new Date(trackingDate.getTime() - trackingDate.getTimezoneOffset() * 60000)
+        : null;
+
       await reportService.updateReport(id as string, {
         title,
         description,
         categoryId,
         priority,
         locationId,
-        trackingDate,
+        trackingDate: trackingDateToSend,
         attachments: uploadedFiles,
       });
       router.push(`/reports/${id}`);
