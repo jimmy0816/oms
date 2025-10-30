@@ -46,6 +46,7 @@ import MultiSelectFilterModal from '@/components/MultiSelectFilterModal';
 import PermissionGuard from '@/components/PermissionGuard';
 import TooltipCell from '@/components/TooltipCell';
 import DatePicker from 'react-datepicker';
+import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { ParsedUrlQuery } from 'querystring';
 
@@ -208,8 +209,8 @@ export default function TicketsPage() {
         const pageSize = 20;
         const apiFilters = {
           search, status, priority, locationIds, roleIds, creatorIds, assigneeIds,
-          startDate: dateRange[0]?.toISOString(),
-          endDate: dateRange[1]?.toISOString(),
+          startDate: dateRange[0] ? format(dateRange[0], 'yyyy-MM-dd') : undefined,
+          endDate: dateRange[1] ? format(dateRange[1], 'yyyy-MM-dd') : undefined,
           sortField, sortOrder,
         };
         const response = await ticketService.getAllTickets(page, pageSize, apiFilters);
@@ -260,8 +261,8 @@ export default function TicketsPage() {
     if (!view) return;
 
     const { filters } = view;
-    const startDate = filters.dateRange?.[0] ? new Date(filters.dateRange[0]).toISOString().split('T')[0] : undefined;
-    const endDate = filters.dateRange?.[1] ? new Date(filters.dateRange[1]).toISOString().split('T')[0] : undefined;
+    const startDate = filters.dateRange?.[0] ? format(new Date(filters.dateRange[0]), 'yyyy-MM-dd') : undefined;
+    const endDate = filters.dateRange?.[1] ? format(new Date(filters.dateRange[1]), 'yyyy-MM-dd') : undefined;
 
     updateQuery({
       search: filters.search || undefined,
@@ -345,8 +346,8 @@ export default function TicketsPage() {
     try {
       const apiFilters = {
         status, priority, search, locationIds, roleIds, creatorIds, assigneeIds,
-        startDate: dateRange[0]?.toISOString(),
-        endDate: dateRange[1]?.toISOString(),
+        startDate: dateRange[0] ? format(dateRange[0], 'yyyy-MM-dd') : undefined,
+        endDate: dateRange[1] ? format(dateRange[1], 'yyyy-MM-dd') : undefined,
         sortField, sortOrder,
       };
       const blob = await ticketService.exportTickets(apiFilters);
@@ -381,7 +382,7 @@ export default function TicketsPage() {
           if (value.length > 0) {
             if (key === 'dateRange') {
               const [start, end] = value;
-              const normalizedRange = [start ? new Date(start).toISOString().split('T')[0] : null, end ? new Date(end).toISOString().split('T')[0] : null];
+              const normalizedRange = [start ? format(new Date(start), 'yyyy-MM-dd') : null, end ? format(new Date(end), 'yyyy-MM-dd') : null];
               if (normalizedRange[0] || normalizedRange[1]) cleaned[key] = normalizedRange;
             } else {
               cleaned[key] = [...value].sort();
@@ -533,7 +534,7 @@ export default function TicketsPage() {
                 startDate={dateRange[0]}
                 endDate={dateRange[1]}
                 onChange={(update: [Date | null, Date | null]) => {
-                  updateQuery({ startDate: update[0]?.toISOString().split('T')[0] || undefined, endDate: update[1]?.toISOString().split('T')[0] || undefined });
+                  updateQuery({ startDate: update[0] ? format(update[0], 'yyyy-MM-dd') : undefined, endDate: update[1] ? format(update[1], 'yyyy-MM-dd') : undefined });
                 }}
                 isClearable={true}
                 locale={zhTW}
