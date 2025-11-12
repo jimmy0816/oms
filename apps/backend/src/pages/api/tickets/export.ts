@@ -1,14 +1,7 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import {
-  withAuth,
-  AuthenticatedRequest,
-  withPermission,
-} from '@/middleware/auth';
 import {
   Permission,
   TicketStatus,
   TicketPriority,
-  UserRole,
 } from 'shared-types';
 import { prisma } from '@/lib/prisma';
 import ExcelJS from 'exceljs';
@@ -47,21 +40,6 @@ const getPriorityText = (priority: TicketPriority) => {
     default:
       return priority;
   }
-};
-
-const getRoleName = (role: UserRole): string => {
-  const roleNames: Partial<Record<UserRole, string>> = {
-    [UserRole.ADMIN]: '系統管理員',
-    [UserRole.MANAGER]: '區域總監',
-    [UserRole.REPORT_PROCESSOR]: '營業專員',
-    [UserRole.REPORT_REVIEWER]: '通報審核者',
-    [UserRole.CUSTOMER_SERVICE]: '客服人員',
-    [UserRole.MAINTENANCE_WORKER]: '維修工務',
-    [UserRole.STAFF]: '管家',
-    [UserRole.USER]: '一般用戶',
-  };
-
-  return roleNames[role] || role;
 };
 
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
@@ -285,7 +263,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         status: getStatusText(ticket.status as TicketStatus),
         priority: getPriorityText(ticket.priority as TicketPriority),
         location: locations || 'N/A',
-        role: getRoleName(ticket.role?.name as UserRole),
+        role: ticket.role?.name || 'N/A',
         assignee: ticket.assignee?.name || 'N/A',
         creator: ticket.creator?.name || 'N/A',
         createdAt: format(new Date(ticket.createdAt), 'yyyy-MM-dd HH:mm:ss'),

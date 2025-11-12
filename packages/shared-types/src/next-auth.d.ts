@@ -8,25 +8,30 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      role: string;
-      additionalRoles: string[];
+      primaryRole: any; // Replace with a proper Role type if you have one
+      additionalRoles: any[]; // Replace with a proper Role type if you have one
       permissions: string[];
-    } & DefaultSession["user"]
+      isOidcLinked?: boolean;
+      id_token?: string;
+    } & DefaultSession['user'];
   }
 
   interface User {
-    role: string;
-    additionalRoles: string[];
+    primaryRole: any;
+    additionalRoles: any[];
     permissions: string[];
+    isOidcLinked?: boolean;
   }
 }
 
-declare module "next-auth/jwt" {
+declare module 'next-auth/jwt' {
   /** Returned by the `jwt` callback and `getToken`, when using JWT sessions */
   interface JWT {
     id: string;
-    role: string;
-    additionalRoles: string[];
+    primaryRole: any;
+    additionalRoles: any[];
     permissions: string[];
+    isOidcLinked?: boolean;
+    id_token?: string;
   }
 }

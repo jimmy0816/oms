@@ -6,13 +6,13 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { userService } from '@/services/userService';
-import { getRoleName } from '@/services/roleService';
-import { UserRole } from 'shared-types';
+import { Role } from '@/services/roleService';
 
 interface UserProfile {
   name: string;
   email: string;
-  role: string;
+  primaryRole: Role | null;
+  additionalRoles: Role[];
   permissions: string[];
 }
 
@@ -38,12 +38,11 @@ export default function UserProfilePage() {
 
   useEffect(() => {
     if (user) {
-      // In a real application, you might fetch more detailed user info from an API
-      // For now, we'll use the user object from AuthContext
       setProfile({
         name: user.name || 'N/A',
         email: user.email || 'N/A',
-        role: user.role || 'N/A',
+        primaryRole: user.primaryRole || null,
+        additionalRoles: user.additionalRoles || [],
         permissions: user.permissions || [],
       });
     }
@@ -61,7 +60,6 @@ export default function UserProfilePage() {
         return;
       }
 
-      // Assuming userService has a changePassword method
       await userService.changePassword(data.currentPassword, data.newPassword);
       showToast('密碼更改成功', 'success');
       reset(); // Clear form
@@ -126,9 +124,15 @@ export default function UserProfilePage() {
                   </span>
                 )}
               </p>
-              <p>
-                <strong>角色:</strong> {getRoleName(profile.role as UserRole)}
-              </p>
+              <div>
+                <strong>角色:</strong>
+                <div className="ml-4">
+                  {profile.primaryRole && <p>主要角色: {profile.primaryRole.description}</p>}
+                  {profile.additionalRoles.length > 0 && (
+                    <p>額外角色: {profile.additionalRoles.map(r => r.description).join(', ')}</p>
+                  )}
+                </div>
+              </div>
               <div>
                 <strong>權限:</strong>
                 <ul className="list-disc list-inside ml-4">

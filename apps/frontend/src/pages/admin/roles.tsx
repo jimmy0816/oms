@@ -1,400 +1,307 @@
-import React, { useState, useEffect } from 'react';
-import { UserRole, Permission } from 'shared-types';
+import React, { useState, useEffect, FC } from 'react';
+import { Permission } from 'shared-types';
 import { PermissionGuard } from '@/components/PermissionGuard';
-import { roleService, getRoleName } from '@/services/roleService';
+import { roleService, Role } from '@/services/roleService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
+import { PlusIcon, PencilIcon, TrashIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+
+// --- Reusable Modal Component ---
+interface ModalProps {
+  show: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+const Modal: FC<ModalProps> = ({ show, onClose, title, children }) => {
+  if (!show) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="p-4 border-b flex justify-between items-center">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800">&times;</button>
+        </div>
+        <div className="p-4">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+// --- Role Form Component ---
+interface RoleFormProps {
+  role?: Role | null;
+  onSave: (roleData: { name: string; description?: string }) => void;
+  onCancel: () => void;
+  isSaving: boolean;
+}
+
+const RoleForm: FC<RoleFormProps> = ({ role, onSave, onCancel, isSaving }) => {
+  const [name, setName] = useState(role?.name || '');
+  const [description, setDescription] = useState(role?.description || '');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({ name, description });
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="mb-4">
+        <label htmlFor="roleName" className="block text-sm font-medium text-gray-700">Role Name</label>
+        <input
+          type="text"
+          id="roleName"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label htmlFor="roleDescription" className="block text-sm font-medium text-gray-700">Description</label>
+        <textarea
+          id="roleDescription"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
+      <div className="flex justify-end space-x-2">
+        <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
+        <button type="submit" disabled={isSaving} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300">
+          {isSaving ? 'Saving...' : 'Save'}
+        </button>
+      </div>
+    </form>
+  );
+};
+
+// --- Permission Editor Component ---
+const PermissionEditor: FC<{ role: Role; onSave: () => void }> = ({ role, onSave }) => {
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [allPermissions] = useState<Permission[]>(Object.values(Permission));
+  const [isSaving, setIsSaving] = useState(false);
+  const { showToast } = useToast();
+  const { hasPermission } = useAuth();
+
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      try {
+        const perms = await roleService.getRolePermissions(role.id);
+        setPermissions(perms);
+      } catch (error) {
+        showToast('Failed to fetch permissions', 'error');
+      }
+    };
+    fetchPermissions();
+  }, [role, showToast]);
+
+  const handlePermissionChange = (permission: Permission, checked: boolean) => {
+    setPermissions(prev => checked ? [...prev, permission] : prev.filter(p => p !== permission));
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await roleService.updateRolePermissions(role.id, permissions);
+      showToast('Permissions updated successfully', 'success');
+      onSave();
+    } catch (error) {
+      showToast('Failed to save permissions', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const permissionGroups = {
+     tickets: allPermissions.filter(p => p.includes('TICKETS')),
+     reports: allPermissions.filter(p => p.includes('REPORTS')),
+     users: allPermissions.filter(p => p.includes('USERS')),
+     roles: allPermissions.filter(p => p.includes('ROLES') || p.includes('PERMISSIONS')),
+     system: allPermissions.filter(p => p.startsWith('manage_')),
+  };
+
+  return (
+    <div>
+      <h3 className="text-xl font-semibold mb-4">Edit Permissions for {role.name}</h3>
+      {Object.entries(permissionGroups).map(([groupName, groupPermissions]) => (
+        <div key={groupName} className="mb-6">
+          <h4 className="text-lg font-medium mb-2 capitalize">{groupName}</h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {groupPermissions.map(p => (
+              <div key={p} className="flex items-center">
+                <input
+                  type="checkbox"
+                  id={p}
+                  checked={permissions.includes(p)}
+                  onChange={(e) => handlePermissionChange(p, e.target.checked)}
+                  className="mr-2"
+                  disabled={!hasPermission(Permission.ASSIGN_PERMISSIONS)}
+                />
+                <label htmlFor={p} className="text-sm">{p.replace(/_/g, ' ')}</label>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className="flex justify-end">
+        <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300">
+          {isSaving ? 'Saving...' : 'Save Permissions'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 
 /**
- * 角色權限管理頁面
+ * Role Management Page
  */
 export default function RolesManagement() {
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const [rolePermissions, setRolePermissions] = useState<Permission[]>([]);
-  const [allPermissions] = useState<Permission[]>(Object.values(Permission));
-  const { hasPermission } = useAuth(); // 獲取當前用戶
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [deletingRole, setDeletingRole] = useState<Role | null>(null);
+  const [managingPermissionsFor, setManagingPermissionsFor] = useState<Role | null>(null);
   const { showToast } = useToast();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [isResetting, setIsResetting] = useState<boolean>(false);
 
-  // 當選擇角色變化時，從 API 獲取權限列表
-  useEffect(() => {
-    if (selectedRole) {
-      fetchRolePermissions(selectedRole);
-    } else {
-      setRolePermissions([]);
-    }
-  }, [selectedRole]);
-
-  // 從 API 獲取角色權限
-  const fetchRolePermissions = async (role: UserRole) => {
+  const fetchRoles = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      // 呼叫 API 取得權限
-      const permissions = await roleService.getRolePermissions(role);
-      setRolePermissions(permissions);
+      const fetchedRoles = await roleService.getAllRoles();
+      setRoles(fetchedRoles);
     } catch (error) {
-      console.error(`Error fetching permissions for role ${role}:`, error);
-      showToast('獲取角色權限失敗', 'error');
+      showToast('Failed to fetch roles', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 保存權限變更到 API
-  const handleSavePermissions = async () => {
-    if (!selectedRole) return;
+  useEffect(() => {
+    fetchRoles();
+  }, []);
 
+  const handleOpenModal = (role: Role | null = null) => {
+    setEditingRole(role);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingRole(null);
+  };
+
+  const handleSaveRole = async (roleData: { name: string; description?: string }) => {
+    setIsSaving(true);
     try {
-      setIsSaving(true);
-      const result = await roleService.updateRolePermissions(
-        selectedRole,
-        rolePermissions
-      );
-
-      if (result.success) {
-        showToast('權限已成功保存', 'success');
+      if (editingRole) {
+        await roleService.updateRole(editingRole.id, roleData);
+        showToast('Role updated successfully', 'success');
       } else {
-        showToast(result.message || '保存權限失敗', 'error');
+        await roleService.createRole(roleData.name, roleData.description);
+        showToast('Role created successfully', 'success');
       }
-    } catch (error) {
-      console.error(
-        `Error saving permissions for role ${selectedRole}:`,
-        error
-      );
-      showToast('保存權限失敗', 'error');
+      fetchRoles();
+      handleCloseModal();
+    } catch (error: any) {
+      showToast(error.response?.data?.message || 'Failed to save role', 'error');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // 重置角色權限為默認值
-  const handleResetPermissions = async () => {
-    if (!selectedRole) return;
-
-    if (!confirm(`確定要將 ${selectedRole} 的權限重置為默認值嗎？`)) {
-      return;
-    }
-
+  const handleDeleteRole = async () => {
+    if (!deletingRole) return;
     try {
-      setIsResetting(true);
-      const result = await roleService.resetRolePermissions(selectedRole);
-
-      if (result.success) {
-        showToast('權限已重置為默認值', 'success');
-        // 重新獲取權限
-        fetchRolePermissions(selectedRole);
-      } else {
-        showToast(result.message || '重置權限失敗', 'error');
-      }
-    } catch (error) {
-      console.error(
-        `Error resetting permissions for role ${selectedRole}:`,
-        error
-      );
-      showToast('重置權限失敗', 'error');
-    } finally {
-      setIsResetting(false);
+      await roleService.deleteRole(deletingRole.id);
+      showToast('Role deleted successfully', 'success');
+      fetchRoles();
+      setDeletingRole(null);
+    } catch (error: any) {
+      showToast(error.response?.data?.message || 'Failed to delete role', 'error');
     }
   };
 
-  // 處理權限變更
-  const handlePermissionChange = (permission: Permission, checked: boolean) => {
-    if (checked) {
-      setRolePermissions([...rolePermissions, permission]);
-    } else {
-      setRolePermissions(rolePermissions.filter((p) => p !== permission));
-    }
-  };
-
-  // 按權限類別分組
-  const permissionGroups = {
-    tickets: allPermissions.filter(
-      (p) =>
-        p.startsWith('view_all_tickets') ||
-        p.startsWith('view_tickets') ||
-        p.startsWith('create_tickets') ||
-        p.startsWith('edit_tickets') ||
-        p.startsWith('delete_tickets') ||
-        p.startsWith('assign_tickets') ||
-        p.startsWith('claim_tickets') ||
-        p.startsWith('complete_tickets') ||
-        p.startsWith('verify_tickets') ||
-        p.startsWith('export_tickets')
-    ),
-    reports: allPermissions.filter(
-      (p) =>
-        p.startsWith('view_all_reports') ||
-        p.startsWith('view_reports') ||
-        p.startsWith('create_reports') ||
-        p.startsWith('edit_reports') ||
-        p.startsWith('delete_reports') ||
-        p.startsWith('process_reports') ||
-        p.startsWith('review_reports') ||
-        p.startsWith('export_reports')
-    ),
-    users: allPermissions.filter(
-      (p) =>
-        p.startsWith('view_users') ||
-        p.startsWith('create_users') ||
-        p.startsWith('edit_users') ||
-        p.startsWith('delete_users')
-    ),
-    roles: allPermissions.filter(
-      (p) => p.startsWith('manage_roles') || p.startsWith('assign_permissions')
-    ),
-    system: allPermissions.filter(
-      (p) =>
-        p.startsWith('manage_settings') ||
-        p.startsWith('manage_categories') ||
-        p.startsWith('manage_locations')
-    ),
-  };
+  if (managingPermissionsFor) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <button onClick={() => setManagingPermissionsFor(null)} className="mb-4 text-blue-600 hover:underline">
+          &larr; Back to Roles List
+        </button>
+        <PermissionEditor role={managingPermissionsFor} onSave={() => setManagingPermissionsFor(null)} />
+      </div>
+    );
+  }
 
   return (
     <PermissionGuard required={Permission.MANAGE_ROLES}>
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">角色權限管理</h1>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* 角色選擇區域 */}
-          <div className="bg-white p-4 rounded shadow">
-            <h2 className="text-xl font-semibold mb-4">角色列表</h2>
-            <div className="space-y-2">
-              {Object.values(UserRole).map((role) => (
-                <div
-                  key={role}
-                  className={`p-2 rounded cursor-pointer ${
-                    selectedRole === role
-                      ? 'bg-blue-100 font-medium'
-                      : 'hover:bg-gray-100'
-                  }`}
-                  onClick={() => setSelectedRole(role)}
-                >
-                  {getRoleName(role)}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 權限編輯區域 */}
-          <div className="bg-white p-4 rounded shadow md:col-span-3">
-            {selectedRole ? (
-              <>
-                <h2 className="text-xl font-semibold mb-4">
-                  {getRoleName(selectedRole)} 的權限設置
-                </h2>
-
-                {/* 工單權限 */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-medium mb-2">工單權限</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {permissionGroups.tickets.map((permission) => (
-                      <div key={permission} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id={permission}
-                          checked={rolePermissions.includes(permission)}
-                          onChange={(e) =>
-                            handlePermissionChange(permission, e.target.checked)
-                          }
-                          className="mr-2"
-                          disabled={
-                            !hasPermission(Permission.ASSIGN_PERMISSIONS)
-                          }
-                        />
-                        <label htmlFor={permission} className="text-sm">
-                          {permission.replace(/_/g, ' ')}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 通報權限 */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-medium mb-2">通報權限</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {permissionGroups.reports.map((permission) => (
-                      <div key={permission} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id={permission}
-                          checked={rolePermissions.includes(permission)}
-                          onChange={(e) =>
-                            handlePermissionChange(permission, e.target.checked)
-                          }
-                          className="mr-2"
-                          disabled={
-                            !hasPermission(Permission.ASSIGN_PERMISSIONS)
-                          }
-                        />
-                        <label htmlFor={permission} className="text-sm">
-                          {permission.replace(/_/g, ' ')}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 用戶管理權限 */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-medium mb-2">用戶管理權限</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {permissionGroups.users.map((permission) => (
-                      <div key={permission} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id={permission}
-                          checked={rolePermissions.includes(permission)}
-                          onChange={(e) =>
-                            handlePermissionChange(permission, e.target.checked)
-                          }
-                          className="mr-2"
-                          disabled={
-                            !hasPermission(Permission.ASSIGN_PERMISSIONS)
-                          }
-                        />
-                        <label htmlFor={permission} className="text-sm">
-                          {permission.replace(/_/g, ' ')}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 角色管理權限 */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-medium mb-2">角色管理權限</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {permissionGroups.roles.map((permission) => (
-                      <div key={permission} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id={permission}
-                          checked={rolePermissions.includes(permission)}
-                          onChange={(e) =>
-                            handlePermissionChange(permission, e.target.checked)
-                          }
-                          className="mr-2"
-                          disabled={
-                            !hasPermission(Permission.ASSIGN_PERMISSIONS)
-                          }
-                        />
-                        <label htmlFor={permission} className="text-sm">
-                          {permission.replace(/_/g, ' ')}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 系統設定權限 */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-medium mb-2">系統設定權限</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {permissionGroups.system.map((permission) => (
-                      <div key={permission} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id={permission}
-                          checked={rolePermissions.includes(permission)}
-                          onChange={(e) =>
-                            handlePermissionChange(permission, e.target.checked)
-                          }
-                          className="mr-2"
-                          disabled={
-                            !hasPermission(Permission.ASSIGN_PERMISSIONS)
-                          }
-                        />
-                        <label htmlFor={permission} className="text-sm">
-                          {permission.replace(/_/g, ' ')}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <PermissionGuard required={Permission.ASSIGN_PERMISSIONS}>
-                  <div className="mt-6 flex space-x-4">
-                    <button
-                      onClick={handleSavePermissions}
-                      disabled={isSaving}
-                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed flex items-center"
-                    >
-                      {isSaving ? (
-                        <>
-                          <svg
-                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          保存中...
-                        </>
-                      ) : (
-                        '保存權限設置'
-                      )}
-                    </button>
-
-                    <button
-                      onClick={handleResetPermissions}
-                      disabled={isResetting}
-                      className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
-                    >
-                      {isResetting ? (
-                        <>
-                          <svg
-                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          重置中...
-                        </>
-                      ) : (
-                        '重置為默認值'
-                      )}
-                    </button>
-                  </div>
-                </PermissionGuard>
-              </>
-            ) : (
-              <div className="text-gray-500 text-center py-8">
-                請從左側選擇一個角色以編輯其權限
-              </div>
-            )}
-          </div>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Role Management</h1>
+          <button onClick={() => handleOpenModal()} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center">
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Create Role
+          </button>
         </div>
+
+        {isLoading ? (
+          <p>Loading roles...</p>
+        ) : (
+          <div className="bg-white shadow rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Users</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {roles.map((role) => (
+                  <tr key={role.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{role.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.description}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.userCount}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                      <button onClick={() => setManagingPermissionsFor(role)} className="text-green-600 hover:text-green-900" title="Permissions">
+                        <ShieldCheckIcon className="h-5 w-5" />
+                      </button>
+                      <button onClick={() => handleOpenModal(role)} className="text-indigo-600 hover:text-indigo-900" title="Edit">
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                      <button onClick={() => setDeletingRole(role)} className="text-red-600 hover:text-red-900" title="Delete">
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <Modal show={isModalOpen} onClose={handleCloseModal} title={editingRole ? 'Edit Role' : 'Create Role'}>
+          <RoleForm role={editingRole} onSave={handleSaveRole} onCancel={handleCloseModal} isSaving={isSaving} />
+        </Modal>
+
+        <Modal show={!!deletingRole} onClose={() => setDeletingRole(null)} title="Confirm Deletion">
+          {deletingRole && (
+            <div>
+              <p>Are you sure you want to delete the role "<strong>{deletingRole.name}</strong>"?</p>
+              <p className="text-sm text-red-600 mt-2">This action cannot be undone.</p>
+              <div className="flex justify-end space-x-2 mt-4">
+                <button onClick={() => setDeletingRole(null)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
+                <button onClick={handleDeleteRole} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Delete</button>
+              </div>
+            </div>
+          )}
+        </Modal>
       </div>
     </PermissionGuard>
   );

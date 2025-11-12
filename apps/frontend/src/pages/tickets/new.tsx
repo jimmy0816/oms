@@ -3,10 +3,10 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
 import { ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
-import { TicketPriority, UserRole } from 'shared-types';
+import { TicketPriority } from 'shared-types';
 import FileUploader from '@/components/FileUploader';
 import { ticketService } from '@/services/ticketService';
-import { roleService, getRoleName } from '@/services/roleService';
+import { roleService } from '@/services/roleService';
 import { uploadService } from '@/services/uploadService';
 import { useToast } from '@/contexts/ToastContext';
 import dynamic from 'next/dynamic';
@@ -267,7 +267,7 @@ export default function NewTicket() {
                   <option value="">請選擇角色</option>
                   {roles.map((role) => (
                     <option key={role.id} value={role.id}>
-                      {getRoleName(role.name)}
+                      {role.description}
                     </option>
                   ))}
                 </select>

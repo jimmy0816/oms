@@ -10,7 +10,7 @@ import {
 import { Attachments, TicketPriority, FileInfo } from 'shared-types';
 import FileUploader from '@/components/FileUploader';
 import { ticketService } from '@/services/ticketService';
-import { roleService, getRoleName } from '@/services/roleService';
+import { roleService } from '@/services/roleService';
 import { uploadService } from '@/services/uploadService';
 import { useToast } from '@/contexts/ToastContext';
 import dynamic from 'next/dynamic';
@@ -314,7 +314,7 @@ export default function EditTicket() {
                   <option value="">請選擇角色</option>
                   {roles.map((role) => (
                     <option key={role.id} value={role.id}>
-                      {getRoleName(role.name)}
+                      {role.description}
                     </option>
                   ))}
                 </select>

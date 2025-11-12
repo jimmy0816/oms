@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
+import {
   UserIcon,
   Cog6ToothIcon,
   Bars3Icon,
@@ -18,8 +18,7 @@ import {
   MagnifyingGlassIcon,
   TagIcon,
 } from '@heroicons/react/24/outline';
-import { getRoleName } from '@/services/roleService';
-import { Permission, UserRole } from 'shared-types';
+import { Permission } from 'shared-types';
 import { publicRoutes as PUBLIC_PATHS } from '@/config/routes';
 
 interface NavigationItem {
@@ -286,7 +285,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </p>
                     <p className="text-xs text-gray-500">{user.email}</p>
                     <p className="text-xs mt-1 bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full inline-block">
-                      {getRoleName(user.role as UserRole)}
+                      {user.primaryRole?.description}
                     </p>
                   </div>
                 </Link>

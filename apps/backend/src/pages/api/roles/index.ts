@@ -1,98 +1,79 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { UserRole, Permission } from 'shared-types';
+import { Permission } from 'shared-types';
 import { withPermission, AuthenticatedRequest } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
 
-// 模擬數據存儲
-let customRolePermissions: Record<string, Permission[]> = {};
-
 /**
- * 角色權限管理 API
- * GET: 獲取所有角色及其權限
- * POST: 更新角色權限
+ * Roles API
+ * GET: Fetches all roles.
+ * POST: Creates a new role.
  */
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
   switch (req.method) {
     case 'GET':
-      return getRolePermissions(req, res);
+      return getRoles(req, res);
     case 'POST':
-      return updateRolePermissions(req, res);
+      return createRole(req, res);
     default:
-      return res.status(405).json({ message: '方法不允許' });
+      res.setHeader('Allow', ['GET', 'POST']);
+      return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
   }
 }
 
 /**
- * 獲取所有角色及其權限
+ * Fetches all roles from the database.
  */
-async function getRolePermissions(
-  req: AuthenticatedRequest,
-  res: NextApiResponse
-) {
+async function getRoles(req: AuthenticatedRequest, res: NextApiResponse) {
   try {
-    // 查詢資料庫
     const roles = await prisma.role.findMany({
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        _count: {
+          select: { userRoles: true },
+        },
       },
       orderBy: { createdAt: 'asc' },
     });
-    return res.status(200).json({ roles });
+
+    const rolesWithUserCount = roles.map(({ _count, ...role }) => ({
+      ...role,
+      userCount: _count.userRoles,
+    }));
+
+    return res.status(200).json({ roles: rolesWithUserCount });
   } catch (error) {
     console.error('Error fetching roles:', error);
-    return res.status(500).json({ message: '獲取角色失敗' });
+    return res.status(500).json({ message: 'Failed to fetch roles' });
   }
 }
 
 /**
- * 更新角色權限
+ * Creates a new role.
  */
-async function updateRolePermissions(
-  req: AuthenticatedRequest,
-  res: NextApiResponse
-) {
+async function createRole(req: AuthenticatedRequest, res: NextApiResponse) {
   try {
-    const { role, permissions } = req.body;
+    const { name, description } = req.body;
 
-    if (!role || !Array.isArray(permissions)) {
-      return res.status(400).json({ message: '無效的請求數據' });
+    if (!name) {
+      return res.status(400).json({ message: 'Role name is required' });
     }
 
-    if (!Object.values(UserRole).includes(role as UserRole)) {
-      return res.status(400).json({ message: '無效的角色' });
+    const existingRole = await prisma.role.findUnique({ where: { name } });
+    if (existingRole) {
+      return res.status(409).json({ message: 'Role with this name already exists' });
     }
 
-    // 驗證所有權限是否有效
-    const validPermissions = permissions.every((p) =>
-      Object.values(Permission).includes(p as Permission)
-    );
-
-    if (!validPermissions) {
-      return res.status(400).json({ message: '包含無效的權限' });
-    }
-
-    // 在實際應用中，這裡應該將更新保存到數據庫
-    customRolePermissions[role] = permissions as Permission[];
-
-    return res.status(200).json({
-      message: '角色權限已更新',
-      role,
-      permissions: customRolePermissions[role],
+    const newRole = await prisma.role.create({
+      data: {
+        name,
+        description,
+      },
     });
+
+    return res.status(201).json(newRole);
   } catch (error) {
-    console.error('Error updating role permissions:', error);
-    return res.status(500).json({ message: '更新角色權限失敗' });
+    console.error('Error creating role:', error);
+    return res.status(500).json({ message: 'Failed to create role' });
   }
 }
 
-// 先應用 CORS 中間件，再應用權限中間件
-export default async function wrappedHandler(
-  req: AuthenticatedRequest,
-  res: NextApiResponse
-) {
-  return withPermission(Permission.MANAGE_ROLES)(handler)(req, res);
-}
+export default withPermission(Permission.MANAGE_ROLES)(handler);
