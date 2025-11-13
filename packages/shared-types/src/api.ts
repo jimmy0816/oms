@@ -69,6 +69,7 @@ export interface TicketWithDetails extends Ticket {
   role?: {
     id: string;
     name: string;
+    description: string;
   };
   comments: Comment[];
   attachments?: FileInfo[]; // New attachments field

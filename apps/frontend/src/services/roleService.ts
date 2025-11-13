@@ -1,112 +1,102 @@
-import { UserRole, Permission } from 'shared-types';
+import { Permission } from 'shared-types';
 import apiClient from '@/lib/apiClient';
 
+// Define a type for the Role object, which will now be fetched from the backend
+export interface Role {
+  id: string;
+  name: string;
+  description?: string;
+  userCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
-
-// 獲取角色顯示名稱
-export const getRoleName = (role: UserRole): string => {
-  const roleNames: Partial<Record<UserRole, string>> = {
-    [UserRole.ADMIN]: '系統管理員',
-    [UserRole.MANAGER]: '區域總監',
-    [UserRole.REPORT_PROCESSOR]: '營業專員',
-    [UserRole.REPORT_REVIEWER]: '通報審核者',
-    [UserRole.CUSTOMER_SERVICE]: '客服人員',
-    [UserRole.MAINTENANCE_WORKER]: '維修工務',
-    [UserRole.STAFF]: '管家',
-    [UserRole.USER]: '一般用戶',
-  };
-
-  return roleNames[role] || role;
-};
-
-/**
- * 角色權限管理服務
- * 使用後端 API 管理角色權限
- */
 export const roleService = {
-  async getAllRoles(): Promise<UserRole[]> {
+  /**
+   * Fetches all roles from the backend.
+   * @returns A promise that resolves to an array of Role objects.
+   */
+  async getAllRoles(): Promise<Role[]> {
     try {
-      const data = await apiClient.get<{ roles: UserRole[] }>('/api/roles/list');
-      return data.roles || [];
+      const { roles } = await apiClient.get<{ roles: Role[] }>('/api/roles');
+      return roles || [];
     } catch (error) {
       console.error('Error fetching roles:', error);
-      return [];
-    }
-  },
-  /**
-   * 獲取所有角色及其權限
-   * @returns 角色權限映射
-   */
-  async getAllRolePermissions(): Promise<Record<string, Permission[]>> {
-    try {
-      const data = await apiClient.get<{ rolePermissions: Record<string, Permission[]> }>('/api/roles');
-      return data.rolePermissions || {};
-    } catch (error) {
-      console.error('Error fetching role permissions:', error);
-      return {};
+      throw error;
     }
   },
 
   /**
-   * 獲取特定角色的權限
-   * @param role 角色
-   * @returns 權限列表
+   * Creates a new role.
+   * @param name The name of the new role.
+   * @param description The description of the new role.
+   * @returns A promise that resolves to the newly created Role object.
    */
-  async getRolePermissions(role: UserRole): Promise<Permission[]> {
+  async createRole(name: string, description?: string): Promise<Role> {
     try {
-      const data = await apiClient.get<{ permissions: Permission[] }>(`/api/roles/${role}`);
-      return data.permissions || [];
+      const newRole = await apiClient.post<Role>('/api/roles', { name, description });
+      return newRole;
     } catch (error) {
-      console.error(`Error fetching permissions for role ${role}:`, error);
-      return [];
+      console.error('Error creating role:', error);
+      throw error;
     }
   },
 
   /**
-   * 更新角色權限
-   * @param role 角色
-   * @param permissions 權限列表
-   * @returns 更新結果
+   * Updates an existing role.
+   * @param id The ID of the role to update.
+   * @param data The data to update (name, description).
+   * @returns A promise that resolves to the updated Role object.
    */
-  async updateRolePermissions(
-    role: UserRole,
-    permissions: Permission[]
-  ): Promise<{ success: boolean; message: string }> {
+  async updateRole(id: string, data: { name: string; description?: string }): Promise<Role> {
     try {
-      await apiClient.put(`/api/roles/${role}`, { permissions });
-      return {
-        success: true,
-        message: `成功更新 ${role} 角色的權限`,
-      };
+      const updatedRole = await apiClient.put<Role>(`/api/roles/${id}`, data);
+      return updatedRole;
     } catch (error) {
-      console.error(`Error updating permissions for role ${role}:`, error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : '更新角色權限失敗',
-      };
+      console.error(`Error updating role ${id}:`, error);
+      throw error;
     }
   },
 
   /**
-   * 重置角色權限為默認值
-   * @param role 角色
-   * @returns 重置結果
+   * Deletes a role.
+   * @param id The ID of the role to delete.
    */
-  async resetRolePermissions(
-    role: UserRole
-  ): Promise<{ success: boolean; message: string }> {
+  async deleteRole(id: string): Promise<void> {
     try {
-      await apiClient.post(`/api/roles/${role}/reset`, {});
-      return {
-        success: true,
-        message: `成功重置 ${role} 角色的權限`,
-      };
+      await apiClient.delete(`/api/roles/${id}`);
     } catch (error) {
-      console.error(`Error resetting permissions for role ${role}:`, error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : '重置角色權限失敗',
-      };
+      console.error(`Error deleting role ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetches the permissions for a specific role.
+   * @param id The ID of the role.
+   * @returns A promise that resolves to an array of permission strings.
+   */
+  async getRolePermissions(id: string): Promise<Permission[]> {
+    try {
+      const { permissions } = await apiClient.get<{ permissions: Permission[] }>(`/api/roles/${id}/permissions`);
+      return permissions || [];
+    } catch (error) {
+      console.error(`Error fetching permissions for role ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates the permissions for a specific role.
+   * @param id The ID of the role.
+   * @param permissions An array of permission strings.
+   */
+  async updateRolePermissions(id: string, permissions: Permission[]): Promise<void> {
+    try {
+      await apiClient.put(`/api/roles/${id}/permissions`, { permissions });
+    } catch (error) {
+      console.error(`Error updating permissions for role ${id}:`, error);
+      throw error;
     }
   },
 };

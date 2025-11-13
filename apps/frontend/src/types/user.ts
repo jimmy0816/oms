@@ -5,11 +5,11 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: string;
-  additionalRoles?: string[];
+  primaryRole: any; // Can be a more specific Role type
+  additionalRoles?: any[]; // Can be a more specific Role type
   permissions?: string[];
-  isOidcLinked?: boolean; // Added to indicate if the account is linked to OIDC
-  id_token?: string; // Add id_token for OIDC logout
+  isOidcLinked?: boolean;
+  id_token?: string;
   createdAt?: string;
   updatedAt?: string;
 }

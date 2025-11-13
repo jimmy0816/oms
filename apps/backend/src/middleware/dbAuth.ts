@@ -1,16 +1,18 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { UserRole, Permission } from 'shared-types';
+import { Permission } from 'shared-types';
 import jwt from 'jsonwebtoken';
 import { als } from '@/lib/als';
 import { permissionService } from '@/services/permissionService';
 
-// 定義擴展的請求類型，包含用戶信息
+// Define the extended request type, including user information
 export interface AuthenticatedRequest extends NextApiRequest {
   user?: {
     id: string;
     email: string;
     name: string;
-    role: UserRole;
+    primaryRole: any;
+    additionalRoles: any[];
+    permissions?: string[];
   };
 }
 

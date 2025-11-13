@@ -16,7 +16,6 @@ import {
 } from '@/services/ticketService';
 import { uploadService } from '@/services/uploadService';
 import { TicketStatus, Permission, FileInfo } from 'shared-types';
-import { getRoleName } from '@/services/roleService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import TicketReviewForm from '@/components/TicketReviewForm';
@@ -320,7 +319,7 @@ export default function TicketDetail() {
               <div>
                 <h3 className="font-medium text-gray-500">指派角色</h3>
                 <p className="mt-1 text-gray-800">
-                  {getRoleName(ticket.role?.name) || '未指定'}
+                  {ticket.role?.description || '未指定'}
                 </p>
               </div>
             </div>
@@ -329,9 +328,9 @@ export default function TicketDetail() {
               {ticket.assigneeId == null &&
                 ticket.status === TicketStatus.PENDING &&
                 hasPermission(Permission.CLAIM_TICKETS) &&
-                (user.role === ticket.role?.name ||
+                (user.primaryRole?.id === ticket.role?.id ||
                   (user.additionalRoles &&
-                    user.additionalRoles.includes(ticket.role?.name))) && (
+                    user.additionalRoles.some((r) => r.id === ticket.role?.id))) && (
                   <button className="btn-primary" onClick={handleClaim}>
                     認領工單
                   </button>

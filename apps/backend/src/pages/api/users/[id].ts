@@ -1,17 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import { permissionService } from '@/services/permissionService';
+import { withPermission, AuthenticatedRequest } from '@/middleware/auth';
 import { Permission } from 'shared-types';
-// import { getUserPermissions, Permission } from '@/utils/permissions';
 
 /**
- * 單個用戶 API 處理程序
- * 處理 GET、PUT 和 DELETE 請求
+ * Single User API Handler
+ * Handles GET, PUT, and DELETE requests
  */
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
   const { id } = req.query;
 
   if (!id || typeof id !== 'string') {
@@ -27,49 +23,47 @@ export default async function handler(
       return deleteUser(req, res, id);
     default:
       res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
-      return res
-        .status(405)
-        .json({ error: `Method ${req.method} Not Allowed` });
+      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 }
 
 /**
- * 獲取單個用戶
+ * Gets a single user and processes their roles.
  */
-async function getUser(req: NextApiRequest, res: NextApiResponse, id: string) {
+async function getUser(req: AuthenticatedRequest, res: NextApiResponse, id: string) {
   try {
     const user = await prisma.user.findUnique({
       where: { id, deletedAt: null },
+      include: {
+        userRoles: {
+          include: {
+            role: true,
+          },
+        },
+      },
     });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // 查詢用戶的所有角色關聯
-    const userRoles = await prisma.userRole.findMany({
-      where: { userId: user.id },
-      include: { role: true },
+    let primaryRole: any = null;
+    const additionalRoles: any[] = [];
+    user.userRoles.forEach((userRole) => {
+      if (userRole.isPrimary) {
+        primaryRole = userRole.role;
+      } else {
+        additionalRoles.push(userRole.role);
+      }
     });
-    const additionalRoles = userRoles.map((ur) => ur.role.name);
 
-    // 合併主角色與額外角色的權限
-    let permissions = new Set(
-      await permissionService.getRolePermissions(user.role)
-    );
-    for (const roleName of additionalRoles) {
-      (await permissionService.getRolePermissions(roleName)).forEach((p) =>
-        permissions.add(p)
-      );
-    }
-    const permissionsArr = Array.from(permissions).map((p) =>
-      typeof p === 'string' ? p : (p as Permission)
-    );
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, userRoles, ...userWithoutSensitiveInfo } = user;
 
     return res.status(200).json({
-      ...user,
+      ...userWithoutSensitiveInfo,
+      primaryRole,
       additionalRoles,
-      permissions: permissionsArr,
     });
   } catch (error) {
     console.error(`Error fetching user with ID ${id}:`, error);
@@ -78,63 +72,70 @@ async function getUser(req: NextApiRequest, res: NextApiResponse, id: string) {
 }
 
 /**
- * 更新用戶
+ * Updates a user's details and role assignments.
  */
-async function updateUser(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  id: string
-) {
+async function updateUser(req: AuthenticatedRequest, res: NextApiResponse, id: string) {
   try {
-    const { email, name, role } = req.body;
+    const { email, name, primaryRoleId, additionalRoleIds = [] } = req.body;
 
-    // 檢查用戶是否存在
-    const existingUser = await prisma.user.findUnique({
-      where: { id, deletedAt: null },
-    });
-
-    if (!existingUser) {
-      return res.status(404).json({ error: 'User not found' });
+    if (!primaryRoleId) {
+      return res.status(400).json({ error: 'Primary role ID is required' });
     }
 
-    // 如果要更新郵箱，檢查是否與其他用戶衝突
-    if (email && email !== existingUser.email) {
-      const emailExists = await prisma.user.findUnique({
-        where: { email },
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      // 1. Update user's personal info
+      const user = await tx.user.update({
+        where: { id },
+        data: {
+          ...(email && { email }),
+          ...(name && { name }),
+        },
       });
 
-      if (emailExists) {
-        return res.status(409).json({ error: 'Email already exists' });
-      }
-    }
+      // 2. Delete all existing role assignments for this user
+      await tx.userRole.deleteMany({
+        where: { userId: id },
+      });
 
-    // 更新用戶
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: {
-        ...(email && { email }),
-        ...(name && { name }),
-        ...(role && { role }),
-      },
+      // 3. Create new role assignments
+      const roleAssignments = [];
+      roleAssignments.push({
+        userId: id,
+        roleId: primaryRoleId,
+        isPrimary: true,
+      });
+      additionalRoleIds.forEach((roleId: string) => {
+        if (roleId !== primaryRoleId) {
+          roleAssignments.push({
+            userId: id,
+            roleId: roleId,
+            isPrimary: false,
+          });
+        }
+      });
+
+      await tx.userRole.createMany({
+        data: roleAssignments,
+      });
+
+      return user;
     });
 
     return res.status(200).json(updatedUser);
   } catch (error) {
     console.error(`Error updating user with ID ${id}:`, error);
+    if (error.code === 'P2003') {
+      return res.status(400).json({ error: 'Invalid role ID provided.' });
+    }
     return res.status(500).json({ error: 'Failed to update user' });
   }
 }
 
 /**
- * 刪除用戶
+ * Soft-deletes a user.
  */
-async function deleteUser(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  id: string
-) {
+async function deleteUser(req: AuthenticatedRequest, res: NextApiResponse, id: string) {
   try {
-    // 檢查用戶是否存在
     const existingUser = await prisma.user.findUnique({
       where: { id, deletedAt: null },
     });
@@ -143,12 +144,11 @@ async function deleteUser(
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // 軟刪除用戶
     await prisma.user.update({
       where: { id },
-      data: { 
+      data: {
         deletedAt: new Date(),
-        email: `${existingUser.email}#DELETED_${Date.now()}`
+        email: `${existingUser.email}#DELETED_${Date.now()}`,
       },
     });
 
@@ -158,3 +158,9 @@ async function deleteUser(
     return res.status(500).json({ error: 'Failed to delete user' });
   }
 }
+
+export default withPermission([
+  Permission.VIEW_USERS,
+  Permission.EDIT_USERS,
+  Permission.DELETE_USERS,
+])(handler);

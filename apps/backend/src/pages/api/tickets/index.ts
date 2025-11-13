@@ -87,14 +87,22 @@ async function getTickets(
         : assigneeIds.split(',');
       if (parsedAssigneeIds.length > 0) {
         const hasUnassigned = parsedAssigneeIds.includes('UNASSIGNED');
-        const filteredAssigneeIds = parsedAssigneeIds.filter(id => id !== 'UNASSIGNED');
+        const filteredAssigneeIds = parsedAssigneeIds.filter(
+          (id) => id !== 'UNASSIGNED'
+        );
 
         if (hasUnassigned && filteredAssigneeIds.length > 0) {
-          rawWhereClausesSql.push(Prisma.sql`(t."assigneeId" IS NULL OR t."assigneeId" IN (${Prisma.join(filteredAssigneeIds)}))`);
+          rawWhereClausesSql.push(
+            Prisma.sql`(t."assigneeId" IS NULL OR t."assigneeId" IN (${Prisma.join(
+              filteredAssigneeIds
+            )}))`
+          );
         } else if (hasUnassigned) {
           rawWhereClausesSql.push(Prisma.sql`t."assigneeId" IS NULL`);
         } else if (filteredAssigneeIds.length > 0) {
-          rawWhereClausesSql.push(Prisma.sql`t."assigneeId" IN (${Prisma.join(filteredAssigneeIds)})`);
+          rawWhereClausesSql.push(
+            Prisma.sql`t."assigneeId" IN (${Prisma.join(filteredAssigneeIds)})`
+          );
         }
       }
     }
@@ -103,7 +111,9 @@ async function getTickets(
         ? creatorIds
         : creatorIds.split(',');
       if (parsedCreatorIds.length > 0) {
-        rawWhereClausesSql.push(Prisma.sql`t."creatorId" IN (${Prisma.join(parsedCreatorIds)})`);
+        rawWhereClausesSql.push(
+          Prisma.sql`t."creatorId" IN (${Prisma.join(parsedCreatorIds)})`
+        );
       }
     }
 
@@ -150,11 +160,15 @@ async function getTickets(
     }
 
     if (startDate) {
-      rawWhereClausesSql.push(Prisma.sql`t."createdAt" >= ${new Date(startDate)}`);
+      rawWhereClausesSql.push(
+        Prisma.sql`t."createdAt" >= ${new Date(startDate)}`
+      );
     }
 
     if (endDate) {
-      rawWhereClausesSql.push(Prisma.sql`t."createdAt" <= ${new Date(endDate)}`);
+      rawWhereClausesSql.push(
+        Prisma.sql`t."createdAt" <= ${new Date(endDate)}`
+      );
     }
 
     const userId = req.user.id;
@@ -244,7 +258,7 @@ async function getTickets(
       include: {
         creator: { select: { id: true, name: true, email: true } },
         assignee: { select: { id: true, name: true, email: true } },
-        role: { select: { id: true, name: true } },
+        role: { select: { id: true, name: true, description: true } },
         reports: {
           include: {
             report: {
@@ -319,7 +333,9 @@ async function getTickets(
       : assigneeIds.split(',');
     if (parsedAssigneeIds.length > 0) {
       const hasUnassigned = parsedAssigneeIds.includes('UNASSIGNED');
-      const filteredAssigneeIds = parsedAssigneeIds.filter(id => id !== 'UNASSIGNED');
+      const filteredAssigneeIds = parsedAssigneeIds.filter(
+        (id) => id !== 'UNASSIGNED'
+      );
 
       if (hasUnassigned && filteredAssigneeIds.length > 0) {
         andClauses.push({
@@ -381,7 +397,7 @@ async function getTickets(
         { title: { contains: search, mode: 'insensitive' } },
         { creator: { name: { contains: search, mode: 'insensitive' } } },
         { assignee: { name: { contains: search, mode: 'insensitive' } } },
-        { role: { name: { contains: search, mode: 'insensitive' } } },
+        { role: { description: { contains: search, mode: 'insensitive' } } },
       ],
     });
   }
@@ -434,7 +450,7 @@ async function getTickets(
       include: {
         creator: { select: { id: true, name: true, email: true } },
         assignee: { select: { id: true, name: true, email: true } },
-        role: { select: { id: true, name: true } },
+        role: { select: { id: true, name: true, description: true } },
         reports: {
           include: {
             report: {
@@ -476,6 +492,7 @@ async function createTicket(
     description,
     priority,
     roleId,
+    assigneeId, // <-- Add assigneeId
     attachments = [],
     reportIds = [],
   } = req.body as any;
@@ -496,9 +513,10 @@ async function createTicket(
       title,
       description,
       priority,
-      status: TicketStatus.PENDING,
+      status: assigneeId ? TicketStatus.IN_PROGRESS : TicketStatus.PENDING, // <-- Modified status logic
       creatorId,
       roleId,
+      assigneeId, // <-- Add assigneeId
       reports: {
         create: reportIds.map((reportId: string) => ({
           report: { connect: { id: reportId } },

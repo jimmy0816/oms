@@ -189,6 +189,7 @@ export const authOptions: NextAuthOptions = {
               userRoles: {
                 create: {
                   roleId: housekeeperRole.id,
+                  isPrimary: true, // Set the default role as primary
                 },
               },
             },
@@ -229,17 +230,18 @@ export const authOptions: NextAuthOptions = {
       return baseUrl;
     },
     async jwt({ token, user, account }) {
-      // Initial sign in: user and account are available
       if (user && account) {
-        // Fetch dbUser and permissions only once during initial sign-in
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
           include: {
             userRoles: {
               select: {
+                isPrimary: true,
                 role: {
                   select: {
+                    id: true,
                     name: true,
+                    description: true,
                     rolePermissions: {
                       select: {
                         permission: {
@@ -257,11 +259,16 @@ export const authOptions: NextAuthOptions = {
         });
 
         const permissions = new Set<string>();
-        const additionalRoles: string[] = [];
+        let primaryRole: any = null;
+        const additionalRoles: any[] = [];
 
         if (dbUser?.userRoles) {
           dbUser.userRoles.forEach((userRole) => {
-            additionalRoles.push(userRole.role.name);
+            if (userRole.isPrimary) {
+              primaryRole = userRole.role;
+            } else {
+              additionalRoles.push(userRole.role);
+            }
             userRole.role.rolePermissions.forEach((p) => {
               permissions.add(p.permission.name);
             });
@@ -273,51 +280,37 @@ export const authOptions: NextAuthOptions = {
           refreshToken: account.refresh_token,
           accessTokenExpires: account.expires_at
             ? account.expires_at * 1000
-            : Date.now() + 60 * 60 * 24 * 30 * 1000, // Default to 30 days from now if not provided
+            : Date.now() + 60 * 60 * 24 * 30 * 1000,
           id_token: account.id_token,
-          id: user.id, // Store id at root
-          email: user.email, // Store email at root
-          name: user.name, // Store name at root
-          isOidcLinked: (user as any).isOidcLinked, // Store isOidcLinked at root
-          role: (dbUser as any)?.role, // Store role at root
-          additionalRoles: additionalRoles, // Store additionalRoles at root
-          permissions: Array.from(permissions), // Store permissions at root
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          isOidcLinked: (user as any).isOidcLinked,
+          primaryRole,
+          additionalRoles,
+          permissions: Array.from(permissions),
         };
       }
 
-      // Subsequent calls: user and account are not available, only token
-      // Check if access token is expired
       if (
         token.accessTokenExpires &&
         typeof token.accessTokenExpires === 'number' &&
         Date.now() < token.accessTokenExpires
       ) {
-        return token; // Token is still valid
+        return token;
       }
 
-      // Access token has expired, try to refresh it
-      const refreshedToken = await refreshAccessToken(token);
-
-      // If refresh failed, return the token with error
-      if (refreshedToken.error) {
-        return refreshedToken;
-      }
-
-      // Return the refreshed token (which already contains all user data from initial sign-in)
-      return refreshedToken;
+      return refreshAccessToken(token);
     },
     async session({ session, token }) {
-      console.log('Session callback - token:', token);
       if (token.error === 'RefreshAccessTokenError') {
-        // If there was an error refreshing the access token,
-        // invalidate the session to force re-login.
         return { ...session, error: 'RefreshAccessTokenError' };
       }
 
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as string;
-        session.user.additionalRoles = token.additionalRoles as string[];
+        session.user.primaryRole = token.primaryRole as any; // Adjust types as needed
+        session.user.additionalRoles = token.additionalRoles as any[]; // Adjust types as needed
         session.user.permissions = token.permissions as string[];
         session.user.isOidcLinked = token.isOidcLinked as boolean;
         session.user.id_token = token.id_token as string;

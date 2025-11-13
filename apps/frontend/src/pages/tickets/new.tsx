@@ -3,13 +3,16 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
 import { ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
-import { TicketPriority, UserRole } from 'shared-types';
+import { TicketPriority, User } from 'shared-types';
 import FileUploader from '@/components/FileUploader';
 import { ticketService } from '@/services/ticketService';
-import { roleService, getRoleName } from '@/services/roleService';
+import { roleService } from '@/services/roleService';
+import { userService } from '@/services/userService';
 import { uploadService } from '@/services/uploadService';
 import { useToast } from '@/contexts/ToastContext';
 import dynamic from 'next/dynamic';
+
+import UserSelector from '@/components/UserSelector';
 
 const ReportMultiSelector = dynamic(
   () => import('@/components/ReportMultiSelector'),
@@ -22,6 +25,7 @@ interface TicketFormData {
   description: string;
   priority: TicketPriority;
   roleId?: string;
+  assigneeId?: string;
   attachments?: FileInfo[];
   reportIds?: string[]; // 確保 reportIds 是 string[] 類型，且是可選的
 }
@@ -42,6 +46,8 @@ export default function NewTicket() {
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [assignees, setAssignees] = useState<User[]>([]);
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
   const { showToast } = useToast();
 
@@ -49,18 +55,45 @@ export default function NewTicket() {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<TicketFormData>();
 
+  const selectedRoleId = watch('roleId');
+  const selectedAssigneeId = watch('assigneeId');
+
   useEffect(() => {
-    roleService.getAllRoles().then((roles) => {
-      setRoles(roles);
-    });
+    const fetchData = async () => {
+      try {
+        const [fetchedRoles, fetchedUsers] = await Promise.all([
+          roleService.getAllRoles(),
+          userService.getAllUsers(),
+        ]);
+        setRoles(fetchedRoles);
+        setUsers(fetchedUsers);
+      } catch (error) {
+        showToast('無法載入頁面資料', 'error');
+      }
+    };
+    fetchData();
 
     if (query.reportId && typeof query.reportId === 'string') {
       setSelectedReportIds([query.reportId]);
     }
-  }, []);
+  }, [query.reportId, showToast]);
+
+  useEffect(() => {
+    if (selectedRoleId && users.length > 0) {
+      const filteredAssignees = users.filter(user => 
+        user.primaryRole?.id === selectedRoleId || 
+        user.additionalRoles?.some(role => role.id === selectedRoleId)
+      );
+      setAssignees(filteredAssignees);
+    } else {
+      setAssignees([]);
+    }
+    setValue('assigneeId', ''); // Reset assignee when role changes
+  }, [selectedRoleId, users, setValue]);
 
   // 處理檔案變更
   const handleFilesChange = (files: FileInfo[]) => {
@@ -106,6 +139,7 @@ export default function NewTicket() {
         description: data.description,
         priority: data.priority,
         roleId: data.roleId || undefined,
+        assigneeId: data.assigneeId || undefined,
         attachments: uploadedFiles,
         reportIds: selectedReportIds,
       };
@@ -267,7 +301,7 @@ export default function NewTicket() {
                   <option value="">請選擇角色</option>
                   {roles.map((role) => (
                     <option key={role.id} value={role.id}>
-                      {getRoleName(role.name)}
+                      {role.description}
                     </option>
                   ))}
                 </select>
@@ -276,6 +310,22 @@ export default function NewTicket() {
                     {errors.roleId.message}
                   </p>
                 )}
+              </div>
+
+              {/* 指派人員 */}
+              <div>
+                <label
+                  htmlFor="assigneeId"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  指派人員 (選填)
+                </label>
+                <UserSelector
+                  users={assignees}
+                  selectedUserId={selectedAssigneeId}
+                  onChange={(userId) => setValue('assigneeId', userId || '')}
+                  isDisabled={!selectedRoleId || assignees.length === 0}
+                />
               </div>
 
               {/* 關聯通報 */}
