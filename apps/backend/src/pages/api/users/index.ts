@@ -17,7 +17,9 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       return createUser(req, res);
     default:
       res.setHeader('Allow', ['GET', 'POST']);
-      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+      return res
+        .status(405)
+        .json({ error: `Method ${req.method} Not Allowed` });
   }
 }
 
@@ -155,6 +157,9 @@ async function createUser(req: AuthenticatedRequest, res: NextApiResponse) {
   }
 }
 
-export default withPermission([Permission.VIEW_USERS, Permission.CREATE_USERS])(
-  handler
-);
+// todo: 目前權限沒辦法針對不同 function 處理不同的權限，先權限全開，後續補上
+export default handler;
+
+// export default withPermission([Permission.VIEW_USERS, Permission.CREATE_USERS])(
+//   handler
+// );
