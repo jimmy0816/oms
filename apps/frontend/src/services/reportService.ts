@@ -218,6 +218,8 @@ export const reportService = {
       creatorIds?: string[];
       startDate?: string;
       endDate?: string;
+      trackingStartDate?: string;
+      trackingEndDate?: string;
       sortField?: string;
       sortOrder?: 'asc' | 'desc';
     } = {}

@@ -158,6 +158,7 @@ export interface SavedView {
     categoryIds?: string[];
     roleIds?: string[];
     dateRange?: (string | Date)[];
+    trackingDateRange?: (string | Date)[];
     sortField?: string;
     sortOrder?: 'asc' | 'desc';
   }; // This will be a JSON object storing filter criteria
