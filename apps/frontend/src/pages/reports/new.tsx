@@ -36,7 +36,7 @@ interface CreateReportRequest {
   description: string;
   priority: string;
   categoryId: string;
-  locationId?: number;
+  locationId?: string;
   attachments?: FileInfo[];
   ticketIds?: string[];
 }
@@ -47,7 +47,7 @@ export default function NewReport() {
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
-  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     null
   );
   const { showToast } = useToast();
@@ -271,9 +271,19 @@ export default function NewReport() {
                 >
                   問題地點 <span className="text-red-500">*</span>
                 </label>
+                <input
+                  type="hidden"
+                  id="locationId"
+                  {...register('locationId', { required: '請選擇問題地點' })}
+                />
                 <LocationSelector
-                  value={selectedLocationId}
-                  onChange={setSelectedLocationId}
+                  value={selectedLocationId ? String(selectedLocationId) : null}
+                  onChange={(id) => {
+                    setSelectedLocationId(id);
+                    setValue('locationId', id, {
+                      shouldValidate: true,
+                    });
+                  }}
                 />
                 {errors.locationId && (
                   <p className="mt-1 text-sm text-red-600">

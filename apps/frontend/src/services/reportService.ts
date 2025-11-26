@@ -91,7 +91,7 @@ export interface Report {
 export interface CreateReportRequest {
   title: string;
   description: string;
-  locationId?: number;
+  locationId?: string;
   priority?: string;
   categoryId: string;
   contactPhone?: string;
@@ -103,7 +103,7 @@ export interface CreateReportRequest {
 export interface UpdateReportRequest {
   title?: string;
   description?: string;
-  locationId?: number;
+  locationId?: string;
   priority?: string;
   categoryId: string;
   attachments?: any[];
