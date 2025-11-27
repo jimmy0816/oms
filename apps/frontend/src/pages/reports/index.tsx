@@ -48,7 +48,7 @@ import ViewTabs from '@/components/ViewTabs';
 import TooltipCell from '@/components/TooltipCell';
 import MultiSelectFilterModal from '@/components/MultiSelectFilterModal';
 import DatePicker from 'react-datepicker';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ParsedUrlQuery } from 'querystring';
@@ -94,6 +94,7 @@ export default function Reports() {
     locationIds,
     creatorIds,
     dateRange,
+    trackingDateRange,
     sortField,
     sortOrder,
     selectedViewId,
@@ -103,6 +104,12 @@ export default function Reports() {
       ? new Date(query.startDate as string)
       : null;
     const endDate = query.endDate ? new Date(query.endDate as string) : null;
+    const trackingStartDate = query.trackingStartDate
+      ? new Date(query.trackingStartDate as string)
+      : null;
+    const trackingEndDate = query.trackingEndDate
+      ? new Date(query.trackingEndDate as string)
+      : null;
     return {
       page: parseInt(query.page as string, 10) || 1,
       search: (query.search as string) || '',
@@ -112,6 +119,10 @@ export default function Reports() {
       locationIds: getQueryArray(query, 'locationIds'),
       creatorIds: getQueryArray(query, 'creatorIds'),
       dateRange: [startDate, endDate] as [Date | null, Date | null],
+      trackingDateRange: [trackingStartDate, trackingEndDate] as [
+        Date | null,
+        Date | null,
+      ],
       sortField: (query.sortField as string) || null,
       sortOrder: (query.sortOrder as 'asc' | 'desc') || null,
       selectedViewId: (query.view as string) || null,
@@ -226,10 +237,16 @@ export default function Reports() {
           locationIds,
           creatorIds,
           startDate: dateRange[0]
-            ? format(dateRange[0], 'yyyy-MM-dd')
+            ? format(startOfDay(dateRange[0]), 'yyyy-MM-dd HH:mm:ss')
             : undefined,
           endDate: dateRange[1]
-            ? format(dateRange[1], 'yyyy-MM-dd')
+            ? format(endOfDay(dateRange[1]), 'yyyy-MM-dd HH:mm:ss')
+            : undefined,
+          trackingStartDate: trackingDateRange[0]
+            ? format(startOfDay(trackingDateRange[0]), 'yyyy-MM-dd HH:mm:ss')
+            : undefined,
+          trackingEndDate: trackingDateRange[1]
+            ? format(endOfDay(trackingDateRange[1]), 'yyyy-MM-dd HH:mm:ss')
             : undefined,
           sortField,
           sortOrder,
@@ -303,6 +320,8 @@ export default function Reports() {
       creatorIds: undefined,
       startDate: undefined,
       endDate: undefined,
+      trackingStartDate: undefined,
+      trackingEndDate: undefined,
       sortField: undefined,
       sortOrder: undefined,
       view: undefined,
@@ -322,6 +341,12 @@ export default function Reports() {
       const endDate = filters.dateRange?.[1]
         ? format(new Date(filters.dateRange[1]), 'yyyy-MM-dd')
         : undefined;
+      const trackingStartDate = filters.trackingDateRange?.[0]
+        ? format(new Date(filters.trackingDateRange[0]), 'yyyy-MM-dd')
+        : undefined;
+      const trackingEndDate = filters.trackingDateRange?.[1]
+        ? format(new Date(filters.trackingDateRange[1]), 'yyyy-MM-dd')
+        : undefined;
 
       updateQuery({
         search: filters.search || undefined,
@@ -334,6 +359,8 @@ export default function Reports() {
         sortOrder: filters.sortOrder || undefined,
         startDate,
         endDate,
+        trackingStartDate,
+        trackingEndDate,
         view: viewId,
         page: 1, // Always reset to page 1 when applying a view
       });
@@ -351,6 +378,7 @@ export default function Reports() {
         locationIds,
         creatorIds,
         dateRange,
+        trackingDateRange,
         sortField,
         sortOrder,
       };
@@ -436,9 +464,17 @@ export default function Reports() {
         locationIds,
         creatorIds,
         startDate: dateRange[0]
-          ? format(dateRange[0], 'yyyy-MM-dd')
+          ? format(startOfDay(dateRange[0]), 'yyyy-MM-dd HH:mm:ss')
           : undefined,
-        endDate: dateRange[1] ? format(dateRange[1], 'yyyy-MM-dd') : undefined,
+        endDate: dateRange[1]
+          ? format(endOfDay(dateRange[1]), 'yyyy-MM-dd HH:mm:ss')
+          : undefined,
+        trackingStartDate: trackingDateRange[0]
+          ? format(startOfDay(trackingDateRange[0]), 'yyyy-MM-dd HH:mm:ss')
+          : undefined,
+        trackingEndDate: trackingDateRange[1]
+          ? format(endOfDay(trackingDateRange[1]), 'yyyy-MM-dd HH:mm:ss')
+          : undefined,
         sortField,
         sortOrder,
       };
@@ -477,6 +513,7 @@ export default function Reports() {
         'sortField',
         'sortOrder',
         'dateRange',
+        'trackingDateRange',
       ];
 
       allKeys.forEach((key) => {
@@ -486,7 +523,7 @@ export default function Reports() {
 
         if (Array.isArray(value)) {
           if (value.length > 0) {
-            if (key === 'dateRange') {
+            if (key === 'dateRange' || key === 'trackingDateRange') {
               const [start, end] = value;
               const normalizedRange = [
                 start ? new Date(start).toISOString().split('T')[0] : null,
@@ -524,6 +561,7 @@ export default function Reports() {
       sortField,
       sortOrder,
       dateRange,
+      trackingDateRange,
     });
 
     return viewFiltersString !== currentFiltersString;
@@ -784,23 +822,49 @@ export default function Reports() {
                 selectsRange={true}
                 startDate={dateRange[0]}
                 endDate={dateRange[1]}
-                  onChange={(update: [Date | null, Date | null]) => {
-                    updateQuery({
-                      startDate:
-                        update[0]
-                          ? format(update[0], 'yyyy-MM-dd')
-                          : undefined,
-                      endDate:
-                        update[1]
-                          ? format(update[1], 'yyyy-MM-dd')
-                          : undefined,
-                    });
-                  }}
+                onChange={(update: [Date | null, Date | null]) => {
+                  updateQuery({
+                    startDate: update[0]
+                      ? format(update[0], 'yyyy-MM-dd')
+                      : undefined,
+                    endDate: update[1]
+                      ? format(update[1], 'yyyy-MM-dd')
+                      : undefined,
+                  });
+                }}
                 isClearable={true}
                 locale={zhTW}
                 dateFormat="yyyy/MM/dd"
-                placeholderText="選擇日期範圍"
-                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-left md:py-2"
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm md:py-2"
+                placeholderText="選擇建立區間..."
+              />
+            </div>
+            <div className="">
+              <label
+                htmlFor="tracking-date-range-filter"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                追蹤區間
+              </label>
+              <DatePicker
+                selectsRange={true}
+                startDate={trackingDateRange[0]}
+                endDate={trackingDateRange[1]}
+                onChange={(update: [Date | null, Date | null]) => {
+                  updateQuery({
+                    trackingStartDate: update[0]
+                      ? format(update[0], 'yyyy-MM-dd')
+                      : undefined,
+                    trackingEndDate: update[1]
+                      ? format(update[1], 'yyyy-MM-dd')
+                      : undefined,
+                  });
+                }}
+                isClearable={true}
+                locale={zhTW}
+                dateFormat="yyyy/MM/dd"
+                className="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm md:py-2"
+                placeholderText="選擇追蹤區間..."
               />
             </div>
           </div>

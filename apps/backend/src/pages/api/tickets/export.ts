@@ -1,8 +1,5 @@
-import {
-  Permission,
-  TicketStatus,
-  TicketPriority,
-} from 'shared-types';
+import { Permission, TicketStatus, TicketPriority } from 'shared-types';
+import { withPermission } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
 import ExcelJS from 'exceljs';
 import { format } from 'date-fns';

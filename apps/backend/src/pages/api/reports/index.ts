@@ -102,6 +102,8 @@ async function getReports(
   const sortOrder = req.query.sortOrder as 'asc' | 'desc' | undefined;
   const startDate = req.query.startDate as string | undefined;
   const endDate = req.query.endDate as string | undefined;
+  const trackingStartDate = req.query.trackingStartDate as string | undefined;
+  const trackingEndDate = req.query.trackingEndDate as string | undefined;
 
   const skip = (page - 1) * pageSize;
 
@@ -216,6 +218,16 @@ async function getReports(
     }
     if (endDate) {
       where.createdAt.lte = new Date(endDate);
+    }
+  }
+
+  if (trackingStartDate || trackingEndDate) {
+    where.trackingDate = {};
+    if (trackingStartDate) {
+      where.trackingDate.gte = new Date(trackingStartDate);
+    }
+    if (trackingEndDate) {
+      where.trackingDate.lte = new Date(trackingEndDate);
     }
   }
 
