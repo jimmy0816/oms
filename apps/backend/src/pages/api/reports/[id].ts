@@ -1,6 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import { ApiResponse, Ticket, ReportTicket, ReportStatus } from 'shared-types';
+import {
+  ApiResponse,
+  Ticket,
+  ReportTicket,
+  ReportStatus,
+  Permission,
+} from 'shared-types';
 import { notificationService } from '@/services/notificationService';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 
@@ -316,6 +322,20 @@ async function updateReport(
   if (trackingDate !== undefined) updateData.trackingDate = trackingDate;
 
   const userId = req.user.id; // 從認證請求中獲取用戶ID
+
+  // Check for REJECTED -> UNCONFIRMED transition
+  if (
+    status === ReportStatus.UNCONFIRMED &&
+    existingReport.status === ReportStatus.REJECTED
+  ) {
+    const userPermissions = (req.user.permissions as string[]) || [];
+    if (!userPermissions.includes(Permission.REVIEW_REPORTS)) {
+      return res.status(403).json({
+        success: false,
+        error: '您沒有權限執行此操作 (需具備審核通報權限)',
+      });
+    }
+  }
 
   // 輔助函數：創建活動日誌
   const createActivityLog = async (

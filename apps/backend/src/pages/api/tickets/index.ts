@@ -513,7 +513,7 @@ async function createTicket(
       title,
       description,
       priority,
-      status: assigneeId ? TicketStatus.IN_PROGRESS : TicketStatus.PENDING, // <-- Modified status logic
+      status: TicketStatus.PENDING, // <-- Modified status logic: Always PENDING initially
       creatorId,
       roleId,
       assigneeId, // <-- Add assigneeId

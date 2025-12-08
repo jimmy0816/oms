@@ -11,6 +11,7 @@ import {
   ChevronDownIcon,
   PencilIcon,
   TrashIcon,
+  ShareIcon,
 } from '@heroicons/react/24/outline';
 import {
   reportService,
@@ -95,6 +96,14 @@ export default function ReportDetail() {
     }
   }, [fetchReport]);
 
+  const handleShare = () => {
+    if (typeof window !== 'undefined') {
+      const url = window.location.origin + window.location.pathname;
+      navigator.clipboard.writeText(url);
+      showToast('連結已複製到剪貼簿', 'success');
+    }
+  };
+
   const handleDelete = async () => {
     if (!report) return;
 
@@ -155,7 +164,9 @@ export default function ReportDetail() {
       if (finalUpdateData.trackingDate) {
         const date = new Date(finalUpdateData.trackingDate);
         const offset = date.getTimezoneOffset() * 60000;
-        (finalUpdateData.trackingDate as any) = new Date(date.getTime() - offset);
+        (finalUpdateData.trackingDate as any) = new Date(
+          date.getTime() - offset
+        );
       }
 
       await reportService.updateReport(id.toString(), finalUpdateData);
@@ -305,6 +316,13 @@ export default function ReportDetail() {
                     {report.title}
                   </h1>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleShare}
+                      className="btn-icon text-gray-600 hover:text-gray-900"
+                      title="分享連結"
+                    >
+                      <ShareIcon className="h-5 w-5" />
+                    </button>
                     {hasPermission(Permission.EDIT_REPORTS) && (
                       <Link
                         href={`/reports/${report.id}/edit`}
@@ -414,6 +432,22 @@ export default function ReportDetail() {
                       disabled={processing}
                     >
                       退回
+                    </button>
+                  </div>
+                )}
+              {hasPermission(Permission.REVIEW_REPORTS) &&
+                report.status === ReportStatus.REJECTED && (
+                  <div className="flex gap-2">
+                    <button
+                      className="btn-primary"
+                      onClick={() =>
+                        updateReportStatus('重新開啟通報 (設為待確認)', {
+                          status: ReportStatus.UNCONFIRMED,
+                        })
+                      }
+                      disabled={processing}
+                    >
+                      {processing ? '處理中...' : '重新確認'}
                     </button>
                   </div>
                 )}
