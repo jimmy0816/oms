@@ -6,6 +6,7 @@ import {
   ArrowLeftIcon,
   PencilIcon,
   TrashIcon,
+  ShareIcon,
 } from '@heroicons/react/24/outline';
 import {
   ticketService,
@@ -143,6 +144,14 @@ export default function TicketDetail() {
     }
   };
 
+  const handleShare = () => {
+    if (typeof window !== 'undefined') {
+      const url = window.location.origin + window.location.pathname;
+      navigator.clipboard.writeText(url);
+      showToast('連結已複製到剪貼簿', 'success');
+    }
+  };
+
   const updateTicketStatus = async (newStatus: TicketStatus, log: string) => {
     if (!ticket?.id || !user?.id) return;
 
@@ -255,6 +264,13 @@ export default function TicketDetail() {
 
         <div className="bg-white shadow-md rounded-lg overflow-hidden relative">
           <div className="absolute top-4 right-4 flex items-center space-x-2">
+            <button
+              onClick={handleShare}
+              className="text-gray-600 hover:text-gray-900 p-2 bg-white rounded-full shadow-md"
+              title="分享連結"
+            >
+              <ShareIcon className="h-6 w-6" />
+            </button>
             <PermissionGuard required={Permission.EDIT_TICKETS}>
               <Link
                 href={`/tickets/${ticket.id}/edit`}
