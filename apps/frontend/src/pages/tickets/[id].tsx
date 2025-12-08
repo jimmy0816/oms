@@ -325,12 +325,14 @@ export default function TicketDetail() {
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              {ticket.assigneeId == null &&
+              {(ticket.assigneeId == null || ticket.assigneeId === user.id) &&
                 ticket.status === TicketStatus.PENDING &&
                 hasPermission(Permission.CLAIM_TICKETS) &&
                 (user.primaryRole?.id === ticket.role?.id ||
                   (user.additionalRoles &&
-                    user.additionalRoles.some((r) => r.id === ticket.role?.id))) && (
+                    user.additionalRoles.some(
+                      (r) => r.id === ticket.role?.id
+                    ))) && (
                   <button className="btn-primary" onClick={handleClaim}>
                     認領工單
                   </button>

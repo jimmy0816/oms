@@ -236,6 +236,14 @@ async function updateTicket(
   if (assigneeId !== undefined) updateData.assigneeId = assigneeId;
   if (roleId !== undefined) updateData.roleId = roleId;
 
+  // Check if assignee or role is being changed, if so, reset status to PENDING
+  if (
+    (assigneeId !== undefined && assigneeId !== existingTicket.assigneeId) ||
+    (roleId !== undefined && roleId !== existingTicket.roleId)
+  ) {
+    updateData.status = TicketStatus.PENDING;
+  }
+
   try {
     const updatedTicket = await prisma.$transaction(async (tx) => {
       // 記錄標量欄位變更的活動日誌
@@ -618,8 +626,10 @@ async function claimTicket(
   }
 
   if (action === 'claim') {
-    if (ticket.assigneeId) {
-      return res.status(400).json({ success: false, error: '工單已被認領' });
+    if (ticket.assigneeId && ticket.assigneeId !== user.id) {
+      return res
+        .status(400)
+        .json({ success: false, error: '工單已被其他人認領' });
     }
     if (ticket.status !== 'PENDING') {
       return res
