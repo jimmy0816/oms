@@ -435,6 +435,22 @@ export default function ReportDetail() {
                     </button>
                   </div>
                 )}
+              {hasPermission(Permission.REVIEW_REPORTS) &&
+                report.status === ReportStatus.REJECTED && (
+                  <div className="flex gap-2">
+                    <button
+                      className="btn-primary"
+                      onClick={() =>
+                        updateReportStatus('重新開啟通報 (設為待確認)', {
+                          status: ReportStatus.UNCONFIRMED,
+                        })
+                      }
+                      disabled={processing}
+                    >
+                      {processing ? '處理中...' : '重新確認'}
+                    </button>
+                  </div>
+                )}
 
               {/* 通報詳細資訊 */}
               <div className="mt-6 space-y-4">
