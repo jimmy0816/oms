@@ -1,12 +1,16 @@
 import React from 'react';
 import { TicketReview } from 'shared-types';
+import HeicImage from './HeicImage';
 
 interface TicketReviewDetailModalProps {
   review: TicketReview;
   onClose: () => void;
 }
 
-const TicketReviewDetailModal: React.FC<TicketReviewDetailModalProps> = ({ review, onClose }) => {
+const TicketReviewDetailModal: React.FC<TicketReviewDetailModalProps> = ({
+  review,
+  onClose,
+}) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('zh-TW', {
@@ -19,11 +23,20 @@ const TicketReviewDetailModal: React.FC<TicketReviewDetailModalProps> = ({ revie
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50" onClick={onClose}>
-      <div className="relative mx-auto p-6 border w-11/12 sm:w-3/4 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="relative mx-auto p-6 border w-11/12 sm:w-3/4 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-start">
           <h3 className="text-xl font-bold text-gray-900">審核記錄詳情</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
             <span className="text-2xl">&times;</span>
           </button>
         </div>
@@ -38,7 +51,9 @@ const TicketReviewDetailModal: React.FC<TicketReviewDetailModalProps> = ({ revie
           </div>
           <div>
             <h4 className="text-sm font-medium text-gray-500">審核內容</h4>
-            <p className="mt-1 text-gray-900 whitespace-pre-wrap">{review.content}</p>
+            <p className="mt-1 text-gray-900 whitespace-pre-wrap">
+              {review.content}
+            </p>
           </div>
           {review.attachments && review.attachments.length > 0 && (
             <div>
@@ -47,8 +62,12 @@ const TicketReviewDetailModal: React.FC<TicketReviewDetailModalProps> = ({ revie
                 {review.attachments.map((file) => (
                   <div key={file.id} className="w-full">
                     {file.fileType.startsWith('image') ? (
-                      <a href={file.url} target="_blank" rel="noopener noreferrer">
-                        <img
+                      <a
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <HeicImage
                           src={file.url}
                           alt={file.filename}
                           className="rounded shadow border w-full h-32 object-cover cursor-pointer transition-transform hover:scale-105"

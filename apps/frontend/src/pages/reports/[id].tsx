@@ -40,6 +40,7 @@ import { categoryService, getCategoryPath } from '@/services/categoryService';
 import PermissionGuard from '@/components/PermissionGuard';
 import DatePicker from 'react-datepicker';
 import { zhTW } from 'date-fns/locale';
+import HeicImage from '@/components/HeicImage';
 
 export default function ReportDetail() {
   const router = useRouter();
@@ -543,7 +544,7 @@ export default function ReportDetail() {
                         <div key={file.id} className="w-40">
                           {file.fileType.startsWith('image') ? (
                             <>
-                              <img
+                              <HeicImage
                                 src={file.url}
                                 alt={file.filename}
                                 className="rounded shadow border w-full h-32 object-cover cursor-pointer transition-transform hover:scale-105"
@@ -583,7 +584,7 @@ export default function ReportDetail() {
                         className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
                         onClick={() => setPreviewImage(null)}
                       >
-                        <img
+                        <HeicImage
                           src={previewImage}
                           alt="預覽"
                           className="max-h-[80vh] max-w-[90vw] rounded shadow-lg border-4 border-white"
