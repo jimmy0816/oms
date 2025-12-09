@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Attachments } from 'shared-types';
+import heic2any from 'heic2any';
 
 // Define FileInfo interface
 interface FileInfo {
@@ -82,7 +83,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           : file.type.startsWith('video/')
           ? 'video'
           : undefined;
-        if (!fileType) {
+
+        // Check for HEIC files
+        const isHeic =
+          file.name.toLowerCase().endsWith('.heic') ||
+          file.type === 'image/heic' ||
+          file.type === 'image/heif';
+
+        if (!fileType && !isHeic) {
           hasInvalidFiles = true;
         } else {
           validFiles.push(file);
@@ -102,13 +110,47 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
       try {
         const uploadPromises = validFiles.map(async (file) => {
-          const objectURL = URL.createObjectURL(file);
+          let fileToUpload = file;
+          let objectURL: string;
+
+          // Convert HEIC to JPEG
+          if (
+            file.name.toLowerCase().endsWith('.heic') ||
+            file.type === 'image/heic' ||
+            file.type === 'image/heif'
+          ) {
+            try {
+              const convertedBlob = await heic2any({
+                blob: file,
+                toType: 'image/jpeg',
+                quality: 0.8,
+              });
+
+              const convertedFile = new File(
+                [
+                  Array.isArray(convertedBlob)
+                    ? convertedBlob[0]
+                    : convertedBlob,
+                ],
+                file.name.replace(/\.heic$/i, '.jpg'),
+                { type: 'image/jpeg' }
+              );
+
+              fileToUpload = convertedFile;
+            } catch (conversionError) {
+              console.error('HEIC conversion failed:', conversionError);
+              throw new Error(`無法轉換檔案 ${file.name}`);
+            }
+          }
+
+          objectURL = URL.createObjectURL(fileToUpload);
+
           try {
-            const newFile = await uploadFunction(file);
+            const newFile = await uploadFunction(fileToUpload);
             return {
               ...newFile,
               objectURL,
-              fileType: file.type,
+              fileType: fileToUpload.type,
             };
           } catch (uploadError) {
             URL.revokeObjectURL(objectURL);
@@ -284,4 +326,3 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 };
 
 export default FileUploader;
-

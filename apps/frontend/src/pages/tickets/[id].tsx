@@ -22,6 +22,7 @@ import { useToast } from '@/contexts/ToastContext';
 import TicketReviewForm from '@/components/TicketReviewForm';
 import TicketReviewDetailModal from '@/components/TicketReviewDetailModal';
 import PermissionGuard from '@/components/PermissionGuard';
+import HeicImage from '@/components/HeicImage';
 
 export default function TicketDetail() {
   const router = useRouter();
@@ -469,7 +470,7 @@ export default function TicketDetail() {
                   <div key={file.id} className="w-full">
                     {file.fileType.startsWith('image') ? (
                       <>
-                        <img
+                        <HeicImage
                           src={file.url}
                           alt={file.filename}
                           className="rounded-md shadow-sm border border-gray-200 w-full h-32 object-cover cursor-pointer transition-transform hover:scale-105"
@@ -508,7 +509,7 @@ export default function TicketDetail() {
                   className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
                   onClick={() => setPreviewImage(null)}
                 >
-                  <img
+                  <HeicImage
                     src={previewImage}
                     alt="預覽"
                     className="max-h-[80vh] max-w-[90vw] rounded-lg shadow-lg border-4 border-white"

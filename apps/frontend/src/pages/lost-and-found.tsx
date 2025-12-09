@@ -12,6 +12,7 @@ import {
   BarsArrowUpIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import HeicImage from '@/components/HeicImage';
 
 const SortIcon = ({
   field,
@@ -85,7 +86,7 @@ const ImagePreviewModal = ({
       onClick={onClose}
     >
       <div className="relative max-w-4xl max-h-full p-4">
-        <img
+        <HeicImage
           src={imageUrl}
           alt="Preview"
           className="max-w-full max-h-[90vh] object-contain"
@@ -279,7 +280,7 @@ const LostAndFoundPageContent = () => {
                           {report.attachments &&
                           report.attachments.length > 0 ? (
                             report.attachments.map((att) => (
-                              <img
+                              <HeicImage
                                 key={att.id}
                                 src={att.url}
                                 alt={report.title}
