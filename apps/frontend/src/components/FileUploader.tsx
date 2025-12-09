@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Attachments } from 'shared-types';
-import heic2any from 'heic2any';
 
 // Define FileInfo interface
 interface FileInfo {
@@ -120,6 +119,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({
             file.type === 'image/heif'
           ) {
             try {
+              // Dynamic import to avoid SSR issues
+              const heic2any = (await import('heic2any')).default;
+
               const convertedBlob = await heic2any({
                 blob: file,
                 toType: 'image/jpeg',

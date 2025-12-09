@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import heic2any from 'heic2any';
 
 interface HeicImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
 }
-
 const HeicImage: React.FC<HeicImageProps> = ({ src, ...props }) => {
   const [imageSrc, setImageSrc] = useState<string>(src);
   const [loading, setLoading] = useState(false);
@@ -15,23 +13,31 @@ const HeicImage: React.FC<HeicImageProps> = ({ src, ...props }) => {
 
     if (isHeic) {
       setLoading(true);
-      fetch(src)
-        .then((res) => res.blob())
-        .then((blob) => heic2any({ blob, toType: 'image/jpeg', quality: 0.8 }))
-        .then((conversionResult) => {
-          const blob = Array.isArray(conversionResult)
-            ? conversionResult[0]
-            : conversionResult;
-          const url = URL.createObjectURL(blob);
-          setImageSrc(url);
-        })
-        .catch((err) => {
-          console.error('Error converting HEIC image:', err);
-          setError('無法載入圖片');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+
+      // Dynamic import to avoid SSR issues
+      import('heic2any').then((module) => {
+        const heic2any = module.default;
+
+        fetch(src)
+          .then((res) => res.blob())
+          .then((blob) =>
+            heic2any({ blob, toType: 'image/jpeg', quality: 0.8 })
+          )
+          .then((conversionResult) => {
+            const blob = Array.isArray(conversionResult)
+              ? conversionResult[0]
+              : conversionResult;
+            const url = URL.createObjectURL(blob);
+            setImageSrc(url);
+          })
+          .catch((err) => {
+            console.error('Error converting HEIC image:', err);
+            setError('無法載入圖片');
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      });
     } else {
       setImageSrc(src);
     }
