@@ -8,8 +8,10 @@ import {
   FolderPlusIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  ArrowRightCircleIcon,
 } from '@heroicons/react/24/outline';
 import CategoryModal from '@/components/CategoryModal';
+import MoveCategoryModal from '@/components/MoveCategoryModal';
 import { useToast } from '@/contexts/ToastContext';
 
 // --- CategoryTree Component (Presentational) ---
@@ -24,6 +26,7 @@ const CategoryTree = ({
     draggedId,
     dropTarget,
     expandedIds,
+    selectedIds,
     handleDragStart,
     handleDragOver,
     handleDragLeave,
@@ -32,6 +35,7 @@ const CategoryTree = ({
     onEdit,
     onDelete,
     onAddSubCategory,
+    onSelect,
   } = renderContext;
 
   const renderCategory = (category: Category) => {
@@ -39,6 +43,7 @@ const CategoryTree = ({
     const hasChildren = category.children && category.children.length > 0;
     const isDropTarget = dropTarget?.id === category.id;
     const isDragged = draggedId === category.id;
+    const isSelected = selectedIds.has(category.id);
 
     const getDropClassName = () => {
       if (!isDropTarget) return '';
@@ -61,6 +66,18 @@ const CategoryTree = ({
       >
         <div className="flex justify-between items-center group">
           <div className="flex items-center">
+            <div
+              className="mr-3 flex items-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input
+                type="checkbox"
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                checked={isSelected}
+                onChange={(e) => onSelect(category.id, e.target.checked)}
+              />
+            </div>
+
             {hasChildren ? (
               <button
                 onClick={() => onToggleNode(category.id)}
@@ -128,12 +145,21 @@ export default function ManageCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Modals
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
+
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [parentCategory, setParentCategory] = useState<Category | null>(null);
   const { showToast } = useToast();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  // Selection State
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // --- Drag and Drop State and Logic ---
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -142,6 +168,7 @@ export default function ManageCategoriesPage() {
     position: 'before' | 'after';
   } | null>(null);
 
+  // Helper to flatten categories for DnD lookup
   const flatCategories = useMemo(() => {
     const flatten = (cats: Category[]): Omit<Category, 'children'>[] => {
       return cats.reduce<Omit<Category, 'children'>[]>((acc, cat) => {
@@ -296,20 +323,126 @@ export default function ManageCategoriesPage() {
     });
   };
 
+  const handleSelect = (categoryId: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(categoryId);
+      else next.delete(categoryId);
+      return next;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkMove = (targetParentId: string | null) => {
+    setIsMoving(true);
+    // Helper to perform the move logic.
+    // Strategy: For each selected item, update its parentId.
+    // We can reuse updateCategoryOrder but we need to calculate displayOrder.
+    // To keep it simple, we will place them at the end of the target list.
+
+    // OR we can make individual calls to updateCategory (which now handles level updates).
+    // Individual calls are safer for level recursion logic since we updated categoryService to handle it per-update.
+    // However, updateCategoryOrder is transactional.
+
+    // Best approach: Use updateCategoryOrder.
+    // 1. Get current children of targetParent
+    // 2. Append selected items to the end
+    // 3. Send update
+
+    // BUT wait, updateCategoryOrder expects ALL siblings to ensure order is correct?
+    // Actually, standard practice for "Append" is just to set parentId and a high displayOrder?
+    // No, our reorderCategories logic replaces checking siblings.
+
+    // Let's use the individual updateCategory calls for now as it triggers the complex Level logic we wrote.
+    // Although reorderCategories also has it.
+
+    // Let's try to construct a bulk payload for reorderCategories.
+    // We need to know the next displayOrder.
+
+    const runMove = async () => {
+      try {
+        const selectedItems = flatCategories.filter((c) =>
+          selectedIds.has(c.id),
+        );
+
+        // Find current last index in target
+        const targetSiblings = flatCategories.filter(
+          (c) => c.parentId === targetParentId && !selectedIds.has(c.id),
+        );
+        let lastOrder = targetSiblings.reduce(
+          (max, c) => Math.max(max, c.displayOrder || 0),
+          -1,
+        );
+
+        const updates = selectedItems.map((item, index) => ({
+          id: item.id,
+          parentId: targetParentId,
+          displayOrder: lastOrder + 1 + index,
+        }));
+
+        await categoryService.updateCategoryOrder(updates);
+
+        showToast(`成功移動 ${selectedItems.length} 個分類`, 'success');
+        setIsMoveModalOpen(false);
+        setSelectedIds(new Set());
+
+        if (targetParentId) {
+          setExpandedIds((prev) => new Set(prev).add(targetParentId));
+        }
+
+        await fetchCategories();
+      } catch (e: any) {
+        console.error(e);
+        showToast('移動失敗: ' + e.message, 'error');
+      } finally {
+        setIsMoving(false);
+      }
+    };
+
+    runMove();
+  };
+
+  const handleBulkDelete = async () => {
+    if (
+      !window.confirm(
+        `確定要刪除選取的 ${selectedIds.size} 個分類嗎？此動作無法復原。`,
+      )
+    )
+      return;
+
+    try {
+      // Sequential delete to handle potential errors gracefully or just Promise.all
+      // Backend doesn't have bulk delete yet, so we loop.
+      const ids = Array.from(selectedIds);
+      await Promise.all(ids.map((id) => categoryService.deleteCategory(id)));
+
+      showToast('删除成功', 'success');
+      setSelectedIds(new Set());
+      await fetchCategories();
+    } catch (e: any) {
+      console.error(e);
+      showToast('部分刪除失敗，請檢查是否有關聯資料', 'error');
+      await fetchCategories();
+    }
+  };
+
   const handleOpenModalForCreate = (parent: Category | null = null) => {
     setEditingCategory(null);
     setParentCategory(parent);
-    setIsModalOpen(true);
+    setIsCategoryModalOpen(true);
   };
 
   const handleOpenModalForEdit = (category: Category) => {
     setEditingCategory(category);
     setParentCategory(null);
-    setIsModalOpen(true);
+    setIsCategoryModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleCloseCategoryModal = () => {
+    setIsCategoryModalOpen(false);
     setEditingCategory(null);
     setParentCategory(null);
   };
@@ -331,7 +464,7 @@ export default function ManageCategoriesPage() {
           parentIdToExpand = newCategory.parentId;
         }
       }
-      handleCloseModal();
+      handleCloseCategoryModal();
       await fetchCategories();
 
       if (parentIdToExpand) {
@@ -362,6 +495,7 @@ export default function ManageCategoriesPage() {
     draggedId,
     dropTarget,
     expandedIds,
+    selectedIds,
     handleDragStart,
     handleDragOver,
     handleDragLeave,
@@ -370,6 +504,7 @@ export default function ManageCategoriesPage() {
     onEdit: handleOpenModalForEdit,
     onDelete: handleDelete,
     onAddSubCategory: handleOpenModalForCreate,
+    onSelect: handleSelect,
   };
 
   return (
@@ -377,16 +512,42 @@ export default function ManageCategoriesPage() {
       <Head>
         <title>分類管理 | OMS</title>
       </Head>
-      <div className="space-y-6">
+      <div className="space-y-6 relative">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-gray-900">分類管理</h1>
-          <button
-            onClick={() => handleOpenModalForCreate(null)}
-            className="btn-primary px-4 py-2 text-sm font-medium rounded-md flex items-center"
-          >
-            <PlusIcon className="h-4 w-4 mr-1" />
-            <span>新增頂層分類</span>
-          </button>
+          <div className="space-x-2 flex">
+            {selectedIds.size > 0 && (
+              <>
+                <button
+                  onClick={() => setIsMoveModalOpen(true)}
+                  className="btn-secondary px-3 py-2 text-sm font-medium rounded-md flex items-center bg-white border border-gray-300 hover:bg-gray-50 text-gray-700"
+                >
+                  <ArrowRightCircleIcon className="h-4 w-4 mr-1" />
+                  移動 ({selectedIds.size})
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="btn-danger px-3 py-2 text-sm font-medium rounded-md flex items-center bg-red-50 text-red-600 hover:bg-red-100"
+                >
+                  <TrashIcon className="h-4 w-4 mr-1" />
+                  刪除 ({selectedIds.size})
+                </button>
+                <button
+                  onClick={handleClearSelection}
+                  className="text-sm text-gray-500 hover:text-gray-700 underline px-2"
+                >
+                  取消選取
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => handleOpenModalForCreate(null)}
+              className="btn-primary px-4 py-2 text-sm font-medium rounded-md flex items-center bg-blue-600 text-white hover:bg-blue-700 ml-2"
+            >
+              <PlusIcon className="h-4 w-4 mr-1" />
+              <span>新增頂層分類</span>
+            </button>
+          </div>
         </div>
 
         {loading && <p>載入中...</p>}
@@ -400,12 +561,22 @@ export default function ManageCategoriesPage() {
           </div>
         )}
       </div>
+
       <CategoryModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        isOpen={isCategoryModalOpen}
+        onClose={handleCloseCategoryModal}
         onSave={handleSave}
         initialData={editingCategory}
         isSaving={isSaving}
+      />
+
+      <MoveCategoryModal
+        isOpen={isMoveModalOpen}
+        onClose={() => setIsMoveModalOpen(false)}
+        onMove={handleBulkMove}
+        categories={categories}
+        movingCategoryIds={Array.from(selectedIds)}
+        isMoving={isMoving}
       />
     </>
   );
