@@ -12,6 +12,9 @@ import { prisma } from '@/lib/prisma';
 import { ActivityLogService } from '@/services/activityLogService';
 import { notificationService } from '@/services/notificationService';
 import { categoryService } from '@/services/categoryService'; // Import categoryService
+import { googleChatService } from '@/services/googleChatService';
+import { chatThreadService } from '@/services/chatThreadService';
+import { chatLogService } from '@/services/chatLogService';
 
 // Define Report type based on Prisma schema (updated to include attachments)
 interface Report {
@@ -354,7 +357,75 @@ async function createReport(
     });
   }
 
-  // 5. 回傳結果
+  // 5. 發送 Google Chat 通知並建立 ChatThread
+  try {
+    console.log(`[Report Created] 開始處理 Google Chat 通知: ${report.id}`);
+    console.log(`[Report Created] GOOGLE_CHAT_ENABLED: ${process.env.GOOGLE_CHAT_ENABLED}`);
+    console.log(`[Report Created] GOOGLE_CHAT_WEBHOOK_URL 已設定: ${!!process.env.GOOGLE_CHAT_WEBHOOK_URL}`);
+    
+    const message = googleChatService.formatReportCreateMessage(report);
+    const chatResponse = await googleChatService.sendToSpace(message);
+
+    if (chatResponse) {
+      console.log(`[Report Created] Google Chat API 回應:`, JSON.stringify(chatResponse, null, 2));
+      
+      // 從回應中提取 space 和 thread 資訊
+      // Google Chat Webhook 回應格式: { name: "spaces/{space}/messages/{message}", thread: { name: "spaces/{space}/threads/{thread}" } }
+      const spaceName = chatResponse.space?.name || chatResponse.name.split('/messages/')[0];
+      const threadName = chatResponse.thread?.name || chatResponse.name;
+      
+      console.log(`[Report Created] 解析結果 - spaceName: ${spaceName}, threadName: ${threadName}`);
+      
+      // 提取 ID (移除 "spaces/" 前綴)
+      const spaceId = spaceName.replace('spaces/', '');
+      const threadId = threadName.split('/threads/')[1] || threadName;
+
+      console.log(`[Report Created] 準備建立 ChatThread - spaceId: ${spaceId}, threadId: ${threadId}`);
+
+      // 建立 ChatThread 記錄
+      const chatThread = await chatThreadService.create(
+        report.id,
+        spaceId,
+        threadId,
+        'OMS Bug Reports' // 可以之後從環境變數讀取
+      );
+
+      console.log(`[Report Created] ChatThread 建立成功:`, chatThread);
+
+      // 記錄成功日誌
+      await chatLogService.log({
+        platform: 'GOOGLE_CHAT',
+        type: 'SPACE',
+        status: 'SUCCESS',
+        request: message,
+        response: chatResponse,
+        relatedId: report.id,
+        relatedType: 'REPORT',
+      });
+
+      console.log(`[Report Created] Google Chat 通知發送成功: ${report.id}`);
+    } else {
+      console.log(`[Report Created] Google Chat 未啟用或回應為 null`);
+    }
+  } catch (error: any) {
+    console.error('[Report Created] Google Chat 通知發送失敗:', error);
+    console.error('[Report Created] 錯誤堆疊:', error.stack);
+    
+    // 記錄失敗日誌
+    await chatLogService.log({
+      platform: 'GOOGLE_CHAT',
+      type: 'SPACE',
+      status: 'FAILED',
+      request: null,
+      response: { error: error.message, stack: error.stack },
+      relatedId: report.id,
+      relatedType: 'REPORT',
+    });
+    
+    // 不阻斷主流程，繼續執行
+  }
+
+  // 6. 回傳結果
   return res.status(201).json({
     success: true,
     data: report,

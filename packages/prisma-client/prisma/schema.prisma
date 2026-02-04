@@ -153,6 +153,9 @@ model Report {
   // Relation to Location model
   location Location? @relation(fields: [locationId], references: [id])
 
+  // Relation to ChatThread
+  chatThread ChatThread?
+
   @@index([categoryId])
   @@index([locationId])
 }
@@ -317,4 +320,42 @@ model IdSequence {
   updatedAt DateTime @updatedAt
 
   @@unique([modelName, date])
+}
+
+// ChatThread model for managing chat integrations
+model ChatThread {
+  id            String   @id @default(uuid())
+  reportId      String   @unique
+  report        Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  
+  platform      String   @default("GOOGLE_CHAT")
+  chatSpaceId   String   // 聊天群組 ID
+  chatSpaceName String?  // 群組名稱
+  chatThreadId  String   // 討論串 ID (Thread Key)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([chatSpaceId, chatThreadId])
+  @@index([platform])
+}
+
+// ChatLog model for logging chat notifications
+model ChatLog {
+  id        String   @id @default(uuid())
+  status    String   // 'SUCCESS' | 'FAILED' 
+  platform  String   // 'GOOGLE_CHAT' | 'LINE' | 'SLACK' etc.
+  type      String   // 'SPACE' | 'THREAD' - 發送行為（目的地）
+  request   Json?    // 請求內容
+  response  Json     // 紀錄原始通知內容快照
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Polymorphic relation
+  relatedId   String?
+  relatedType String? // e.g., "REPORT", "TICKET"
+  
+  @@index([platform])
+  @@index([status])
+  @@index([relatedId, relatedType])
 }

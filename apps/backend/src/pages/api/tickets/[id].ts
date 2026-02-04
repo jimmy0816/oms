@@ -9,6 +9,9 @@ import {
 } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { notificationService } from '@/services/notificationService';
+import { googleChatService } from '@/services/googleChatService';
+import { chatThreadService } from '@/services/chatThreadService';
+import { chatLogService } from '@/services/chatLogService';
 
 async function handler(
   req: NextApiRequest,
@@ -531,6 +534,101 @@ async function updateTicket(
         relatedType: 'TICKET',
       });
     }
+
+    // --- 發送 Google Chat 通知到關聯的 Report Thread ---
+    try {
+      // 查詢關聯的 Reports
+      const reportIds = existingReportIds;
+
+      if (reportIds.length > 0) {
+        const reports = await prisma.report.findMany({
+          where: { id: { in: reportIds } },
+          include: {
+            creator: { select: { id: true, name: true, email: true } },
+            assignee: { select: { id: true, name: true, email: true } },
+          },
+        });
+
+        // 收集變更的欄位
+        const changes: Record<string, { old: any; new: any }> = {};
+
+        if (status && status !== existingTicket.status) {
+          changes.status = { old: existingTicket.status, new: status };
+        }
+        if (priority && priority !== existingTicket.priority) {
+          changes.priority = { old: existingTicket.priority, new: priority };
+        }
+        if (assigneeId !== undefined && assigneeId !== existingTicket.assigneeId) {
+          const oldAssignee = existingTicket.assigneeId
+            ? await prisma.user.findUnique({ where: { id: existingTicket.assigneeId } })
+            : null;
+          const newAssignee = assigneeId
+            ? await prisma.user.findUnique({ where: { id: assigneeId } })
+            : null;
+          changes.assigneeId = {
+            old: oldAssignee?.name || '未指派',
+            new: newAssignee?.name || '未指派',
+          };
+        }
+        if (title && title !== existingTicket.title) {
+          changes.title = { old: existingTicket.title, new: title };
+        }
+        if (description && description !== existingTicket.description) {
+          changes.description = { old: existingTicket.description, new: description };
+        }
+
+        // 如果有變更，對每個 Report 發送通知
+        if (Object.keys(changes).length > 0) {
+          for (const report of reports) {
+            const chatThread = await chatThreadService.findByReportId(report.id);
+
+            if (chatThread) {
+              const threadName = `spaces/${chatThread.chatSpaceId}/threads/${chatThread.chatThreadId}`;
+              const text = googleChatService.formatTicketUpdateText(
+                finalUpdatedTicket,
+                report,
+                changes
+              );
+              const chatResponse = await googleChatService.sendToThread(
+                threadName,
+                text
+              );
+
+              if (chatResponse) {
+                await chatLogService.log({
+                  platform: 'GOOGLE_CHAT',
+                  type: 'THREAD',
+                  status: 'SUCCESS',
+                  request: { text, thread: { name: threadName } },
+                  response: chatResponse,
+                  relatedId: id,
+                  relatedType: 'TICKET',
+                });
+
+                console.log(
+                  `[Ticket Updated] Google Chat 通知發送成功: ${id} -> Report ${report.id}`
+                );
+              }
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('[Ticket Updated] Google Chat 通知發送失敗:', error.message);
+
+      await chatLogService.log({
+        platform: 'GOOGLE_CHAT',
+        type: 'THREAD',
+        status: 'FAILED',
+        request: null,
+        response: { error: error.message },
+        relatedId: id,
+        relatedType: 'TICKET',
+      });
+
+      // 不阻斷主流程
+    }
+    // --- End Google Chat Notification ---
 
     return res.status(200).json({ success: true, data: finalUpdatedTicket });
   } catch (error: any) {
