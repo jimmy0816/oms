@@ -1,0 +1,153 @@
+import { ReportPriority } from 'shared-types';
+
+interface BitbucketIssueResponse {
+  id: number;
+  title: string;
+  state: string;
+  links?: {
+    html?: { href?: string };
+  };
+}
+
+interface BitbucketIssuePayload {
+  title: string;
+  content?: { raw: string };
+  kind?: string;
+  priority?: string;
+}
+
+const BITBUCKET_BASE_URL = process.env.BITBUCKET_BASE_URL || 'https://api.bitbucket.org/2.0';
+const BITBUCKET_WORKSPACE = process.env.BITBUCKET_WORKSPACE || '';
+const BITBUCKET_REPO_SLUG = process.env.BITBUCKET_REPO_SLUG || '';
+const BITBUCKET_USERNAME = process.env.BITBUCKET_USERNAME || '';
+const BITBUCKET_APP_PASSWORD = process.env.BITBUCKET_APP_PASSWORD || '';
+const BITBUCKET_TOKEN = process.env.BITBUCKET_TOKEN || '';
+const BITBUCKET_ENABLED = process.env.BITBUCKET_ENABLED === 'true';
+
+const getAuthHeader = () => {
+  if (BITBUCKET_TOKEN) {
+    return `Bearer ${BITBUCKET_TOKEN}`;
+  }
+  if (BITBUCKET_USERNAME && BITBUCKET_APP_PASSWORD) {
+    const encoded = Buffer.from(
+      `${BITBUCKET_USERNAME}:${BITBUCKET_APP_PASSWORD}`
+    ).toString('base64');
+    return `Basic ${encoded}`;
+  }
+  return '';
+};
+
+const getRepoIssuesUrl = () => {
+  return `${BITBUCKET_BASE_URL}/repositories/${BITBUCKET_WORKSPACE}/${BITBUCKET_REPO_SLUG}/issues`;
+};
+
+const ensureConfig = () => {
+  if (!BITBUCKET_ENABLED) return false;
+  if (!BITBUCKET_WORKSPACE || !BITBUCKET_REPO_SLUG) return false;
+  if (!getAuthHeader()) return false;
+  return true;
+};
+
+const mapPriority = (priority?: string) => {
+  switch (priority) {
+    case ReportPriority.URGENT:
+      return 'critical';
+    case ReportPriority.HIGH:
+      return 'major';
+    case ReportPriority.MEDIUM:
+      return 'minor';
+    case ReportPriority.LOW:
+      return 'trivial';
+    default:
+      return 'minor';
+  }
+};
+
+export const bitbucketService = {
+  isEnabled() {
+    return ensureConfig();
+  },
+
+  async createIssue(input: {
+    reportId: string;
+    title: string;
+    description?: string | null;
+    priority?: string;
+    reporterName?: string | null;
+  }) {
+    if (!ensureConfig()) return null;
+
+    const payload: BitbucketIssuePayload = {
+      title: `${input.reportId}`,
+      content: {
+        raw: [
+          `Report Category: ${input.title}`,
+          input.reporterName ? `Reporter: ${input.reporterName}` : undefined,
+          input.description ? `\n${input.description}` : undefined,
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      },
+      kind: 'bug',
+      priority: mapPriority(input.priority),
+    };
+
+    const response = await fetch(getRepoIssuesUrl(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: getAuthHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Bitbucket create issue failed: ${response.status} ${errorText}`);
+    }
+
+    const data = (await response.json()) as BitbucketIssueResponse;
+    return {
+      id: String(data.id),
+      url: data.links?.html?.href || null,
+      state: data.state,
+      title: data.title,
+    };
+  },
+
+  async resolveIssue(issueId: string) {
+    if (!ensureConfig()) return null;
+
+    const response = await fetch(`${getRepoIssuesUrl()}/${issueId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: getAuthHeader(),
+      },
+      body: JSON.stringify({ state: 'resolved' }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Bitbucket resolve issue failed: ${response.status} ${errorText}`);
+    }
+
+    const data = (await response.json()) as BitbucketIssueResponse;
+    return {
+      id: String(data.id),
+      url: data.links?.html?.href || null,
+      state: data.state,
+      title: data.title,
+    };
+  },
+
+  extractIssueFromWebhook(payload: any) {
+    const issue = payload?.issue;
+    if (!issue) return null;
+    return {
+      id: issue?.id ? String(issue.id) : null,
+      state: issue?.state ? String(issue.state) : null,
+      title: issue?.title ? String(issue.title) : null,
+    };
+  },
+};

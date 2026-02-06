@@ -15,6 +15,7 @@ import { categoryService } from '@/services/categoryService'; // Import category
 import { googleChatService } from '@/services/googleChatService';
 import { chatThreadService } from '@/services/chatThreadService';
 import { chatLogService } from '@/services/chatLogService';
+import { bitbucketService } from '@/services/bitbucketService';
 
 // Define Report type based on Prisma schema (updated to include attachments)
 interface Report {
@@ -28,6 +29,8 @@ interface Report {
   updatedAt: Date;
   creatorId: string;
   assigneeId?: string | null;
+  bitbucketIssueId?: string | null;
+  bitbucketIssueUrl?: string | null;
   attachments?: FileInfo[]; // New attachments field
   category?: string | null; // This will now store categoryId
   contactPhone?: string | null;
@@ -423,6 +426,35 @@ async function createReport(
     });
     
     // 不阻斷主流程，繼續執行
+  }
+
+  // 6. 建立 Bitbucket issue（若已啟用）
+  if (bitbucketService.isEnabled()) {
+    try {
+      const issue = await bitbucketService.createIssue({
+        reportId: report.id,
+        title: report.title,
+        description: report.description,
+        priority: report.priority,
+        reporterName: report.creator?.name || null,
+      });
+
+      if (issue?.id) {
+        const updatedReport = await prisma.report.update({
+          where: { id: report.id },
+          data: {
+            bitbucketIssueId: issue.id,
+            bitbucketIssueUrl: issue.url,
+          },
+        });
+
+        report.bitbucketIssueId = updatedReport.bitbucketIssueId;
+        report.bitbucketIssueUrl = updatedReport.bitbucketIssueUrl;
+      }
+    } catch (error: any) {
+      console.error('[Report Created] Bitbucket issue 建立失敗:', error.message);
+      // 不阻斷主流程
+    }
   }
 
   // 6. 回傳結果

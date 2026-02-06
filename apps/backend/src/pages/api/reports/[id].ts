@@ -9,9 +9,8 @@ import {
 } from 'shared-types';
 import { notificationService } from '@/services/notificationService';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
-import { googleChatService } from '@/services/googleChatService';
-import { chatThreadService } from '@/services/chatThreadService';
-import { chatLogService } from '@/services/chatLogService';
+import { bitbucketService } from '@/services/bitbucketService';
+import { sendReportUpdateChatNotification } from '@/services/reportUpdateNotificationService';
 
 // Define Report type based on Prisma schema
 interface Report {
@@ -25,6 +24,8 @@ interface Report {
   updatedAt: Date;
   creatorId: string;
   assigneeId?: string | null;
+  bitbucketIssueId?: string | null;
+  bitbucketIssueUrl?: string | null;
   category?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
@@ -278,6 +279,9 @@ async function updateReport(
   req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<Report>>
 ) {
+  const originPlatform = Array.isArray(req.query.origin_platform)
+    ? req.query.origin_platform[0]
+    : req.query.origin_platform;
   const {
     title,
     description,
@@ -627,82 +631,49 @@ async function updateReport(
     }
 
     // 發送 Google Chat 更新通知
-    try {
-      const chatThread = await chatThreadService.findByReportId(id);
+    const changes: Record<string, { old: any; new: any }> = {};
 
-      if (chatThread) {
-        // 收集變更的欄位
-        const changes: Record<string, { old: any; new: any }> = {};
+    if (status && status !== existingReport.status) {
+      changes.status = { old: existingReport.status, new: status };
+    }
+    if (priority && priority !== existingReport.priority) {
+      changes.priority = { old: existingReport.priority, new: priority };
+    }
+    if (assigneeId !== undefined && assigneeId !== existingReport.assigneeId) {
+      const oldAssignee = existingReport.assigneeId
+        ? await prisma.user.findUnique({ where: { id: existingReport.assigneeId } })
+        : null;
+      const newAssignee = assigneeId
+        ? await prisma.user.findUnique({ where: { id: assigneeId } })
+        : null;
+      changes.assigneeId = {
+        old: oldAssignee?.name || '未指派',
+        new: newAssignee?.name || '未指派',
+      };
+    }
+    if (title && title !== existingReport.title) {
+      changes.title = { old: existingReport.title, new: title };
+    }
+    if (description && description !== existingReport.description) {
+      changes.description = { old: existingReport.description, new: description };
+    }
 
-        if (status && status !== existingReport.status) {
-          changes.status = { old: existingReport.status, new: status };
-        }
-        if (priority && priority !== existingReport.priority) {
-          changes.priority = { old: existingReport.priority, new: priority };
-        }
-        if (assigneeId !== undefined && assigneeId !== existingReport.assigneeId) {
-          const oldAssignee = existingReport.assigneeId
-            ? await prisma.user.findUnique({ where: { id: existingReport.assigneeId } })
-            : null;
-          const newAssignee = assigneeId
-            ? await prisma.user.findUnique({ where: { id: assigneeId } })
-            : null;
-          changes.assigneeId = {
-            old: oldAssignee?.name || '未指派',
-            new: newAssignee?.name || '未指派',
-          };
-        }
-        if (title && title !== existingReport.title) {
-          changes.title = { old: existingReport.title, new: title };
-        }
-        if (description && description !== existingReport.description) {
-          changes.description = { old: existingReport.description, new: description };
-        }
+    await sendReportUpdateChatNotification(id, finalUpdatedReport, changes);
 
-        // 如果有變更，發送通知
-        if (Object.keys(changes).length > 0) {
-          // 組合完整的 thread name: spaces/{spaceId}/threads/{threadId}
-          const threadName = `spaces/${chatThread.chatSpaceId}/threads/${chatThread.chatThreadId}`;
-          const text = googleChatService.formatReportUpdateText(
-            finalUpdatedReport,
-            changes
-          );
-          const chatResponse = await googleChatService.sendToThread(
-            threadName,
-            text
-          );
-
-          if (chatResponse) {
-            // 記錄成功日誌
-            await chatLogService.log({
-              platform: 'GOOGLE_CHAT',
-              type: 'THREAD',
-              status: 'SUCCESS',
-              request: { text, thread: { name: threadName } },
-              response: chatResponse,
-              relatedId: id,
-              relatedType: 'REPORT',
-            });
-
-            console.log(`[Report Updated] Google Chat 通知發送成功: ${id}`);
-          }
-        }
+    // 若狀態更新為 REVIEWED，且來源非 Bitbucket，則同步更新 Bitbucket issue
+    if (
+      status === ReportStatus.REVIEWED &&
+      status !== existingReport.status &&
+      originPlatform !== 'bitbucket' &&
+      existingReport.bitbucketIssueId &&
+      bitbucketService.isEnabled()
+    ) {
+      try {
+        await bitbucketService.resolveIssue(existingReport.bitbucketIssueId);
+      } catch (error: any) {
+        console.error('[Report Updated] Bitbucket issue 更新失敗:', error.message);
+        // 不阻斷主流程
       }
-    } catch (error: any) {
-      console.error('[Report Updated] Google Chat 通知發送失敗:', error.message);
-
-      // 記錄失敗日誌
-      await chatLogService.log({
-        platform: 'GOOGLE_CHAT',
-        type: 'THREAD',
-        status: 'FAILED',
-        request: null,
-        response: { error: error.message },
-        relatedId: id,
-        relatedType: 'REPORT',
-      });
-
-      // 不阻斷主流程
     }
 
     return res.status(200).json({

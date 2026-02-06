@@ -31,6 +31,8 @@ export interface Report {
   creatorId: string;
   trackingDate: Date;
   assigneeId?: string | null;
+  bitbucketIssueId?: string | null;
+  bitbucketIssueUrl?: string | null;
   images: string[];
   categoryId?: string | null;
   contactPhone?: string | null;

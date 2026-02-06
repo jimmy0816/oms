@@ -141,6 +141,8 @@ model Report {
   contactPhone String?
   contactEmail String?
   trackingDate DateTime?
+  bitbucketIssueId  String?
+  bitbucketIssueUrl String?
   comments     Comment[]
   assignee     User?          @relation("AssignedReports", fields: [assigneeId], references: [id])
   creator      User           @relation("CreatedReports", fields: [creatorId], references: [id])
@@ -158,6 +160,7 @@ model Report {
 
   @@index([categoryId])
   @@index([locationId])
+  @@index([bitbucketIssueId])
 }
 
 model Role {
