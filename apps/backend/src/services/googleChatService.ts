@@ -441,6 +441,7 @@ export const googleChatService = {
       assigneeId: '負責人',
       title: '標題',
       description: '描述',
+      reportIds: '關聯通報',
       locationId: '地點',
       categoryId: '分類',
       contactPhone: '聯絡電話',
@@ -524,6 +525,23 @@ export const googleChatService = {
     }
 
     text += `\n查看工單: ${ticketUrl}`;
+    return text;
+  },
+
+  /**
+   * 格式化 Ticket 刪除的 text 訊息
+   */
+  formatTicketDeleteText(ticket: any, report: any): string {
+    const omsUrl = process.env.PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+    const reportUrl = `${omsUrl}/reports/${report.id}`;
+
+    let text = `🗑️ *工單已刪除*\n`;
+    text += `工單編號: ${ticket.id}\n`;
+    text += `關聯通報: ${report.id}\n`;
+    text += `標題: ${ticket.title}\n`;
+    text += `狀態: ${this.formatStatus(ticket.status)}\n`;
+    text += `優先度: ${this.formatPriority(ticket.priority)}\n`;
+    text += `\n查看通報: ${reportUrl}`;
     return text;
   },
 };

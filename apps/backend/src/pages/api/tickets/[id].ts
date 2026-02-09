@@ -536,98 +536,20 @@ async function updateTicket(
     }
 
     // --- 發送 Google Chat 通知到關聯的 Report Thread ---
-    try {
-      // 查詢關聯的 Reports
-      const reportIds = existingReportIds;
-
-      if (reportIds.length > 0) {
-        const reports = await prisma.report.findMany({
-          where: { id: { in: reportIds } },
-          include: {
-            creator: { select: { id: true, name: true, email: true } },
-            assignee: { select: { id: true, name: true, email: true } },
-          },
-        });
-
-        // 收集變更的欄位
-        const changes: Record<string, { old: any; new: any }> = {};
-
-        if (status && status !== existingTicket.status) {
-          changes.status = { old: existingTicket.status, new: status };
-        }
-        if (priority && priority !== existingTicket.priority) {
-          changes.priority = { old: existingTicket.priority, new: priority };
-        }
-        if (assigneeId !== undefined && assigneeId !== existingTicket.assigneeId) {
-          const oldAssignee = existingTicket.assigneeId
-            ? await prisma.user.findUnique({ where: { id: existingTicket.assigneeId } })
-            : null;
-          const newAssignee = assigneeId
-            ? await prisma.user.findUnique({ where: { id: assigneeId } })
-            : null;
-          changes.assigneeId = {
-            old: oldAssignee?.name || '未指派',
-            new: newAssignee?.name || '未指派',
-          };
-        }
-        if (title && title !== existingTicket.title) {
-          changes.title = { old: existingTicket.title, new: title };
-        }
-        if (description && description !== existingTicket.description) {
-          changes.description = { old: existingTicket.description, new: description };
-        }
-
-        // 如果有變更，對每個 Report 發送通知
-        if (Object.keys(changes).length > 0) {
-          for (const report of reports) {
-            const chatThread = await chatThreadService.findByReportId(report.id);
-
-            if (chatThread) {
-              const threadName = `spaces/${chatThread.chatSpaceId}/threads/${chatThread.chatThreadId}`;
-              const text = googleChatService.formatTicketUpdateText(
-                finalUpdatedTicket,
-                report,
-                changes
-              );
-              const chatResponse = await googleChatService.sendToThread(
-                threadName,
-                text
-              );
-
-              if (chatResponse) {
-                await chatLogService.log({
-                  platform: 'GOOGLE_CHAT',
-                  type: 'THREAD',
-                  status: 'SUCCESS',
-                  request: { text, thread: { name: threadName } },
-                  response: chatResponse,
-                  relatedId: id,
-                  relatedType: 'TICKET',
-                });
-
-                console.log(
-                  `[Ticket Updated] Google Chat 通知發送成功: ${id} -> Report ${report.id}`
-                );
-              }
-            }
-          }
-        }
-      }
-    } catch (error: any) {
-      console.error('[Ticket Updated] Google Chat 通知發送失敗:', error.message);
-
-      await chatLogService.log({
-        platform: 'GOOGLE_CHAT',
-        type: 'THREAD',
-        status: 'FAILED',
-        request: null,
-        response: { error: error.message },
-        relatedId: id,
-        relatedType: 'TICKET',
-      });
-
-      // 不阻斷主流程
-    }
+    void notifyTicketUpdatedToReportThreads({
+      ticketId: id,
+      reportIdsBefore: existingReportIds,
+      reportIdsAfter: reportIds ?? existingReportIds,
+      ticket: finalUpdatedTicket,
+      existingTicket,
+      status,
+      priority,
+      assigneeId,
+      title,
+      description,
+    }).catch((error) => {
+      console.error('[Ticket Updated] Google Chat 通知發送失敗:', error?.message);
+    });
     // --- End Google Chat Notification ---
 
     return res.status(200).json({ success: true, data: finalUpdatedTicket });
@@ -649,6 +571,12 @@ async function deleteTicket(
   if (!existingTicket) {
     return res.status(404).json({ success: false, error: 'Ticket not found' });
   }
+
+  const reportIdRows = await prisma.reportTicket.findMany({
+    where: { ticketId: id },
+    select: { reportId: true },
+  });
+  const reportIds = reportIdRows.map((row) => row.reportId);
 
   try {
     const deletedTicketData = await prisma.$transaction(async (tx) => {
@@ -690,6 +618,14 @@ async function deleteTicket(
       return deletedTicket;
     });
 
+    void notifyTicketDeletedToReportThreads({
+      ticketId: id,
+      reportIds,
+      ticket: existingTicket,
+    }).catch((error) => {
+      console.error('[Ticket Deleted] Google Chat 通知發送失敗:', error?.message);
+    });
+
     return res.status(200).json({ success: true, data: deletedTicketData });
   } catch (error: any) {
     console.error(`Error deleting ticket ${id}:`, error);
@@ -697,6 +633,218 @@ async function deleteTicket(
       success: false,
       error: 'Failed to delete ticket and its related data.',
     });
+  }
+}
+
+async function notifyTicketUpdatedToReportThreads({
+  ticketId,
+  reportIdsBefore,
+  reportIdsAfter,
+  ticket,
+  existingTicket,
+  status,
+  priority,
+  assigneeId,
+  title,
+  description,
+}: {
+  ticketId: string;
+  reportIdsBefore: string[];
+  reportIdsAfter: string[];
+  ticket: any;
+  existingTicket: any;
+  status?: string;
+  priority?: string;
+  assigneeId?: string | null;
+  title?: string;
+  description?: string;
+}) {
+  const reportIds = Array.from(
+    new Set([...reportIdsBefore, ...reportIdsAfter])
+  );
+
+  if (reportIds.length === 0) {
+    return;
+  }
+
+  try {
+    const reports = await prisma.report.findMany({
+      where: { id: { in: reportIds } },
+      include: {
+        creator: { select: { id: true, name: true, email: true } },
+        assignee: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    const changes: Record<string, { old: any; new: any }> = {};
+
+    if (status && status !== existingTicket.status) {
+      changes.status = { old: existingTicket.status, new: status };
+    }
+    if (priority && priority !== existingTicket.priority) {
+      changes.priority = { old: existingTicket.priority, new: priority };
+    }
+    if (assigneeId !== undefined && assigneeId !== existingTicket.assigneeId) {
+      const oldAssignee = existingTicket.assigneeId
+        ? await prisma.user.findUnique({
+            where: { id: existingTicket.assigneeId },
+          })
+        : null;
+      const newAssignee = assigneeId
+        ? await prisma.user.findUnique({ where: { id: assigneeId } })
+        : null;
+      changes.assigneeId = {
+        old: oldAssignee?.name || '未指派',
+        new: newAssignee?.name || '未指派',
+      };
+    }
+    if (title && title !== existingTicket.title) {
+      changes.title = { old: existingTicket.title, new: title };
+    }
+    if (description && description !== existingTicket.description) {
+      changes.description = {
+        old: existingTicket.description,
+        new: description,
+      };
+    }
+
+    if (
+      reportIdsBefore.length !== reportIdsAfter.length ||
+      reportIdsBefore.some((reportId) => !reportIdsAfter.includes(reportId))
+    ) {
+      changes.reportIds = {
+        old: reportIdsBefore.join(', '),
+        new: reportIdsAfter.join(', '),
+      };
+    }
+
+    if (Object.keys(changes).length === 0) {
+      return;
+    }
+
+    for (const report of reports) {
+      const chatThread = await chatThreadService.findByReportId(report.id);
+
+      if (chatThread) {
+        const threadName = `spaces/${chatThread.chatSpaceId}/threads/${chatThread.chatThreadId}`;
+        const text = googleChatService.formatTicketUpdateText(
+          ticket,
+          report,
+          changes
+        );
+        const chatResponse = await googleChatService.sendToThread(
+          threadName,
+          text
+        );
+
+        if (chatResponse) {
+          await chatLogService.log({
+            platform: 'GOOGLE_CHAT',
+            type: 'THREAD',
+            status: 'SUCCESS',
+            request: { text, thread: { name: threadName } },
+            response: chatResponse,
+            relatedId: ticketId,
+            relatedType: 'TICKET',
+          });
+
+          console.log(
+            `[Ticket Updated] Google Chat 通知發送成功: ${ticketId} -> Report ${report.id}`
+          );
+        }
+      }
+    }
+  } catch (error: any) {
+    console.error('[Ticket Updated] Google Chat 通知發送失敗:', error.message);
+
+    try {
+      await chatLogService.log({
+        platform: 'GOOGLE_CHAT',
+        type: 'THREAD',
+        status: 'FAILED',
+        request: null,
+        response: { error: error.message },
+        relatedId: ticketId,
+        relatedType: 'TICKET',
+      });
+    } catch (logError: any) {
+      console.error(
+        '[Ticket Updated] Google Chat 失敗記錄寫入失敗:',
+        logError.message
+      );
+    }
+  }
+}
+
+async function notifyTicketDeletedToReportThreads({
+  ticketId,
+  reportIds,
+  ticket,
+}: {
+  ticketId: string;
+  reportIds: string[];
+  ticket: any;
+}) {
+  if (reportIds.length === 0) {
+    return;
+  }
+
+  try {
+    const reports = await prisma.report.findMany({
+      where: { id: { in: reportIds } },
+      include: {
+        creator: { select: { id: true, name: true, email: true } },
+        assignee: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    for (const report of reports) {
+      const chatThread = await chatThreadService.findByReportId(report.id);
+
+      if (chatThread) {
+        const threadName = `spaces/${chatThread.chatSpaceId}/threads/${chatThread.chatThreadId}`;
+        const text = googleChatService.formatTicketDeleteText(ticket, report);
+        const chatResponse = await googleChatService.sendToThread(
+          threadName,
+          text
+        );
+
+        if (chatResponse) {
+          await chatLogService.log({
+            platform: 'GOOGLE_CHAT',
+            type: 'THREAD',
+            status: 'SUCCESS',
+            request: { text, thread: { name: threadName } },
+            response: chatResponse,
+            relatedId: ticketId,
+            relatedType: 'TICKET',
+          });
+
+          console.log(
+            `[Ticket Deleted] Google Chat 通知發送成功: ${ticketId} -> Report ${report.id}`
+          );
+        }
+      }
+    }
+  } catch (error: any) {
+    console.error('[Ticket Deleted] Google Chat 通知發送失敗:', error.message);
+
+    try {
+      await chatLogService.log({
+        platform: 'GOOGLE_CHAT',
+        type: 'THREAD',
+        status: 'FAILED',
+        request: null,
+        response: { error: error.message },
+        relatedId: ticketId,
+        relatedType: 'TICKET',
+      });
+    } catch (logError: any) {
+      console.error(
+        '[Ticket Deleted] Google Chat 失敗記錄寫入失敗:',
+        logError.message
+      );
+    }
   }
 }
 
