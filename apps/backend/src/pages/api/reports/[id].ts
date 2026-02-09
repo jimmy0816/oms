@@ -10,7 +10,7 @@ import {
 import { notificationService } from '@/services/notificationService';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { bitbucketService } from '@/services/bitbucketService';
-import { sendReportUpdateChatNotification } from '@/services/reportUpdateNotificationService';
+import { sendReportUpdateChatNotification, sendReportDeleteChatNotification } from '@/services/reportUpdateNotificationService';
 
 // Define Report type based on Prisma schema
 interface Report {
@@ -515,6 +515,7 @@ async function updateReport(
           creator: { select: { id: true, name: true, email: true } },
           assignee: { select: { id: true, name: true, email: true } },
           tickets: { include: { ticket: true } },
+          category: { select: { id: true, name: true } },
         },
       });
 
@@ -694,8 +695,14 @@ async function deleteReport(
   req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<Report>>
 ) {
+  // 先取得完整的通報資料（包含相關聯的資料）用於發送刪除通知
   const existingReport = await prisma.report.findUnique({
     where: { id },
+    include: {
+      creator: { select: { id: true, name: true, email: true } },
+      assignee: { select: { id: true, name: true, email: true } },
+      category: { select: { id: true, name: true } },
+    },
   });
 
   if (!existingReport) {
@@ -739,6 +746,14 @@ async function deleteReport(
 
       return deletedReport;
     });
+
+    // 發送 Google Chat 刪除通知
+    try {
+      await sendReportDeleteChatNotification(id, existingReport);
+    } catch (error: any) {
+      console.error('[Report Deleted] Google Chat 通知發送失敗:', error.message);
+      // 不阻斷主流程，繼續返回成功結果
+    }
 
     return res.status(200).json({
       success: true,

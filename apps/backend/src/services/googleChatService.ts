@@ -30,9 +30,22 @@ interface GoogleChatResponse {
 
 export const googleChatService = {
   /**
+   * 檢查是否為軟體通報分類，只有軟體通報才發送通知
+   */
+  isSoftwareReport(report: any): boolean {
+    // 檢查分類名稱是否為「軟體通報」
+    return report?.category?.name === '軟體通報';
+  },
+
+  /**
    * 發送訊息到 Google Chat Space (建立新 Thread)
    */
-  async sendToSpace(message: GoogleChatCard): Promise<GoogleChatResponse | null> {
+  async sendToSpace(message: GoogleChatCard, report?: any): Promise<GoogleChatResponse | null> {
+    // 如果提供了 report 參數，檢查是否為軟體通報
+    if (report && !this.isSoftwareReport(report)) {
+      console.log('[Google Chat] 非軟體通報，跳過發送');
+      return null;
+    }
     const webhookUrl = process.env.GOOGLE_CHAT_WEBHOOK_URL;
     const enabled = process.env.GOOGLE_CHAT_ENABLED === 'true';
 
@@ -75,8 +88,14 @@ export const googleChatService = {
    */
   async sendToThread(
     threadName: string,
-    text: string
+    text: string,
+    report?: any
   ): Promise<GoogleChatResponse | null> {
+    // 如果提供了 report 參數，檢查是否為軟體通報
+    if (report && !this.isSoftwareReport(report)) {
+      console.log('[Google Chat] 非軟體通報，跳過發送到 Thread');
+      return null;
+    }
     const webhookUrl = process.env.GOOGLE_CHAT_WEBHOOK_URL;
     const enabled = process.env.GOOGLE_CHAT_ENABLED === 'true';
 
@@ -542,6 +561,21 @@ export const googleChatService = {
     text += `狀態: ${this.formatStatus(ticket.status)}\n`;
     text += `優先度: ${this.formatPriority(ticket.priority)}\n`;
     text += `\n查看通報: ${reportUrl}`;
+    return text;
+  },
+
+  /**
+   * 格式化通報刪除的 text 訊息
+   */
+  formatReportDeleteText(report: any): string {
+    let text = `🗑️ *通報已刪除*\n`;
+    text += `通報編號: ${report.id}\n`;
+    text += `標題: ${report.title}\n`;
+    text += `狀態: ${this.formatStatus(report.status)}\n`;
+    text += `優先度: ${this.formatPriority(report.priority)}\n`;
+    text += `分類: ${report.category?.name || '無'}\n`;
+    text += `建立人: ${report.creator?.name || '未知'}\n`;
+    text += `負責人: ${report.assignee?.name || '未指派'}`;
     return text;
   },
 };

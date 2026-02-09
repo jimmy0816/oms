@@ -322,6 +322,7 @@ async function createReport(
     include: {
       creator: { select: { id: true, name: true, email: true } },
       assignee: { select: { id: true, name: true, email: true } },
+      category: { select: { id: true, name: true } },
     },
   });
 
@@ -367,7 +368,7 @@ async function createReport(
     console.log(`[Report Created] GOOGLE_CHAT_WEBHOOK_URL 已設定: ${!!process.env.GOOGLE_CHAT_WEBHOOK_URL}`);
     
     const message = googleChatService.formatReportCreateMessage(report);
-    const chatResponse = await googleChatService.sendToSpace(message);
+    const chatResponse = await googleChatService.sendToSpace(message, report);
 
     if (chatResponse) {
       console.log(`[Report Created] Google Chat API 回應:`, JSON.stringify(chatResponse, null, 2));
@@ -428,8 +429,8 @@ async function createReport(
     // 不阻斷主流程，繼續執行
   }
 
-  // 6. 建立 Bitbucket issue（若已啟用）
-  if (bitbucketService.isEnabled()) {
+  // 6. 建立 Bitbucket issue（若已啟用且為軟體通報）
+  if (bitbucketService.isEnabled() && googleChatService.isSoftwareReport(report)) {
     try {
       const issue = await bitbucketService.createIssue({
         reportId: report.id,

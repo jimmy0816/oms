@@ -601,12 +601,13 @@ async function notifyTicketCreatedToReportThreads(
   }
 
   try {
-    // 查詢關聯的 Reports
+    // 查詢關聯的 Reports（包含分類信息）
     const reports = await prisma.report.findMany({
       where: { id: { in: reportIds } },
       include: {
         creator: { select: { id: true, name: true, email: true } },
         assignee: { select: { id: true, name: true, email: true } },
+        category: { select: { id: true, name: true } },
       },
     });
 
@@ -631,7 +632,8 @@ async function notifyTicketCreatedToReportThreads(
         );
         const chatResponse = await googleChatService.sendToThread(
           threadName,
-          text
+          text,
+          report
         );
 
         if (chatResponse) {

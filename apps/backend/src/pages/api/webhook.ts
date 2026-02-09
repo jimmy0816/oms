@@ -35,12 +35,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (issue?.id && issue?.state?.toLowerCase() === 'resolved') {
         const report = await prisma.report.findFirst({
           where: { bitbucketIssueId: issue.id },
+          include: {
+            creator: { select: { id: true, name: true, email: true } },
+            assignee: { select: { id: true, name: true, email: true } },
+            category: { select: { id: true, name: true } },
+          },
         });
 
         if (report && report.status !== ReportStatus.REVIEWED) {
           const updatedReport = await prisma.report.update({
             where: { id: report.id },
             data: { status: ReportStatus.REVIEWED },
+            include: {
+              creator: { select: { id: true, name: true, email: true } },
+              assignee: { select: { id: true, name: true, email: true } },
+              category: { select: { id: true, name: true } },
+            },
           });
 
           await sendReportUpdateChatNotification(report.id, updatedReport, {

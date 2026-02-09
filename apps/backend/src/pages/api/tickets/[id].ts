@@ -673,6 +673,7 @@ async function notifyTicketUpdatedToReportThreads({
       include: {
         creator: { select: { id: true, name: true, email: true } },
         assignee: { select: { id: true, name: true, email: true } },
+        category: { select: { id: true, name: true } },
       },
     });
 
@@ -734,7 +735,8 @@ async function notifyTicketUpdatedToReportThreads({
         );
         const chatResponse = await googleChatService.sendToThread(
           threadName,
-          text
+          text,
+          report
         );
 
         if (chatResponse) {
@@ -795,6 +797,7 @@ async function notifyTicketDeletedToReportThreads({
       include: {
         creator: { select: { id: true, name: true, email: true } },
         assignee: { select: { id: true, name: true, email: true } },
+        category: { select: { id: true, name: true } },
       },
     });
 
@@ -806,7 +809,8 @@ async function notifyTicketDeletedToReportThreads({
         const text = googleChatService.formatTicketDeleteText(ticket, report);
         const chatResponse = await googleChatService.sendToThread(
           threadName,
-          text
+          text,
+          report
         );
 
         if (chatResponse) {
