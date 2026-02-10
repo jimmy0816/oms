@@ -25,6 +25,7 @@ export default function EditReport() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
+  const [selectedCategoryPath, setSelectedCategoryPath] = useState<string>('');
   const [priority, setPriority] = useState<ReportPriority>(
     ReportPriority.MEDIUM
   );
@@ -32,11 +33,16 @@ export default function EditReport() {
   const [trackingDate, setTrackingDate] = useState<Date | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   // UI state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const isSoftwareCategory = selectedCategoryPath
+    .split(' > ')
+    .some((name) => name === '軟體通報');
 
   const reportUploadFunction = async (file: File): Promise<FileInfo> => {
     const { signedUrl, fileUrl, fileId } = await uploadService.getUploadUrl(
@@ -93,6 +99,10 @@ export default function EditReport() {
 
   const handleCategorySelect = (selectedId: string, categoryPath: string) => {
     setCategoryId(selectedId);
+    setSelectedCategoryPath(categoryPath);
+    if (categoryPath.includes('軟體通報')) {
+      setLocationError(null);
+    }
     if (categoryPath) {
       const categories = categoryPath.split(' > ');
       const level3Category = categories[categories.length - 1];
@@ -105,6 +115,13 @@ export default function EditReport() {
     if (!id) return;
 
     setSaving(true);
+    setError(null);
+    if (!isSoftwareCategory && !locationId) {
+      setLocationError('請選擇問題地點');
+      setSaving(false);
+      return;
+    }
+    setLocationError(null);
     try {
       const trackingDateToSend = trackingDate
         ? new Date(trackingDate.getTime() - trackingDate.getTimezoneOffset() * 60000)
@@ -199,6 +216,7 @@ export default function EditReport() {
                 <CategorySelector
                   selectedCategoryId={categoryId}
                   onCategorySelect={handleCategorySelect}
+                  onCategoryPathResolved={setSelectedCategoryPath}
                 />
               </div>
               <div>
@@ -227,9 +245,15 @@ export default function EditReport() {
                   htmlFor="location"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  問題地點 <span className="text-red-500">*</span>
+                  問題地點
+                  {!isSoftwareCategory && (
+                    <span className="text-red-500"> *</span>
+                  )}
                 </label>
                 <LocationSelector value={locationId} onChange={setLocationId} />
+                {locationError && !isSoftwareCategory && !locationId && (
+                  <p className="mt-1 text-sm text-red-600">{locationError}</p>
+                )}
               </div>
               <div>
                 <label
