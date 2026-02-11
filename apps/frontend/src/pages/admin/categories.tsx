@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import CategoryModal from '@/components/CategoryModal';
 import MoveCategoryModal from '@/components/MoveCategoryModal';
+import MergeCategoryModal from '@/components/MergeCategoryModal';
 import { useToast } from '@/contexts/ToastContext';
 
 // --- CategoryTree Component (Presentational) ---
@@ -149,9 +150,11 @@ export default function ManageCategoriesPage() {
   // Modals
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false); // New
 
   const [isSaving, setIsSaving] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
+  const [isMerging, setIsMerging] = useState(false); // New
 
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [parentCategory, setParentCategory] = useState<Category | null>(null);
@@ -338,30 +341,6 @@ export default function ManageCategoriesPage() {
 
   const handleBulkMove = (targetParentId: string | null) => {
     setIsMoving(true);
-    // Helper to perform the move logic.
-    // Strategy: For each selected item, update its parentId.
-    // We can reuse updateCategoryOrder but we need to calculate displayOrder.
-    // To keep it simple, we will place them at the end of the target list.
-
-    // OR we can make individual calls to updateCategory (which now handles level updates).
-    // Individual calls are safer for level recursion logic since we updated categoryService to handle it per-update.
-    // However, updateCategoryOrder is transactional.
-
-    // Best approach: Use updateCategoryOrder.
-    // 1. Get current children of targetParent
-    // 2. Append selected items to the end
-    // 3. Send update
-
-    // BUT wait, updateCategoryOrder expects ALL siblings to ensure order is correct?
-    // Actually, standard practice for "Append" is just to set parentId and a high displayOrder?
-    // No, our reorderCategories logic replaces checking siblings.
-
-    // Let's use the individual updateCategory calls for now as it triggers the complex Level logic we wrote.
-    // Although reorderCategories also has it.
-
-    // Let's try to construct a bulk payload for reorderCategories.
-    // We need to know the next displayOrder.
-
     const runMove = async () => {
       try {
         const selectedItems = flatCategories.filter((c) =>
@@ -405,6 +384,39 @@ export default function ManageCategoriesPage() {
     runMove();
   };
 
+  const handleBulkMerge = async (
+    sourceIds: string[],
+    targetId: string | undefined,
+    newName: string | undefined,
+  ) => {
+    setIsMerging(true);
+    try {
+      // Determines parentId for the new category if merging into a new one.
+      // We default to the parent of the first source category.
+      let parentIdForNew: string | undefined = undefined;
+      if (!targetId && sourceIds.length > 0) {
+        const firstSource = flatCategories.find((c) => c.id === sourceIds[0]);
+        parentIdForNew = firstSource?.parentId || undefined;
+      }
+
+      await categoryService.mergeCategories(
+        sourceIds,
+        targetId,
+        newName,
+        parentIdForNew,
+      );
+      showToast('分類已成功整併', 'success');
+      setIsMergeModalOpen(false);
+      setSelectedIds(new Set());
+      await fetchCategories();
+    } catch (e: any) {
+      console.error(e);
+      showToast('整併失敗: ' + (e.response?.data?.error || e.message), 'error');
+    } finally {
+      setIsMerging(false);
+    }
+  };
+
   const handleBulkDelete = async () => {
     if (
       !window.confirm(
@@ -414,8 +426,6 @@ export default function ManageCategoriesPage() {
       return;
 
     try {
-      // Sequential delete to handle potential errors gracefully or just Promise.all
-      // Backend doesn't have bulk delete yet, so we loop.
       const ids = Array.from(selectedIds);
       await Promise.all(ids.map((id) => categoryService.deleteCategory(id)));
 
@@ -518,6 +528,18 @@ export default function ManageCategoriesPage() {
           <div className="space-x-2 flex">
             {selectedIds.size > 0 && (
               <>
+                {/* Only show Merge button if all selected categories are Level 3 */}
+                {Array.from(selectedIds).every(
+                  (id) => flatCategories.find((c) => c.id === id)?.level === 3,
+                ) && (
+                  <button
+                    onClick={() => setIsMergeModalOpen(true)}
+                    className="btn-secondary px-3 py-2 text-sm font-medium rounded-md flex items-center bg-white border border-gray-300 hover:bg-gray-50 text-indigo-700"
+                  >
+                    <ArrowRightCircleIcon className="h-4 w-4 mr-1 transform rotate-45" />
+                    整併 ({selectedIds.size})
+                  </button>
+                )}
                 <button
                   onClick={() => setIsMoveModalOpen(true)}
                   className="btn-secondary px-3 py-2 text-sm font-medium rounded-md flex items-center bg-white border border-gray-300 hover:bg-gray-50 text-gray-700"
@@ -577,6 +599,15 @@ export default function ManageCategoriesPage() {
         categories={categories}
         movingCategoryIds={Array.from(selectedIds)}
         isMoving={isMoving}
+      />
+
+      <MergeCategoryModal
+        isOpen={isMergeModalOpen}
+        onClose={() => setIsMergeModalOpen(false)}
+        onMerge={handleBulkMerge}
+        categories={categories}
+        selectedIds={selectedIds}
+        isMerging={isMerging}
       />
     </>
   );
