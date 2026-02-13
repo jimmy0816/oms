@@ -132,8 +132,11 @@ export interface Category {
   id: string;
   name: string;
   level: number;
+  displayOrder: number;
   parentId?: string | null;
   children?: Category[];
+  status: 'ACTIVE' | 'INACTIVE' | 'MERGED';
+  mergedIntoId?: string | null;
 }
 
 export interface Location {

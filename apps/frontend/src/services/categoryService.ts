@@ -1,17 +1,15 @@
 import { Category } from 'shared-types';
 import apiClient from '@/lib/apiClient';
 
-
-
 export const getCategoryPath = (
   categoryId?: string | null,
-  categories?: Category[]
+  categories?: Category[],
 ) => {
   if (!categoryId) return '未分類';
 
   const findCategoryPathRecursive = (
     cats: Category[],
-    currentPath: string[]
+    currentPath: string[],
   ): string | undefined => {
     for (const cat of cats) {
       const newPath = [...currentPath, cat.name];
@@ -49,7 +47,10 @@ export const categoryService = {
    * @param data - The data for the new category.
    * @returns The created category.
    */
-  async createCategory(data: { name: string; parentId: string | null }): Promise<Category> {
+  async createCategory(data: {
+    name: string;
+    parentId: string | null;
+  }): Promise<Category> {
     try {
       return await apiClient.post<Category>('/api/categories', data);
     } catch (error) {
@@ -90,11 +91,39 @@ export const categoryService = {
    * Updates the order and hierarchy of categories.
    * @param updates - An array of category updates.
    */
-  async updateCategoryOrder(updates: { id: string; displayOrder: number; parentId: string | null }[]): Promise<void> {
+  async updateCategoryOrder(
+    updates: { id: string; displayOrder: number; parentId: string | null }[],
+  ): Promise<void> {
     try {
       await apiClient.put('/api/categories/reorder', { updates });
     } catch (error) {
       console.error('Error updating category order:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Merges multiple categories.
+   * @param sourceIds - IDs of categories to merge (these will be soft deleted).
+   * @param targetId - ID of existing category to merge into (optional).
+   * @param newName - Name of new category if merging into new (optional).
+   * @param parentId - Parent ID for the new category (optional).
+   */
+  async mergeCategories(
+    sourceIds: string[],
+    targetId?: string,
+    newName?: string,
+    parentId?: string,
+  ): Promise<void> {
+    try {
+      await apiClient.post('/api/categories/merge', {
+        sourceIds,
+        targetId,
+        newName,
+        parentId,
+      });
+    } catch (error) {
+      console.error('Error merging categories:', error);
       throw error;
     }
   },
