@@ -4,6 +4,7 @@
  */
 
 interface GoogleChatCard {
+  fallbackText?: string;
   cardsV2: Array<{
     cardId?: string;
     card: {
@@ -60,12 +61,22 @@ export const googleChatService = {
     }
 
     try {
+      const summaryText =
+        message.fallbackText || this.extractCardSummaryText(message) || '您有一則新的通報通知';
+
+      const { text: _, ...messageWithoutText } = message as GoogleChatCard & { text?: string };
+
+      const payload = {
+        ...messageWithoutText,
+        fallbackText: message.fallbackText || summaryText,
+      };
+
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
         },
-        body: JSON.stringify(message),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -149,8 +160,10 @@ export const googleChatService = {
   formatReportCreateMessage(report: any): GoogleChatCard {
     const omsUrl = process.env.PUBLIC_FRONTEND_URL || 'http://localhost:3000';
     const reportUrl = `${omsUrl}/reports/${report.id}`;
+    const summaryText = `📋 新通報 ${report.id}: ${report.description}`;
 
     return {
+      fallbackText: summaryText,
       cardsV2: [
         {
           cardId: `report-${report.id}`,
@@ -227,6 +240,7 @@ export const googleChatService = {
   formatReportUpdateMessage(report: any, changes: Record<string, any>): GoogleChatCard {
     const omsUrl = process.env.PUBLIC_FRONTEND_URL || 'http://localhost:3000';
     const reportUrl = `${omsUrl}/reports/${report.id}`;
+    const summaryText = `📝 通報更新 ${report.id}`;
 
     const changeWidgets = Object.entries(changes).map(([field, { old, new: newValue }]) => ({
       decoratedText: {
@@ -236,6 +250,7 @@ export const googleChatService = {
     }));
 
     return {
+      fallbackText: summaryText,
       cardsV2: [
         {
           cardId: `report-update-${report.id}`,
@@ -262,150 +277,6 @@ export const googleChatService = {
                           onClick: {
                             openLink: {
                               url: reportUrl,
-                            },
-                          },
-                        },
-                      ],
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      ],
-    };
-  },
-
-  /**
-   * 格式化 Ticket 建立訊息
-   */
-  formatTicketCreateMessage(ticket: any, report: any): GoogleChatCard {
-    const omsUrl = process.env.PUBLIC_FRONTEND_URL || 'http://localhost:3000';
-    const ticketUrl = `${omsUrl}/tickets/${ticket.id}`;
-
-    return {
-      cardsV2: [
-        {
-          cardId: `ticket-${ticket.id}`,
-          card: {
-            header: {
-              title: '🎫 工單已建立',
-              subtitle: ticket.id,
-            },
-            sections: [
-              {
-                widgets: [
-                  {
-                    decoratedText: {
-                      topLabel: '關聯通報',
-                      text: report.id,
-                    },
-                  },
-                  {
-                    decoratedText: {
-                      topLabel: '工單標題',
-                      text: ticket.title,
-                    },
-                  },
-                  {
-                    decoratedText: {
-                      topLabel: '描述',
-                      text: ticket.description || '無',
-                    },
-                  },
-                  {
-                    decoratedText: {
-                      topLabel: '狀態',
-                      text: this.formatStatus(ticket.status),
-                    },
-                  },
-                  {
-                    decoratedText: {
-                      topLabel: '優先度',
-                      text: this.formatPriority(ticket.priority),
-                    },
-                  },
-                  {
-                    decoratedText: {
-                      topLabel: '負責人',
-                      text: ticket.assignee?.name || '未指派',
-                    },
-                  },
-                  {
-                    buttonList: {
-                      buttons: [
-                        {
-                          text: '查看工單',
-                          onClick: {
-                            openLink: {
-                              url: ticketUrl,
-                            },
-                          },
-                        },
-                      ],
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      ],
-    };
-  },
-
-  /**
-   * 格式化 Ticket 更新訊息
-   */
-  formatTicketUpdateMessage(
-    ticket: any,
-    report: any,
-    changes: Record<string, any>
-  ): GoogleChatCard {
-    const omsUrl = process.env.PUBLIC_FRONTEND_URL || 'http://localhost:3000';
-    const ticketUrl = `${omsUrl}/tickets/${ticket.id}`;
-
-    const changeWidgets = Object.entries(changes).map(([field, { old, new: newValue }]) => ({
-      decoratedText: {
-        topLabel: this.formatFieldName(field),
-        text: `${this.formatValue(old)} → ${this.formatValue(newValue)}`,
-      },
-    }));
-
-    return {
-      cardsV2: [
-        {
-          cardId: `ticket-update-${ticket.id}`,
-          card: {
-            header: {
-              title: '🔄 工單已更新',
-              subtitle: ticket.id,
-            },
-            sections: [
-              {
-                widgets: [
-                  {
-                    decoratedText: {
-                      topLabel: '關聯通報',
-                      text: report.id,
-                    },
-                  },
-                  {
-                    decoratedText: {
-                      topLabel: '工單標題',
-                      text: ticket.title,
-                    },
-                  },
-                  ...changeWidgets,
-                  {
-                    buttonList: {
-                      buttons: [
-                        {
-                          text: '查看工單',
-                          onClick: {
-                            openLink: {
-                              url: ticketUrl,
                             },
                           },
                         },
@@ -480,6 +351,26 @@ export const googleChatService = {
       return value.name || value.id || JSON.stringify(value);
     }
     return String(value);
+  },
+
+  extractCardSummaryText(message: GoogleChatCard): string | null {
+    const firstCard = message.cardsV2?.[0]?.card;
+    if (!firstCard) {
+      return null;
+    }
+
+    const headerTitle = firstCard.header?.title;
+    const headerSubtitle = firstCard.header?.subtitle;
+
+    if (headerTitle && headerSubtitle) {
+      return `${headerTitle} ${headerSubtitle}`;
+    }
+
+    if (headerTitle) {
+      return headerTitle;
+    }
+
+    return null;
   },
 
   /**
