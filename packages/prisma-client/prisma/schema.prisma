@@ -267,6 +267,12 @@ model Category {
   // Reports associated with this category (only for level 3 categories)
   reports Report[]
 
+  // New fields for soft delete and merging
+  status       String     @default("ACTIVE") // "ACTIVE", "INACTIVE", "MERGED"
+  mergedIntoId String?
+  mergedInto   Category?  @relation("CategoryMerges", fields: [mergedIntoId], references: [id])
+  mergedFrom   Category[] @relation("CategoryMerges") // Back-relation
+
   @@unique([name, parentId]) // Ensures uniqueness of category names within the same level
   @@index([parentId])
 }
