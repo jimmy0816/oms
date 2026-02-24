@@ -4,6 +4,12 @@ import { ReportStatus } from 'shared-types';
 import { bitbucketService } from '@/services/bitbucketService';
 import { sendReportUpdateChatNotification } from '@/services/reportUpdateNotificationService';
 
+const REPORT_INCLUDE = {
+  creator: { select: { id: true, name: true, email: true } },
+  assignee: { select: { id: true, name: true, email: true } },
+  category: { select: { id: true, name: true } },
+};
+
 /**
  * Webhook 接收端點
  * @param req 請求對象
@@ -32,30 +38,76 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const issue = bitbucketService.extractIssueFromWebhook(req.body);
       console.log('Bitbucket issue payload:', JSON.stringify(issue, null, 2));
 
-      if (issue?.id && issue?.state?.toLowerCase() === 'resolved') {
+      const updateReportStatusByIssue = async (
+        targetStatusOrResolver:
+          | ReportStatus
+          | ((report: { status: string }) => ReportStatus)
+      ) => {
+        if (!issue?.id) return;
+
         const report = await prisma.report.findFirst({
           where: { bitbucketIssueId: issue.id },
-          include: {
-            creator: { select: { id: true, name: true, email: true } },
-            assignee: { select: { id: true, name: true, email: true } },
-            category: { select: { id: true, name: true } },
-          },
+          include: REPORT_INCLUDE,
         });
 
-        if (report && report.status !== ReportStatus.REVIEWED) {
-          const updatedReport = await prisma.report.update({
-            where: { id: report.id },
-            data: { status: ReportStatus.REVIEWED },
-            include: {
-              creator: { select: { id: true, name: true, email: true } },
-              assignee: { select: { id: true, name: true, email: true } },
-              category: { select: { id: true, name: true } },
-            },
-          });
+        if (!report) return;
 
-          await sendReportUpdateChatNotification(report.id, updatedReport, {
-            status: { old: report.status, new: ReportStatus.REVIEWED },
-          });
+        const targetStatus =
+          typeof targetStatusOrResolver === 'function'
+            ? targetStatusOrResolver(report)
+            : targetStatusOrResolver;
+
+        if (report.status === targetStatus) return;
+
+        const updatedReport = await prisma.report.update({
+          where: { id: report.id },
+          data: { status: targetStatus },
+          include: REPORT_INCLUDE,
+        });
+
+        await sendReportUpdateChatNotification(report.id, updatedReport, {
+          status: { old: report.status, new: targetStatus },
+        });
+      };
+
+      const previousIssueState =
+        typeof req.body?.changes?.state?.old === 'string'
+          ? req.body.changes.state.old.toLowerCase()
+          : null;
+
+      const mapIssueStateToReportStatus = (state: string | null): ReportStatus | null => {
+        switch (state) {
+          case 'resolved':
+            return ReportStatus.PENDING_REVIEW;
+          case 'open':
+            return ReportStatus.RETURNED;
+          case 'wontfix':
+            return ReportStatus.REJECTED;
+          default:
+            return null;
+        }
+      };
+
+      if (issue?.id && issue?.state) {
+        switch (issue.state) {
+          case 'resolved': {
+            const targetStatus = ReportStatus.PENDING_REVIEW;
+            if (mapIssueStateToReportStatus(previousIssueState) === targetStatus) break;
+            await updateReportStatusByIssue(targetStatus);
+            break;
+          }
+          case 'open': {
+            const targetStatus = ReportStatus.RETURNED;
+            if (mapIssueStateToReportStatus(previousIssueState) === targetStatus) break;
+            await updateReportStatusByIssue(targetStatus);
+            break;
+          }
+          case 'wontfix': {
+            const targetStatus = ReportStatus.REJECTED;
+            if (mapIssueStateToReportStatus(previousIssueState) === targetStatus) break;
+            await updateReportStatusByIssue(targetStatus);
+            break;
+          }
         }
       }
     }

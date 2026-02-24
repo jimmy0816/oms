@@ -1,5 +1,19 @@
 import { ReportPriority } from 'shared-types';
 
+export type BitbucketIssueState = 'open' | 'resolved' | 'wontfix';
+
+export const normalizeBitbucketIssueState = (
+  state: unknown
+): BitbucketIssueState | null => {
+  if (typeof state !== 'string') return null;
+
+  const normalized = state.toLowerCase();
+  if (normalized === 'open') return 'open';
+  if (normalized === 'resolved') return 'resolved';
+  if (normalized === 'wontfix') return 'wontfix';
+  return null;
+};
+
 interface BitbucketIssueResponse {
   id: number;
   title: string;
@@ -68,6 +82,32 @@ export const bitbucketService = {
     return ensureConfig();
   },
 
+  async updateIssueState(issueId: string, state: BitbucketIssueState) {
+    if (!ensureConfig()) return null;
+
+    const response = await fetch(`${getRepoIssuesUrl()}/${issueId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: getAuthHeader(),
+      },
+      body: JSON.stringify({ state }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Bitbucket update issue state failed: ${response.status} ${errorText}`);
+    }
+
+    const data = (await response.json()) as BitbucketIssueResponse;
+    return {
+      id: String(data.id),
+      url: data.links?.html?.href || null,
+      state: data.state,
+      title: data.title,
+    };
+  },
+
   async createIssue(input: {
     reportId: string;
     title: string;
@@ -115,38 +155,12 @@ export const bitbucketService = {
     };
   },
 
-  async resolveIssue(issueId: string) {
-    if (!ensureConfig()) return null;
-
-    const response = await fetch(`${getRepoIssuesUrl()}/${issueId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: getAuthHeader(),
-      },
-      body: JSON.stringify({ state: 'resolved' }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Bitbucket resolve issue failed: ${response.status} ${errorText}`);
-    }
-
-    const data = (await response.json()) as BitbucketIssueResponse;
-    return {
-      id: String(data.id),
-      url: data.links?.html?.href || null,
-      state: data.state,
-      title: data.title,
-    };
-  },
-
   extractIssueFromWebhook(payload: any) {
     const issue = payload?.issue;
     if (!issue) return null;
     return {
       id: issue?.id ? String(issue.id) : null,
-      state: issue?.state ? String(issue.state) : null,
+      state: normalizeBitbucketIssueState(issue?.state),
       title: issue?.title ? String(issue.title) : null,
     };
   },

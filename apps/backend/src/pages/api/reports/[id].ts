@@ -9,7 +9,7 @@ import {
 } from 'shared-types';
 import { notificationService } from '@/services/notificationService';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
-import { bitbucketService } from '@/services/bitbucketService';
+import { bitbucketService, type BitbucketIssueState } from '@/services/bitbucketService';
 import { sendReportUpdateChatNotification, sendReportDeleteChatNotification } from '@/services/reportUpdateNotificationService';
 
 // Define Report type based on Prisma schema
@@ -279,9 +279,6 @@ async function updateReport(
   req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<Report>>
 ) {
-  const originPlatform = Array.isArray(req.query.origin_platform)
-    ? req.query.origin_platform[0]
-    : req.query.origin_platform;
   const {
     title,
     description,
@@ -661,16 +658,29 @@ async function updateReport(
 
     await sendReportUpdateChatNotification(id, finalUpdatedReport, changes);
 
-    // 若狀態更新為 REVIEWED，且來源非 Bitbucket，則同步更新 Bitbucket issue
     if (
-      status === ReportStatus.REVIEWED &&
       status !== existingReport.status &&
-      originPlatform !== 'bitbucket' &&
       existingReport.bitbucketIssueId &&
       bitbucketService.isEnabled()
     ) {
       try {
-        await bitbucketService.resolveIssue(existingReport.bitbucketIssueId);
+        const bitbucketState: BitbucketIssueState | null =
+          status === ReportStatus.PENDING_REVIEW
+            ? 'resolved'
+            : status === ReportStatus.REJECTED
+              ? 'wontfix'
+              : status === ReportStatus.PROCESSING ||
+                  status === ReportStatus.RETURNED ||
+                  status === ReportStatus.UNCONFIRMED
+                ? 'open'
+                : null;
+
+        if (bitbucketState) {
+          await bitbucketService.updateIssueState(
+            existingReport.bitbucketIssueId,
+            bitbucketState
+          );
+        }
       } catch (error: any) {
         console.error('[Report Updated] Bitbucket issue 更新失敗:', error.message);
         // 不阻斷主流程
