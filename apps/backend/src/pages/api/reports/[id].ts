@@ -2,14 +2,15 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import {
   ApiResponse,
-  Ticket,
   ReportTicket,
   ReportStatus,
   Permission,
 } from 'shared-types';
-import { notificationService } from '@/services/notificationService';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
-import { bitbucketService, type BitbucketIssueState } from '@/services/bitbucketService';
+import {
+  reportMutationService,
+  type UpdateReportPayload,
+} from '@/services/reportMutationService';
 import { sendReportUpdateChatNotification, sendReportDeleteChatNotification } from '@/services/reportUpdateNotificationService';
 
 // Define Report type based on Prisma schema
@@ -82,19 +83,8 @@ interface Report {
 }
 
 // Define UpdateReportRequest type
-interface UpdateReportRequest {
-  title?: string;
-  description?: string;
-  locationId?: number;
+interface UpdateReportRequest extends UpdateReportPayload {
   status?: ReportStatus;
-  priority?: string;
-  assigneeId?: string | null;
-  categoryId?: string;
-  contactPhone?: string;
-  contactEmail?: string;
-  trackingDate?: Date;
-  ticketIds?: string[];
-  attachments?: any[];
 }
 
 async function handler(
@@ -305,26 +295,6 @@ async function updateReport(
     });
   }
 
-  const existingAttachments = await prisma.attachment.findMany({
-    where: {
-      parentId: id,
-      parentType: 'REPORT',
-    },
-  });
-
-  const updateData: any = {};
-  if (title !== undefined) updateData.title = title;
-  if (description !== undefined) updateData.description = description;
-  if (locationId !== undefined) updateData.locationId = locationId;
-  if (status !== undefined) updateData.status = status;
-  if (priority !== undefined) updateData.priority = priority;
-  console.log('assigneeId', assigneeId);
-  if (assigneeId !== undefined) updateData.assigneeId = assigneeId;
-  if (categoryId !== undefined) updateData.categoryId = categoryId;
-  if (contactPhone !== undefined) updateData.contactPhone = contactPhone;
-  if (contactEmail !== undefined) updateData.contactEmail = contactEmail;
-  if (trackingDate !== undefined) updateData.trackingDate = trackingDate;
-
   const userId = req.user.id; // 從認證請求中獲取用戶ID
 
   // Check for REJECTED -> UNCONFIRMED transition
@@ -341,351 +311,60 @@ async function updateReport(
     }
   }
 
-  // 輔助函數：創建活動日誌
-  const createActivityLog = async (
-    tx: any, // Prisma Transaction client
-    reportId: string,
-    actorId: string,
-    content: string
-  ) => {
-    await tx.activityLog.create({
-      data: {
-        parentId: reportId,
-        parentType: 'REPORT',
-        userId: actorId,
-        content: content,
-      },
-    });
-  };
+  const shouldUpdateStatus =
+    status !== undefined && status !== existingReport.status;
 
   try {
-    const updatedReport = await prisma.$transaction(async (tx) => {
-      // 記錄標量欄位變更的活動日誌
-      let dataChanged = false;
-      const fieldsToMonitor = [
-        'title',
-        'description',
-        'locationId',
-        'priority',
-        'categoryId',
-        'contactPhone',
-        'contactEmail',
-      ];
-
-      for (const field of fieldsToMonitor) {
-        if (
-          updateData[field] !== undefined &&
-          updateData[field] !== (existingReport as any)[field]
-        ) {
-          dataChanged = true;
-          break;
-        }
-      }
-
-      if (dataChanged) {
-        await createActivityLog(tx, id, userId, `通報資料已更新`);
-      }
-
-      // 處理人員變更的活動日誌
-      if (
-        updateData.assigneeId !== undefined &&
-        updateData.assigneeId !== existingReport.assigneeId
-      ) {
-        const oldAssignee = existingReport.assigneeId
-          ? await tx.user.findUnique({
-              where: { id: existingReport.assigneeId },
-            })
-          : null;
-        const newAssignee = updateData.assigneeId
-          ? await tx.user.findUnique({ where: { id: updateData.assigneeId } })
-          : null;
-        await createActivityLog(
-          tx,
-          id,
-          userId,
-          `處理人員從「${oldAssignee?.name || '未指派'}」變更為「${
-            newAssignee?.name || '未指派'
-          }」`
-        );
-      }
-
-      // Handle attachments update
-      if (attachments !== undefined) {
-        const currentAttachmentIds = existingAttachments.map((a) => a.id);
-        const newAttachmentIds = attachments
-          .map((a: any) => a.id)
-          .filter(Boolean);
-
-        const attachmentsToDelete = currentAttachmentIds.filter(
-          (attId) => !newAttachmentIds.includes(attId)
-        );
-        const attachmentsToCreate = attachments.filter(
-          (a: any) => !currentAttachmentIds.includes(a.id)
-        );
-
-        if (attachmentsToDelete.length > 0) {
-          await tx.attachment.deleteMany({
-            where: { id: { in: attachmentsToDelete } },
-          });
-          await createActivityLog(
-            tx,
-            id,
-            userId,
-            `移除了 ${attachmentsToDelete.length} 個附件`
-          );
-        }
-
-        if (attachmentsToCreate.length > 0) {
-          await tx.attachment.createMany({
-            data: attachmentsToCreate.map((a: any) => ({
-              filename: a.name,
-              url: a.url,
-              fileType: a.type,
-              fileSize: a.size,
-              createdById: userId,
-              parentId: id, // Add parentId
-              parentType: 'REPORT', // Add parentType
-            })),
-          });
-          await createActivityLog(
-            tx,
-            id,
-            userId,
-            `新增了 ${attachmentsToCreate.length} 個附件`
-          );
-        }
-      }
-
-      // Handle ticketIds update
-      if (ticketIds !== undefined) {
-        const existingTicketIds = (
-          await tx.reportTicket.findMany({
-            where: { reportId: id },
-            select: { ticketId: true },
-          })
-        ).map((rt: any) => rt.ticketId);
-
-        const ticketsToDisconnect = existingTicketIds.filter(
-          (existingId: string) => !ticketIds.includes(existingId)
-        );
-        const ticketsToConnect = ticketIds.filter(
-          (newId: string) => !existingTicketIds.includes(newId)
-        );
-
-        if (ticketsToDisconnect.length > 0) {
-          await tx.reportTicket.deleteMany({
-            where: {
-              reportId: id,
-              ticketId: { in: ticketsToDisconnect },
-            },
-          });
-          await createActivityLog(
-            tx,
-            id,
-            userId,
-            `移除了與 ${ticketsToDisconnect.length} 個工單的關聯`
-          );
-        }
-
-        if (ticketsToConnect.length > 0) {
-          await tx.reportTicket.createMany({
-            data: ticketsToConnect.map((ticketId) => ({
-              ticketId: ticketId,
-              reportId: id,
-            })),
-          });
-          await createActivityLog(
-            tx,
-            id,
-            userId,
-            `新增了與 ${ticketsToConnect.length} 個工單的關聯`
-          );
-        }
-      }
-
-      // Update report
-      const report = await tx.report.update({
-        where: { id },
-        data: updateData,
-        include: {
-          location: true,
-          creator: { select: { id: true, name: true, email: true } },
-          assignee: { select: { id: true, name: true, email: true } },
-          tickets: { include: { ticket: true } },
-          category: { select: { id: true, name: true } },
-        },
-      });
-
-      return report;
+    const nonStatusUpdateResult = await reportMutationService.applyNonStatusUpdate({
+      reportId: id,
+      userId,
+      existingReport,
+      payload: {
+        title,
+        description,
+        locationId,
+        priority,
+        assigneeId,
+        categoryId,
+        contactPhone,
+        contactEmail,
+        trackingDate,
+        attachments,
+        ticketIds,
+      },
     });
 
-    // Fetch attachments separately after update
-    const updatedAttachments = await prisma.attachment.findMany({
-      where: {
-        parentId: id,
-        parentType: 'REPORT',
-      },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    let finalUpdatedReport = nonStatusUpdateResult.report;
 
-    // Manually attach attachments to the updatedReport object
-    const finalUpdatedReport = {
-      ...updatedReport,
-      attachments: updatedAttachments,
-    };
-
-    // Create notification if assignee was changed
-    if (assigneeId && assigneeId !== existingReport.assigneeId) {
-      await notificationService.create({
-        title: '通報已指派給您',
-        message: `您已被指派到通報：「${finalUpdatedReport.title}」`,
-        userId: assigneeId,
-        relatedId: id,
-        relatedType: 'REPORT',
+    if (shouldUpdateStatus && status) {
+      const statusUpdateResult = await reportMutationService.updateReportStatus({
+        reportId: id,
+        targetStatus: status,
+        actorUserId: userId,
+        source: 'REPORT_API',
+        syncBitbucketState: true,
+        sendChatNotification: false,
+        createActivityLog: true,
       });
-    }
 
-    // Create notification if status was changed
-    if (status && status !== existingReport.status) {
-      // await notificationService.create({
-      //   title: '通報狀態更新',
-      //   message: `您的通報「${finalUpdatedReport.title}」狀態已更新為 ${status}`,
-      //   userId: existingReport.creatorId,
-      //   relatedId: id,
-      //   relatedType: 'REPORT',
-      // });
-    }
-
-    // Create notification if other data was changed
-    let otherDataChanged = false;
-    const fieldsToMonitorForNotification = [
-      'title',
-      'description',
-      'locationId',
-      'priority',
-      'categoryId',
-      'contactPhone',
-      'contactEmail',
-    ];
-
-    for (const field of fieldsToMonitorForNotification) {
-      if (
-        updateData[field] !== undefined &&
-        updateData[field] !== (existingReport as any)[field]
-      ) {
-        otherDataChanged = true;
-        break;
+      if (statusUpdateResult.changed && statusUpdateResult.report) {
+        finalUpdatedReport = {
+          ...finalUpdatedReport,
+          status: statusUpdateResult.report.status,
+          updatedAt: (statusUpdateResult.report as any).updatedAt,
+        };
       }
-    }
-
-    // Check for attachment changes
-    if (attachments !== undefined) {
-      const currentAttachmentIds = existingAttachments.map((a) => a.id);
-      const newAttachmentIds = attachments
-        .map((a: any) => a.id)
-        .filter(Boolean);
-      if (
-        currentAttachmentIds.length !== newAttachmentIds.length ||
-        currentAttachmentIds.some((attId) => !newAttachmentIds.includes(attId))
-      ) {
-        otherDataChanged = true;
-      }
-    }
-
-    // Check for ticketIds changes
-    if (ticketIds !== undefined) {
-      const existingTicketIds = (
-        await prisma.reportTicket.findMany({
-          where: { reportId: id },
-          select: { ticketId: true },
-        })
-      ).map((rt: any) => rt.ticketId);
-
-      if (
-        existingTicketIds.length !== ticketIds.length ||
-        existingTicketIds.some((ticketId) => !ticketIds.includes(ticketId))
-      ) {
-        otherDataChanged = true;
-      }
-    }
-
-    if (otherDataChanged) {
-      await notificationService.create({
-        title: '通報資料已更新',
-        message: `您的通報「${finalUpdatedReport.title}」資料已更新。`,
-        userId: existingReport.creatorId,
-        relatedId: id,
-        relatedType: 'REPORT',
-      });
     }
 
     // 發送 Google Chat 更新通知
-    const changes: Record<string, { old: any; new: any }> = {};
+    const changes: Record<string, { old: any; new: any }> = {
+      ...nonStatusUpdateResult.changes,
+    };
 
-    if (status && status !== existingReport.status) {
+    if (status !== undefined && status !== existingReport.status) {
       changes.status = { old: existingReport.status, new: status };
     }
-    if (priority && priority !== existingReport.priority) {
-      changes.priority = { old: existingReport.priority, new: priority };
-    }
-    if (assigneeId !== undefined && assigneeId !== existingReport.assigneeId) {
-      const oldAssignee = existingReport.assigneeId
-        ? await prisma.user.findUnique({ where: { id: existingReport.assigneeId } })
-        : null;
-      const newAssignee = assigneeId
-        ? await prisma.user.findUnique({ where: { id: assigneeId } })
-        : null;
-      changes.assigneeId = {
-        old: oldAssignee?.name || '未指派',
-        new: newAssignee?.name || '未指派',
-      };
-    }
-    if (title && title !== existingReport.title) {
-      changes.title = { old: existingReport.title, new: title };
-    }
-    if (description && description !== existingReport.description) {
-      changes.description = { old: existingReport.description, new: description };
-    }
-
     await sendReportUpdateChatNotification(id, finalUpdatedReport, changes);
-
-    if (
-      status !== existingReport.status &&
-      existingReport.bitbucketIssueId &&
-      bitbucketService.isEnabled()
-    ) {
-      try {
-        const bitbucketState: BitbucketIssueState | null =
-          status === ReportStatus.PENDING_REVIEW
-            ? 'resolved'
-            : status === ReportStatus.REJECTED
-              ? 'wontfix'
-              : status === ReportStatus.PROCESSING ||
-                  status === ReportStatus.RETURNED ||
-                  status === ReportStatus.UNCONFIRMED
-                ? 'open'
-                : null;
-
-        if (bitbucketState) {
-          await bitbucketService.updateIssueState(
-            existingReport.bitbucketIssueId,
-            bitbucketState
-          );
-        }
-      } catch (error: any) {
-        console.error('[Report Updated] Bitbucket issue 更新失敗:', error.message);
-        // 不阻斷主流程
-      }
-    }
 
     return res.status(200).json({
       success: true,

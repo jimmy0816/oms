@@ -1,14 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '@/lib/prisma';
 import { ReportStatus } from 'shared-types';
 import { bitbucketService } from '@/services/bitbucketService';
-import { sendReportUpdateChatNotification } from '@/services/reportUpdateNotificationService';
-
-const REPORT_INCLUDE = {
-  creator: { select: { id: true, name: true, email: true } },
-  assignee: { select: { id: true, name: true, email: true } },
-  category: { select: { id: true, name: true } },
-};
+import { reportMutationService } from '@/services/reportMutationService';
 
 /**
  * Webhook 接收端點
@@ -38,36 +31,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const issue = bitbucketService.extractIssueFromWebhook(req.body);
       console.log('Bitbucket issue payload:', JSON.stringify(issue, null, 2));
 
-      const updateReportStatusByIssue = async (
-        targetStatusOrResolver:
-          | ReportStatus
-          | ((report: { status: string }) => ReportStatus)
-      ) => {
+      const updateReportStatusByIssue = async (targetStatus: ReportStatus) => {
         if (!issue?.id) return;
 
-        const report = await prisma.report.findFirst({
-          where: { bitbucketIssueId: issue.id },
-          include: REPORT_INCLUDE,
-        });
-
-        if (!report) return;
-
-        const targetStatus =
-          typeof targetStatusOrResolver === 'function'
-            ? targetStatusOrResolver(report)
-            : targetStatusOrResolver;
-
-        if (report.status === targetStatus) return;
-
-        const updatedReport = await prisma.report.update({
-          where: { id: report.id },
-          data: { status: targetStatus },
-          include: REPORT_INCLUDE,
-        });
-
-        await sendReportUpdateChatNotification(report.id, updatedReport, {
-          status: { old: report.status, new: targetStatus },
-        });
+        await reportMutationService.updateReportStatusByBitbucketIssueId(
+          issue.id,
+          targetStatus,
+          {
+            source: 'WEBHOOK_BITBUCKET',
+            syncBitbucketState: false,
+            sendChatNotification: true,
+            createActivityLog: true,
+          }
+        );
       };
 
       const previousIssueState =
