@@ -381,6 +381,17 @@ const defaultCategories: CategoryLevel1[] = [
       },
     ],
   },
+  {
+    id: '10',
+    name: '軟體通報',
+    children: [
+      {
+        id: '10.1',
+        name: '軟體通報',
+        children: [{ id: '10.1.1', name: '軟體通報' }],
+      },
+    ],
+  },
 ];
 
 export async function seedCategories() {

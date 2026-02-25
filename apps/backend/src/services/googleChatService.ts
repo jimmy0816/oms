@@ -189,12 +189,6 @@ export const googleChatService = {
                   },
                   {
                     decoratedText: {
-                      topLabel: '狀態',
-                      text: this.formatStatus(report.status),
-                    },
-                  },
-                  {
-                    decoratedText: {
                       topLabel: '優先度',
                       text: this.formatPriority(report.priority),
                     },
@@ -205,70 +199,6 @@ export const googleChatService = {
                       text: report.creator?.name || '未知',
                     },
                   },
-                  {
-                    decoratedText: {
-                      topLabel: '負責人',
-                      text: report.assignee?.name || '未指派',
-                    },
-                  },
-                  {
-                    buttonList: {
-                      buttons: [
-                        {
-                          text: '查看詳情',
-                          onClick: {
-                            openLink: {
-                              url: reportUrl,
-                            },
-                          },
-                        },
-                      ],
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      ],
-    };
-  },
-
-  /**
-   * 格式化 Report 更新訊息
-   */
-  formatReportUpdateMessage(report: any, changes: Record<string, any>): GoogleChatCard {
-    const omsUrl = process.env.PUBLIC_FRONTEND_URL || 'http://localhost:3000';
-    const reportUrl = `${omsUrl}/reports/${report.id}`;
-    const summaryText = `📝 通報更新 ${report.id}`;
-
-    const changeWidgets = Object.entries(changes).map(([field, { old, new: newValue }]) => ({
-      decoratedText: {
-        topLabel: this.formatFieldName(field),
-        text: `${this.formatValue(old)} → ${this.formatValue(newValue)}`,
-      },
-    }));
-
-    return {
-      fallbackText: summaryText,
-      cardsV2: [
-        {
-          cardId: `report-update-${report.id}`,
-          card: {
-            header: {
-              title: '📝 通報已更新',
-              subtitle: report.id,
-            },
-            sections: [
-              {
-                widgets: [
-                  {
-                    decoratedText: {
-                      topLabel: '標題',
-                      text: report.title,
-                    },
-                  },
-                  ...changeWidgets,
                   {
                     buttonList: {
                       buttons: [
