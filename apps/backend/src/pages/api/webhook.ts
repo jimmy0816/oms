@@ -51,6 +51,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           ? req.body.changes.state.old.toLowerCase()
           : null;
 
+      const isReopenedFromClosedState =
+        previousIssueState === 'resolved' ||
+        previousIssueState === 'wontfix' ||
+        previousIssueState === 'closed';
+
       const mapIssueStateToReportStatus = (state: string | null): ReportStatus | null => {
         switch (state) {
           case 'resolved':
@@ -73,6 +78,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             break;
           }
           case 'open': {
+            if (!isReopenedFromClosedState) {
+              console.log(
+                '[Webhook] issue.state=open 但非從關閉態重新開啟，略過同步為 RETURNED'
+              );
+              break;
+            }
+
             const targetStatus = ReportStatus.RETURNED;
             if (mapIssueStateToReportStatus(previousIssueState) === targetStatus) break;
             await updateReportStatusByIssue(targetStatus);

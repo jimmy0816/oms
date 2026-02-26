@@ -1,6 +1,6 @@
 import { ReportPriority } from 'shared-types';
 
-export type BitbucketIssueState = 'open' | 'resolved' | 'wontfix';
+export type BitbucketIssueState = 'open' | 'resolved' | 'wontfix' | 'closed';
 
 export const normalizeBitbucketIssueState = (
   state: unknown
@@ -11,6 +11,7 @@ export const normalizeBitbucketIssueState = (
   if (normalized === 'open') return 'open';
   if (normalized === 'resolved') return 'resolved';
   if (normalized === 'wontfix') return 'wontfix';
+  if (normalized === 'closed') return 'closed';
   return null;
 };
 
