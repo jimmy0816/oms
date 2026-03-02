@@ -49,6 +49,8 @@ import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { ParsedUrlQuery } from 'querystring';
 
+import { getSafeReturnUrl, saveListState } from '@/utils/navigation';
+
 // Helper to parse array from query
 const getQueryArray = (query: ParsedUrlQuery, key: string): string[] => {
   const value = query[key];
@@ -165,7 +167,7 @@ export default function TicketsPage() {
         shallow: true,
       });
     },
-    [router]
+    [router],
   );
 
   // --- DATA FETCHING ---
@@ -230,7 +232,7 @@ export default function TicketsPage() {
         const response = await ticketService.getAllTickets(
           page,
           pageSize,
-          apiFilters
+          apiFilters,
         );
         setTickets(response.items);
         setTotalTickets(response.total);
@@ -329,7 +331,7 @@ export default function TicketsPage() {
         page: 1,
       });
     },
-    [savedViews, updateQuery]
+    [savedViews, updateQuery],
   );
 
   const handleSaveView = async (viewName: string) => {
@@ -352,14 +354,14 @@ export default function TicketsPage() {
         savedView = await savedViewService.updateSavedView(
           selectedViewId,
           viewName,
-          currentFilters
+          currentFilters,
         );
         showToast('視圖已成功更新！', 'success');
       } else {
         savedView = await savedViewService.createSavedView(
           viewName,
           currentFilters,
-          'TICKET'
+          'TICKET',
         );
         showToast('視圖已成功儲存！', 'success');
       }
@@ -525,7 +527,7 @@ export default function TicketsPage() {
 
   const allAssignees = useMemo(
     () => [{ id: 'UNASSIGNED', name: '未指派' } as User, ...allUsers],
-    [allUsers]
+    [allUsers],
   );
 
   // --- RENDER LOGIC ---
@@ -581,8 +583,9 @@ export default function TicketsPage() {
           <PermissionGuard required={Permission.CREATE_TICKETS}>
             <Link
               href={`/tickets/new?returnUrl=${encodeURIComponent(
-                router.asPath
+                getSafeReturnUrl(router.asPath, '/tickets'),
               )}`}
+              onClick={() => saveListState('TICKETS', router.asPath)}
               className="inline-flex items-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 md:py-2"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
@@ -917,13 +920,14 @@ export default function TicketsPage() {
                     <tr
                       key={ticket.id}
                       className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() =>
+                      onClick={() => {
+                        saveListState('TICKETS', router.asPath);
                         router.push(
                           `/tickets/${ticket.id}?returnUrl=${encodeURIComponent(
-                            router.asPath
-                          )}`
-                        )
-                      }
+                            getSafeReturnUrl(router.asPath, '/tickets'),
+                          )}`,
+                        );
+                      }}
                     >
                       <td className="p-0">
                         <TooltipCell
@@ -962,7 +966,7 @@ export default function TicketsPage() {
                       <td className="px-2 py-3 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                            ticket.status
+                            ticket.status,
                           )}`}
                         >
                           {getStatusText(ticket.status)}
@@ -971,7 +975,7 @@ export default function TicketsPage() {
                       <td className="px-2 py-3 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
-                            ticket.priority
+                            ticket.priority,
                           )}`}
                         >
                           {getPriorityText(ticket.priority)}
@@ -984,7 +988,7 @@ export default function TicketsPage() {
                               ...new Set(
                                 ticket.reports
                                   .map((r) => r.report.location?.name)
-                                  .filter(Boolean)
+                                  .filter(Boolean),
                               ),
                             ].join(', ') || '無'
                           }
@@ -995,7 +999,7 @@ export default function TicketsPage() {
                               ...new Set(
                                 ticket.reports
                                   .map((r) => r.report.location?.name)
-                                  .filter(Boolean)
+                                  .filter(Boolean),
                               ),
                             ] as string[];
                             if (locations.length === 0) return '無';

@@ -53,6 +53,8 @@ import { zhTW } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ParsedUrlQuery } from 'querystring';
 
+import { getSafeReturnUrl, saveListState } from '@/utils/navigation';
+
 // Helper to parse array from query
 const getQueryArray = (query: ParsedUrlQuery, key: string): string[] => {
   const value = query[key];
@@ -179,7 +181,7 @@ export default function Reports() {
         shallow: true,
       });
     },
-    [router]
+    [router],
   );
 
   // --- DATA FETCHING ---
@@ -254,7 +256,7 @@ export default function Reports() {
         const response = await reportService.getAllReports(
           page,
           pageSize,
-          apiFilters
+          apiFilters,
         );
 
         console.log('fetch reports:', apiFilters, response);
@@ -365,7 +367,7 @@ export default function Reports() {
         page: 1, // Always reset to page 1 when applying a view
       });
     },
-    [savedViews, updateQuery]
+    [savedViews, updateQuery],
   );
 
   const handleSaveView = async (viewName: string) => {
@@ -388,14 +390,14 @@ export default function Reports() {
         savedView = await savedViewService.updateSavedView(
           selectedViewId,
           viewName,
-          currentFilters
+          currentFilters,
         );
         showToast('視圖已成功更新！', 'success');
       } else {
         savedView = await savedViewService.createSavedView(
           viewName,
           currentFilters,
-          'REPORT'
+          'REPORT',
         );
         showToast('視圖已成功儲存！', 'success');
       }
@@ -647,8 +649,9 @@ export default function Reports() {
               <PermissionGuard required={Permission.CREATE_REPORTS}>
                 <Link
                   href={`/reports/new?returnUrl=${encodeURIComponent(
-                    router.asPath
+                    getSafeReturnUrl(router.asPath, '/reports'),
                   )}`}
+                  onClick={() => saveListState('REPORTS', router.asPath)}
                   className="btn-primary px-4 py-2.5 text-sm font-medium rounded-md flex items-center md:py-2"
                 >
                   <PlusIcon className="h-4 w-4 mr-1" />
@@ -1095,13 +1098,14 @@ export default function Reports() {
                     <tr
                       key={report.id}
                       className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() =>
+                      onClick={() => {
+                        saveListState('REPORTS', router.asPath);
                         router.push(
                           `/reports/${report.id}?returnUrl=${encodeURIComponent(
-                            router.asPath
-                          )}`
-                        )
-                      }
+                            getSafeReturnUrl(router.asPath, '/reports'),
+                          )}`,
+                        );
+                      }}
                     >
                       {/* Table Cells */}
                       <td className="p-0">
@@ -1145,7 +1149,7 @@ export default function Reports() {
                       <td className="px-2 py-3 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
-                            report.priority
+                            report.priority,
                           )}`}
                         >
                           {getPriorityText(report.priority as ReportPriority)}
