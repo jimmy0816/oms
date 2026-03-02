@@ -54,3 +54,23 @@ export const getSafeReturnUrl = (url: string, basePath: string): string => {
   }
   return url;
 };
+
+/**
+ * Resolves the final return URL to navigate to.
+ * If returnUrl is just the base path (indicating truncation or default),
+ * it tries to recover the state from session storage.
+ */
+export const resolveReturnUrl = (
+  type: 'REPORTS' | 'TICKETS',
+  returnUrl: string | string[] | undefined,
+  basePath: string,
+): string => {
+  const url = Array.isArray(returnUrl) ? returnUrl[0] : returnUrl;
+
+  // If no returnUrl or it's just the plain base path (possibly truncated by getSafeReturnUrl)
+  if (!url || url === basePath) {
+    return getListState(type, basePath);
+  }
+
+  return url;
+};

@@ -23,12 +23,12 @@ import TicketReviewForm from '@/components/TicketReviewForm';
 import TicketReviewDetailModal from '@/components/TicketReviewDetailModal';
 import PermissionGuard from '@/components/PermissionGuard';
 import HeicImage from '@/components/HeicImage';
-import { getListState } from '@/utils/navigation';
+import { resolveReturnUrl } from '@/utils/navigation';
 
 export default function TicketDetail() {
   const router = useRouter();
   const { id, returnUrl } = router.query;
-  const backPath = (returnUrl as string) || getListState('TICKETS', '/tickets');
+  const backPath = resolveReturnUrl('TICKETS', returnUrl, '/tickets');
   const [loading, setLoading] = useState(true);
   const [ticket, setTicket] = useState<any>(null);
   const [newCommentContent, setNewCommentContent] = useState('');

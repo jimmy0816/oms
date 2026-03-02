@@ -41,12 +41,12 @@ import PermissionGuard from '@/components/PermissionGuard';
 import DatePicker from 'react-datepicker';
 import { zhTW } from 'date-fns/locale';
 import HeicImage from '@/components/HeicImage';
-import { getListState } from '@/utils/navigation';
+import { resolveReturnUrl } from '@/utils/navigation';
 
 export default function ReportDetail() {
   const router = useRouter();
   const { id, returnUrl } = router.query;
-  const backPath = (returnUrl as string) || getListState('REPORTS', '/reports');
+  const backPath = resolveReturnUrl('REPORTS', returnUrl, '/reports');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

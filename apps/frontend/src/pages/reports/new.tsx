@@ -20,7 +20,7 @@ const LocationSelector = dynamic(
 );
 import { ticketService } from '@/services/ticketService';
 import { useToast } from '@/contexts/ToastContext';
-import { getListState } from '@/utils/navigation';
+import { resolveReturnUrl } from '@/utils/navigation';
 
 // 定義檔案資訊介面
 interface FileInfo {
@@ -44,6 +44,7 @@ interface CreateReportRequest {
 
 export default function NewReport() {
   const router = useRouter();
+  const { query } = router;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
@@ -131,7 +132,9 @@ export default function NewReport() {
 
       // 先導航到通報列表頁面，然後再顯示成功訊息
       // 使用 Next.js 的路由器導航
-      await router.push(getListState('REPORTS', '/reports'));
+      await router.push(
+        resolveReturnUrl('REPORTS', query.returnUrl, '/reports'),
+      );
 
       // 導航完成後顯示成功訊息
       setTimeout(() => {

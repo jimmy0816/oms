@@ -13,7 +13,7 @@ import { useToast } from '@/contexts/ToastContext';
 import dynamic from 'next/dynamic';
 
 import UserSelector from '@/components/UserSelector';
-import { getListState } from '@/utils/navigation';
+import { resolveReturnUrl } from '@/utils/navigation';
 
 const ReportMultiSelector = dynamic(
   () => import('@/components/ReportMultiSelector'),
@@ -153,9 +153,7 @@ export default function NewTicket() {
       showToast('工單已成功建立！', 'success');
 
       // 導向到工單列表頁面
-      router.push(
-        (query.returnUrl as string) || getListState('TICKETS', '/tickets'),
-      );
+      router.push(resolveReturnUrl('TICKETS', query.returnUrl, '/tickets'));
     } catch (err: any) {
       showToast(err.message || '建立工單時發生錯誤，請稍後再試。', 'error');
     } finally {
