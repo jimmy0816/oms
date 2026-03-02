@@ -426,7 +426,13 @@ export const reportMutationService = {
     });
 
     const resolvedActorUserId =
-      actorUserId || existingReport.assigneeId || existingReport.creatorId;
+      source === 'WEBHOOK_BITBUCKET'
+        ? actorUserId
+        : actorUserId || existingReport.assigneeId || existingReport.creatorId;
+
+    if (createActivityLog && source === 'WEBHOOK_BITBUCKET' && !resolvedActorUserId) {
+      console.warn('[Report Status Update] WEBHOOK_BITBUCKET 缺少 actorUserId，略過活動日誌寫入');
+    }
 
     if (createActivityLog && resolvedActorUserId) {
       try {

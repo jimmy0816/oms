@@ -31,6 +31,18 @@ interface BitbucketIssuePayload {
   priority?: string;
 }
 
+interface BitbucketIssueCommentResponse {
+  id: number;
+  content?: {
+    raw?: string;
+  };
+  user?: {
+    display_name?: string;
+    nickname?: string;
+    account_id?: string;
+  };
+}
+
 const BITBUCKET_BASE_URL = process.env.BITBUCKET_BASE_URL || 'https://api.bitbucket.org/2.0';
 const BITBUCKET_WORKSPACE = process.env.BITBUCKET_WORKSPACE || '';
 const BITBUCKET_REPO_SLUG = process.env.BITBUCKET_REPO_SLUG || '';
@@ -156,6 +168,36 @@ export const bitbucketService = {
     };
   },
 
+  async createIssueComment(issueId: string, content: string) {
+    if (!ensureConfig()) return null;
+
+    const response = await fetch(`${getRepoIssuesUrl()}/${issueId}/comments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: getAuthHeader(),
+      },
+      body: JSON.stringify({
+        content: {
+          raw: content,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Bitbucket create issue comment failed: ${response.status} ${errorText}`);
+    }
+
+    const data = (await response.json()) as BitbucketIssueCommentResponse;
+    return {
+      id: String(data.id),
+      content: data.content?.raw || '',
+      authorName: data.user?.display_name || data.user?.nickname || 'Bitbucket User',
+      authorAccountId: data.user?.account_id || null,
+    };
+  },
+
   extractIssueFromWebhook(payload: any) {
     const issue = payload?.issue;
     if (!issue) return null;
@@ -163,6 +205,34 @@ export const bitbucketService = {
       id: issue?.id ? String(issue.id) : null,
       state: normalizeBitbucketIssueState(issue?.state),
       title: issue?.title ? String(issue.title) : null,
+    };
+  },
+
+  extractIssueCommentFromWebhook(payload: any) {
+    const issue = payload?.issue;
+    const comment = payload?.comment;
+    const actor = payload?.actor;
+
+    if (!issue || !comment) return null;
+
+    const issueId = issue?.id ? String(issue.id) : null;
+    const commentId = comment?.id ? String(comment.id) : null;
+    const commentContent =
+      typeof comment?.content?.raw === 'string'
+        ? comment.content.raw
+        : typeof comment?.content === 'string'
+          ? comment.content
+          : null;
+
+    if (!issueId || !commentId || !commentContent) return null;
+
+    return {
+      issueId,
+      commentId,
+      content: commentContent,
+      actorName:
+        actor?.display_name || actor?.nickname || actor?.username || 'Bitbucket User',
+      actorAccountId: actor?.account_id || null,
     };
   },
 };

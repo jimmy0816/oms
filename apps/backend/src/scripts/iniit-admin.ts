@@ -1,5 +1,17 @@
 import { prisma } from '@/lib/prisma';
 import { hashPassword } from '@/lib/auth';
+import { seedBitbucketBotUser } from '@/lib/bot-user';
+
+export const seedBotUser = async () => {
+  try {
+    const botUser = await seedBitbucketBotUser();
+    console.log('✅ Bitbucket Bot 用戶已創建或更新', botUser);
+    return botUser;
+  } catch (error) {
+    console.error('❌ 創建 Bitbucket Bot 用戶時出錯:', error);
+    throw error;
+  }
+};
 
 export const seedAdmin = async () => {
   const defaultAdmin = {
@@ -81,6 +93,8 @@ export const seedAdmin = async () => {
     console.log('✅ 管理員用戶已創建或更新', adminWithoutPassword);
     console.log('✅ 已綁定到系統管理員角色');
     console.log('✅ 系統管理員角色已擁有所有權限');
+
+    await seedBotUser();
   } catch (error) {
     console.error('❌ 創建管理員用戶時出錯:', error);
     throw error;

@@ -131,11 +131,7 @@ export default function ReportDetail() {
 
     setProcessing(true);
     try {
-      await reportService.addCommentToReport(
-        report.id,
-        newCommentContent,
-        user?.id.toString()
-      );
+      await reportService.addCommentToReport(report.id, newCommentContent);
       setNewCommentContent('');
       fetchReport(); // Re-fetch report to update comments
       showToast('留言已成功新增！', 'success');
@@ -173,11 +169,7 @@ export default function ReportDetail() {
       await reportService.updateReport(id.toString(), finalUpdateData);
 
       if (log) {
-        await reportService.addActivityLog(
-          id.toString(),
-          log,
-          user?.id.toString()
-        );
+        await reportService.addActivityLog(id.toString(), log);
       }
 
       fetchReport(); // Re-fetch report to update status and logs

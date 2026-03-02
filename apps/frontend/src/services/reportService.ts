@@ -369,14 +369,12 @@ export const reportService = {
    */
   async addCommentToReport(
     reportId: string,
-    content: string,
-    userId: string
+    content: string
   ): Promise<any> {
     try {
       const comment = await apiClient.post<any>('/api/reports/comments', {
         reportId,
         content,
-        userId,
       });
       return {
         ...comment,
@@ -401,13 +399,11 @@ export const reportService = {
    */
   async addActivityLog(
     reportId: string,
-    content: string,
-    userId: string
+    content: string
   ): Promise<any> {
     try {
       const activityLog = await apiClient.post<any>('/api/activitylogs', {
         content,
-        userId,
         parentId: reportId,
         parentType: 'REPORT',
       });

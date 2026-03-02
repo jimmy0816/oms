@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { ReportStatus } from 'shared-types';
 import { bitbucketService } from '@/services/bitbucketService';
 import { reportMutationService } from '@/services/reportMutationService';
+import { getBitbucketBotUserOrThrow } from '@/lib/bot-user';
+import { reportCommentService } from '@/services/reportCommentService';
 
 /**
  * Webhook 接收端點
@@ -28,6 +30,34 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     console.log('========================\n');
 
     if (originPlatform === 'bitbucket') {
+      const botUser = await getBitbucketBotUserOrThrow();
+      const commentPayload = bitbucketService.extractIssueCommentFromWebhook(req.body);
+
+      if (commentPayload) {
+        await reportCommentService.syncBitbucketIssueCommentToOms({
+          issueId: commentPayload.issueId,
+          commentId: commentPayload.commentId,
+          content: commentPayload.content,
+          actorName: commentPayload.actorName,
+          botUserId: botUser.id,
+        });
+      }
+
+      const hasStateChange =
+        typeof req.body?.changes?.state?.old === 'string' ||
+        typeof req.body?.changes?.state?.new === 'string' ||
+        typeof req.body?.changes?.status?.old === 'string' ||
+        typeof req.body?.changes?.status?.new === 'string';
+
+      if (commentPayload && !hasStateChange) {
+        return res.status(200).json({
+          success: true,
+          message: 'Bitbucket comment webhook 已處理',
+          originPlatform: originPlatform ?? null,
+          receivedAt: new Date().toISOString(),
+        });
+      }
+
       const issue = bitbucketService.extractIssueFromWebhook(req.body);
       console.log('Bitbucket issue payload:', JSON.stringify(issue, null, 2));
 
@@ -38,6 +68,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           issue.id,
           targetStatus,
           {
+            actorUserId: botUser.id,
             source: 'WEBHOOK_BITBUCKET',
             syncBitbucketState: false,
             sendChatNotification: true,
@@ -46,9 +77,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         );
       };
 
+      const previousIssueStateRaw =
+        req.body?.changes?.state?.old ?? req.body?.changes?.status?.old;
+
       const previousIssueState =
-        typeof req.body?.changes?.state?.old === 'string'
-          ? req.body.changes.state.old.toLowerCase()
+        typeof previousIssueStateRaw === 'string'
+          ? previousIssueStateRaw.toLowerCase()
           : null;
 
       const isReopenedFromClosedState =
