@@ -8,16 +8,27 @@ const SESSION_KEYS = {
   TICKETS_LIST: 'last_tickets_list_url',
 };
 
-/**
- * Saves the current list URL to session storage.
- * @param type The type of list (REPORTS or TICKETS)
- * @param url The full URL with query parameters
- */
-export const saveListState = (type: 'REPORTS' | 'TICKETS', url: string) => {
+export const saveListState = (
+  type: 'REPORTS' | 'TICKETS',
+  url: string,
+  query: any = {},
+) => {
   if (typeof window === 'undefined') return;
   const key =
     type === 'REPORTS' ? SESSION_KEYS.REPORTS_LIST : SESSION_KEYS.TICKETS_LIST;
   sessionStorage.setItem(key, url);
+  sessionStorage.setItem(`${key}_query`, JSON.stringify(query));
+};
+
+/**
+ * Gets the last saved list query from session storage.
+ */
+export const getListQuery = (type: 'REPORTS' | 'TICKETS'): any => {
+  if (typeof window === 'undefined') return null;
+  const key =
+    type === 'REPORTS' ? SESSION_KEYS.REPORTS_LIST : SESSION_KEYS.TICKETS_LIST;
+  const data = sessionStorage.getItem(`${key}_query`);
+  return data ? JSON.parse(data) : null;
 };
 
 /**
@@ -38,9 +49,10 @@ export const getListState = (
 
 /**
  * Helper to determine if a URL is too long and should be truncated/handled via session storage.
- * Standard limit is around 2048, but many proxies/servers are stricter (e.g. 1024 or 4096).
+ * Standard limit is around 4096-8192 bytes for headers.
+ * We use 800 to be very safe and leave room for cookies/other headers.
  */
-export const isUrlTooLong = (url: string, limit = 1000): boolean => {
+export const isUrlTooLong = (url: string, limit = 800): boolean => {
   return url.length > limit;
 };
 
@@ -67,10 +79,36 @@ export const resolveReturnUrl = (
 ): string => {
   const url = Array.isArray(returnUrl) ? returnUrl[0] : returnUrl;
 
-  // If no returnUrl or it's just the plain base path (possibly truncated by getSafeReturnUrl)
-  if (!url || url === basePath) {
-    return getListState(type, basePath);
+  const savedUrl = getListState(type, basePath);
+
+  // If provided returnUrl is actually the base path (indicating truncation/default)
+  // OR if provided returnUrl is itself too long
+  const isBase = !url || url === basePath;
+  const isTooLong = !!url && isUrlTooLong(url);
+
+  if (isBase || isTooLong) {
+    if (isUrlTooLong(savedUrl)) {
+      return `${basePath}?restored=1`;
+    }
+    return savedUrl;
   }
 
   return url;
+};
+
+/**
+ * Resolves the full query object by merging URL parameters with session storage if 'restored=1' is set.
+ */
+export const resolveFullQuery = (
+  type: 'REPORTS' | 'TICKETS',
+  currentQuery: any,
+): any => {
+  if (currentQuery.restored === '1') {
+    const savedQuery = getListQuery(type);
+    if (savedQuery) {
+      // Merge saved query with any non-empty current query parameters
+      return { ...savedQuery, ...currentQuery };
+    }
+  }
+  return currentQuery;
 };

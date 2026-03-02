@@ -41,7 +41,7 @@ import PermissionGuard from '@/components/PermissionGuard';
 import DatePicker from 'react-datepicker';
 import { zhTW } from 'date-fns/locale';
 import HeicImage from '@/components/HeicImage';
-import { resolveReturnUrl } from '@/utils/navigation';
+import { resolveReturnUrl, getSafeReturnUrl } from '@/utils/navigation';
 
 export default function ReportDetail() {
   const router = useRouter();
@@ -743,7 +743,9 @@ export default function ReportDetail() {
                   <Link
                     href={`/tickets/new?reportId=${
                       report.id
-                    }&returnUrl=${encodeURIComponent(currentPath)}`}
+                    }&returnUrl=${encodeURIComponent(
+                      getSafeReturnUrl(currentPath, `/reports/${report.id}`),
+                    )} `}
                     className="btn-primary w-full block text-center mt-6"
                   >
                     新增工單

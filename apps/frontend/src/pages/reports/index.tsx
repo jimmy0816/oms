@@ -53,7 +53,13 @@ import { zhTW } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ParsedUrlQuery } from 'querystring';
 
-import { getSafeReturnUrl, saveListState } from '@/utils/navigation';
+import {
+  getSafeReturnUrl,
+  saveListState,
+  getListQuery,
+  resolveFullQuery,
+  isUrlTooLong,
+} from '@/utils/navigation';
 
 // Helper to parse array from query
 const getQueryArray = (query: ParsedUrlQuery, key: string): string[] => {
@@ -87,6 +93,11 @@ export default function Reports() {
   const { showToast } = useToast();
 
   // --- STATE DERIVED FROM URL ---
+  const fullQuery = useMemo(
+    () => resolveFullQuery('REPORTS', router.query),
+    [router.query],
+  );
+
   const {
     page,
     search,
@@ -101,7 +112,7 @@ export default function Reports() {
     sortOrder,
     selectedViewId,
   } = useMemo(() => {
-    const query = router.query;
+    const query = fullQuery;
     const startDate = query.startDate
       ? new Date(query.startDate as string)
       : null;
@@ -155,34 +166,62 @@ export default function Reports() {
   const [allCreators, setAllCreators] = useState<User[]>([]);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
 
-  // Function to update URL query parameters
   const updateQuery = useCallback(
     (newQuery: Partial<Record<string, any>>) => {
-      const query = { ...router.query, ...newQuery };
+      // Use fullQuery as the base for merging
+      const mergedQuery = { ...fullQuery, ...newQuery };
 
       // Reset page to 1 on any filter/sort change
       if (Object.keys(newQuery).some((k) => k !== 'page')) {
-        query.page = '1';
+        mergedQuery.page = '1';
       }
 
       // Clean up null/undefined/empty values
-      Object.keys(query).forEach((key) => {
+      Object.keys(mergedQuery).forEach((key) => {
         if (
-          query[key] === null ||
-          query[key] === undefined ||
-          query[key] === '' ||
-          (Array.isArray(query[key]) && (query[key] as string[]).length === 0)
+          mergedQuery[key] === null ||
+          mergedQuery[key] === undefined ||
+          mergedQuery[key] === '' ||
+          (Array.isArray(mergedQuery[key]) &&
+            (mergedQuery[key] as string[]).length === 0)
         ) {
-          delete query[key];
+          delete mergedQuery[key];
         }
       });
 
-      router.push({ pathname: '/reports', query }, undefined, {
-        shallow: true,
-      });
+      // Remove the 'restored' flag from the query we use to calculate the new URL
+      // We want to calculate if the NEW state is too long.
+      const { restored, ...cleanMergedQuery } = mergedQuery;
+
+      const queryString = new URLSearchParams(
+        cleanMergedQuery as Record<string, string>,
+      ).toString();
+      const finalUrl = `/reports?${queryString}`;
+
+      if (isUrlTooLong(finalUrl)) {
+        // If the resulting URL is too long, save to session and use 'restored' flag
+        saveListState('REPORTS', `/reports?restored=1`, mergedQuery);
+        router.push(
+          { pathname: '/reports', query: { restored: '1' } },
+          undefined,
+          {
+            shallow: true,
+          },
+        );
+      } else {
+        router.push(
+          { pathname: '/reports', query: cleanMergedQuery },
+          undefined,
+          {
+            shallow: true,
+          },
+        );
+      }
     },
-    [router],
+    [router, fullQuery],
   );
+
+  // Note: Removed old restoration useEffect as it's now handled by the enhanced useMemo and resolveFullQuery
 
   // --- DATA FETCHING ---
 
@@ -198,7 +237,7 @@ export default function Reports() {
           ]);
         setCategories(fetchedCategories);
         setAllLocations(fetchedLocations);
-        setAllCreators(fetchedUsers);
+        setAllCreators(fetchedUsers as any);
       } catch (err) {
         console.error('Error fetching static data:', err);
         showToast('無法載入篩選選項，請重試', 'error');
@@ -651,7 +690,9 @@ export default function Reports() {
                   href={`/reports/new?returnUrl=${encodeURIComponent(
                     getSafeReturnUrl(router.asPath, '/reports'),
                   )}`}
-                  onClick={() => saveListState('REPORTS', router.asPath)}
+                  onClick={() =>
+                    saveListState('REPORTS', router.asPath, fullQuery)
+                  }
                   className="btn-primary px-4 py-2.5 text-sm font-medium rounded-md flex items-center md:py-2"
                 >
                   <PlusIcon className="h-4 w-4 mr-1" />
@@ -1099,7 +1140,7 @@ export default function Reports() {
                       key={report.id}
                       className="hover:bg-gray-50 cursor-pointer"
                       onClick={() => {
-                        saveListState('REPORTS', router.asPath);
+                        saveListState('REPORTS', router.asPath, fullQuery);
                         router.push(
                           `/reports/${report.id}?returnUrl=${encodeURIComponent(
                             getSafeReturnUrl(router.asPath, '/reports'),

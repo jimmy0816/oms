@@ -24,6 +24,7 @@ import {
   Permission,
   User,
   Location,
+  Role,
 } from 'shared-types';
 import { userService } from '@/services/userService';
 import {
@@ -49,7 +50,13 @@ import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { ParsedUrlQuery } from 'querystring';
 
-import { getSafeReturnUrl, saveListState } from '@/utils/navigation';
+import {
+  getSafeReturnUrl,
+  saveListState,
+  getListQuery,
+  resolveFullQuery,
+  isUrlTooLong,
+} from '@/utils/navigation';
 
 // Helper to parse array from query
 const getQueryArray = (query: ParsedUrlQuery, key: string): string[] => {
@@ -83,6 +90,11 @@ export default function TicketsPage() {
   const { showToast } = useToast();
 
   // --- STATE DERIVED FROM URL ---
+  const fullQuery = useMemo(
+    () => resolveFullQuery('TICKETS', router.query),
+    [router.query],
+  );
+
   const {
     page,
     search,
@@ -97,7 +109,7 @@ export default function TicketsPage() {
     sortOrder,
     selectedViewId,
   } = useMemo(() => {
-    const query = router.query;
+    const query = fullQuery;
     const startDate = query.startDate
       ? new Date(query.startDate as string)
       : null;
@@ -146,29 +158,56 @@ export default function TicketsPage() {
   // Function to update URL query parameters
   const updateQuery = useCallback(
     (newQuery: Partial<Record<string, any>>) => {
-      const query = { ...router.query, ...newQuery };
+      // Use fullQuery as the base for merging
+      const mergedQuery = { ...fullQuery, ...newQuery };
 
       if (Object.keys(newQuery).some((k) => k !== 'page')) {
-        query.page = '1';
+        mergedQuery.page = '1';
       }
 
-      Object.keys(query).forEach((key) => {
+      Object.keys(mergedQuery).forEach((key) => {
         if (
-          query[key] === null ||
-          query[key] === undefined ||
-          query[key] === '' ||
-          (Array.isArray(query[key]) && (query[key] as string[]).length === 0)
+          mergedQuery[key] === null ||
+          mergedQuery[key] === undefined ||
+          mergedQuery[key] === '' ||
+          (Array.isArray(mergedQuery[key]) &&
+            (mergedQuery[key] as string[]).length === 0)
         ) {
-          delete query[key];
+          delete mergedQuery[key];
         }
       });
 
-      router.push({ pathname: '/tickets', query }, undefined, {
-        shallow: true,
-      });
+      // Remove the 'restored' flag from the query we use to calculate the new URL
+      const { restored, ...cleanMergedQuery } = mergedQuery;
+
+      const queryString = new URLSearchParams(
+        cleanMergedQuery as Record<string, string>,
+      ).toString();
+      const finalUrl = `/tickets?${queryString}`;
+
+      if (isUrlTooLong(finalUrl)) {
+        saveListState('TICKETS', `/tickets?restored=1`, mergedQuery);
+        router.push(
+          { pathname: '/tickets', query: { restored: '1' } },
+          undefined,
+          {
+            shallow: true,
+          },
+        );
+      } else {
+        router.push(
+          { pathname: '/tickets', query: cleanMergedQuery },
+          undefined,
+          {
+            shallow: true,
+          },
+        );
+      }
     },
-    [router],
+    [router, fullQuery],
   );
+
+  // Note: Removed old restoration useEffect as it's now handled by the enhanced useMemo and resolveFullQuery
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -585,7 +624,7 @@ export default function TicketsPage() {
               href={`/tickets/new?returnUrl=${encodeURIComponent(
                 getSafeReturnUrl(router.asPath, '/tickets'),
               )}`}
-              onClick={() => saveListState('TICKETS', router.asPath)}
+              onClick={() => saveListState('TICKETS', router.asPath, fullQuery)}
               className="inline-flex items-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 md:py-2"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
@@ -921,7 +960,7 @@ export default function TicketsPage() {
                       key={ticket.id}
                       className="hover:bg-gray-50 cursor-pointer"
                       onClick={() => {
-                        saveListState('TICKETS', router.asPath);
+                        saveListState('TICKETS', router.asPath, fullQuery);
                         router.push(
                           `/tickets/${ticket.id}?returnUrl=${encodeURIComponent(
                             getSafeReturnUrl(router.asPath, '/tickets'),
