@@ -16,10 +16,11 @@ import dynamic from 'next/dynamic';
 
 const LocationSelector = dynamic(
   () => import('@/components/LocationSelector'),
-  { ssr: false }
+  { ssr: false },
 );
 import { ticketService } from '@/services/ticketService';
 import { useToast } from '@/contexts/ToastContext';
+import { resolveReturnUrl } from '@/utils/navigation';
 
 // 定義檔案資訊介面
 interface FileInfo {
@@ -43,12 +44,13 @@ interface CreateReportRequest {
 
 export default function NewReport() {
   const router = useRouter();
+  const { query } = router;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
-    null
+    null,
   );
   const { showToast } = useToast();
 
@@ -74,7 +76,7 @@ export default function NewReport() {
     const { signedUrl, fileUrl, fileId } = await uploadService.getUploadUrl(
       file.name,
       file.type,
-      'reports'
+      'reports',
     );
 
     const response = await fetch(signedUrl, {
@@ -130,7 +132,9 @@ export default function NewReport() {
 
       // 先導航到通報列表頁面，然後再顯示成功訊息
       // 使用 Next.js 的路由器導航
-      await router.push('/reports');
+      await router.push(
+        resolveReturnUrl('REPORTS', query.returnUrl, '/reports'),
+      );
 
       // 導航完成後顯示成功訊息
       setTimeout(() => {

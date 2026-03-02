@@ -41,11 +41,12 @@ import PermissionGuard from '@/components/PermissionGuard';
 import DatePicker from 'react-datepicker';
 import { zhTW } from 'date-fns/locale';
 import HeicImage from '@/components/HeicImage';
+import { resolveReturnUrl, getSafeReturnUrl } from '@/utils/navigation';
 
 export default function ReportDetail() {
   const router = useRouter();
   const { id, returnUrl } = router.query;
-  const backPath = (returnUrl as string) || '/reports';
+  const backPath = resolveReturnUrl('REPORTS', returnUrl, '/reports');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +135,7 @@ export default function ReportDetail() {
       await reportService.addCommentToReport(
         report.id,
         newCommentContent,
-        user?.id.toString()
+        user?.id.toString(),
       );
       setNewCommentContent('');
       fetchReport(); // Re-fetch report to update comments
@@ -150,7 +151,7 @@ export default function ReportDetail() {
   // 處理通報狀態更新
   const updateReportStatus = async (
     log: string,
-    updateData: Partial<Report>
+    updateData: Partial<Report>,
   ) => {
     if (!report || !id) return;
 
@@ -166,7 +167,7 @@ export default function ReportDetail() {
         const date = new Date(finalUpdateData.trackingDate);
         const offset = date.getTimezoneOffset() * 60000;
         (finalUpdateData.trackingDate as any) = new Date(
-          date.getTime() - offset
+          date.getTime() - offset,
         );
       }
 
@@ -176,7 +177,7 @@ export default function ReportDetail() {
         await reportService.addActivityLog(
           id.toString(),
           log,
-          user?.id.toString()
+          user?.id.toString(),
         );
       }
 
@@ -185,7 +186,7 @@ export default function ReportDetail() {
       if (updateData.status) {
         showToast(
           `通報狀態已更新為 ${getStatusName(updateData.status as string)}`,
-          'success'
+          'success',
         );
       } else {
         showToast('通報已更新', 'success');
@@ -354,7 +355,7 @@ export default function ReportDetail() {
                   </span>
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 ${getPriorityColor(
-                      report.priority
+                      report.priority,
                     )}`}
                   >
                     {getPriorityText(report.priority as ReportPriority)}
@@ -621,7 +622,7 @@ export default function ReportDetail() {
                               setOpenTicketId(
                                 openTicketId === reportTicket.ticket.id
                                   ? null
-                                  : reportTicket.ticket.id
+                                  : reportTicket.ticket.id,
                               )
                             }
                           >
@@ -639,20 +640,20 @@ export default function ReportDetail() {
                             <div className="flex items-center space-x-4">
                               <span
                                 className={`px-2 py-1 text-xs font-medium rounded-full ${getTicketStatusColor(
-                                  reportTicket.ticket.status
+                                  reportTicket.ticket.status,
                                 )}`}
                               >
                                 {getTicketStatusText(
-                                  reportTicket.ticket.status
+                                  reportTicket.ticket.status,
                                 )}
                               </span>
                               <span
                                 className={`px-2 py-1 text-xs font-medium rounded-full ${getTicketPriorityColor(
-                                  reportTicket.ticket.priority
+                                  reportTicket.ticket.priority,
                                 )}`}
                               >
                                 {getTicketPriorityText(
-                                  reportTicket.ticket.priority
+                                  reportTicket.ticket.priority,
                                 )}
                               </span>
                               <ChevronDownIcon
@@ -706,7 +707,7 @@ export default function ReportDetail() {
                                                     </span>
                                                     <span className="text-xs text-gray-400">
                                                       {formatDate(
-                                                        log.createdAt
+                                                        log.createdAt,
                                                       )}
                                                     </span>
                                                   </p>
@@ -720,7 +721,7 @@ export default function ReportDetail() {
                                             </div>
                                           </div>
                                         </li>
-                                      )
+                                      ),
                                     )
                                   ) : (
                                     <li>
@@ -742,7 +743,9 @@ export default function ReportDetail() {
                   <Link
                     href={`/tickets/new?reportId=${
                       report.id
-                    }&returnUrl=${encodeURIComponent(currentPath)}`}
+                    }&returnUrl=${encodeURIComponent(
+                      getSafeReturnUrl(currentPath, `/reports/${report.id}`),
+                    )} `}
                     className="btn-primary w-full block text-center mt-6"
                   >
                     新增工單
@@ -850,7 +853,7 @@ export default function ReportDetail() {
                               </div>
                             </div>
                           </li>
-                        )
+                        ),
                       )
                     ) : (
                       <li>
