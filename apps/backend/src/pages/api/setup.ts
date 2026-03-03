@@ -2,7 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { seedPermissions } from '@/scripts/init-permissions';
 import { seedCategories } from '@/scripts/init-category';
 import { seedLocations } from '@/scripts/init-location';
-import { seedAdmin, seedBotUser } from '@/scripts/iniit-admin';
+import { seedAdmin } from '@/scripts/init-admin';
+import { seedBotUser } from '@/scripts/init-bot';
 
 /**
  * 初始化管理員帳號
