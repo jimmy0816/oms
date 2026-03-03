@@ -23,11 +23,12 @@ import TicketReviewForm from '@/components/TicketReviewForm';
 import TicketReviewDetailModal from '@/components/TicketReviewDetailModal';
 import PermissionGuard from '@/components/PermissionGuard';
 import HeicImage from '@/components/HeicImage';
+import { resolveReturnUrl } from '@/utils/navigation';
 
 export default function TicketDetail() {
   const router = useRouter();
   const { id, returnUrl } = router.query;
-  const backPath = (returnUrl as string) || '/tickets';
+  const backPath = resolveReturnUrl('TICKETS', returnUrl, '/tickets');
   const [loading, setLoading] = useState(true);
   const [ticket, setTicket] = useState<any>(null);
   const [newCommentContent, setNewCommentContent] = useState('');
@@ -36,7 +37,7 @@ export default function TicketDetail() {
   const { showToast } = useToast();
   const [isReviewFormOpen, setIsReviewFormOpen] = useState(false);
   const [reviewType, setReviewType] = useState<'COMPLETED' | 'FAILED'>(
-    'COMPLETED'
+    'COMPLETED',
   );
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [selectedReview, setSelectedReview] = useState<any>(null);
@@ -169,7 +170,7 @@ export default function TicketDetail() {
     const { signedUrl, fileUrl, fileId } = await uploadService.getUploadUrl(
       file.name,
       file.type,
-      'ticket-reviews'
+      'ticket-reviews',
     );
 
     const response = await fetch(signedUrl, {
@@ -195,7 +196,7 @@ export default function TicketDetail() {
 
   const handleReviewSubmit = async (
     content: string,
-    attachments: FileInfo[]
+    attachments: FileInfo[],
   ) => {
     if (!ticket?.id) return;
     setIsSubmittingReview(true);
@@ -204,7 +205,7 @@ export default function TicketDetail() {
         ticket.id,
         content,
         attachments,
-        reviewType
+        reviewType,
       );
       setIsReviewFormOpen(false);
       await fetchTicket();
@@ -295,14 +296,14 @@ export default function TicketDetail() {
               <div className="flex items-center gap-3">
                 <span
                   className={`px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(
-                    ticket.status
+                    ticket.status,
                   )}`}
                 >
                   {getStatusText(ticket.status)}
                 </span>
                 <span
                   className={`px-3 py-1 text-sm font-semibold rounded-full ${getPriorityColor(
-                    ticket.priority
+                    ticket.priority,
                   )}`}
                 >
                   {getPriorityText(ticket.priority)}
@@ -344,7 +345,7 @@ export default function TicketDetail() {
                 (user.primaryRole?.id === ticket.role?.id ||
                   (user.additionalRoles &&
                     user.additionalRoles.some(
-                      (r) => r.id === ticket.role?.id
+                      (r) => r.id === ticket.role?.id,
                     ))) && (
                   <button className="btn-primary" onClick={handleClaim}>
                     認領工單
@@ -387,7 +388,7 @@ export default function TicketDetail() {
                       onClick={() =>
                         updateTicketStatus(
                           TicketStatus.VERIFIED,
-                          '工單驗收通過'
+                          '工單驗收通過',
                         )
                       }
                     >
@@ -398,7 +399,7 @@ export default function TicketDetail() {
                       onClick={() =>
                         updateTicketStatus(
                           TicketStatus.VERIFICATION_FAILED,
-                          '工單驗收失敗'
+                          '工單驗收失敗',
                         )
                       }
                     >
