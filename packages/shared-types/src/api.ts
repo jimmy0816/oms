@@ -33,7 +33,6 @@ export interface UpdateTicketRequest {
 
 export interface CreateCommentRequest {
   content: string;
-  userId: string;
   ticketId?: string;
   reportId?: string;
 }

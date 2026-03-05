@@ -49,6 +49,7 @@ export default function NewReport() {
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [selectedCategoryPath, setSelectedCategoryPath] = useState<string>('');
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     null,
   );
@@ -58,13 +59,22 @@ export default function NewReport() {
     register,
     handleSubmit,
     setValue,
+    setError: setFieldError,
+    clearErrors,
     formState: { errors },
   } = useForm<CreateReportRequest>();
 
+  const isSoftwareCategory = selectedCategoryPath
+    .split(' > ')
+    .some((name) => name === '軟體通報');
+
   // 確保選擇的類別會更新到表單中
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedCategoryId) {
-      setValue('categoryId', selectedCategoryId);
+      setValue('categoryId', selectedCategoryId, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
     }
   }, [selectedCategoryId, setValue]);
 
@@ -110,6 +120,14 @@ export default function NewReport() {
       setIsSubmitting(false);
       return;
     }
+    if (!isSoftwareCategory && !selectedLocationId) {
+      setFieldError('locationId', {
+        type: 'manual',
+        message: '請選擇問題地點',
+      });
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       // 準備要發送到後端 API 的數據
@@ -146,6 +164,11 @@ export default function NewReport() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const onInvalid = (validationErrors: unknown) => {
+    console.error('表單驗證錯誤:', validationErrors);
+    showToast('表單未通過驗證，請檢查必填欄位。', 'error');
   };
 
   return (
@@ -195,7 +218,7 @@ export default function NewReport() {
         {/* 通報表單 */}
         <div className="bg-white shadow-sm rounded-lg overflow-hidden">
           <div className="p-6">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
               {/* 通報類別 - 使用三層級分類選擇器 */}
               <div>
                 <input
@@ -212,10 +235,17 @@ export default function NewReport() {
                 <CategorySelector
                   onCategorySelect={(categoryId, categoryPath) => {
                     setSelectedCategoryId(categoryId);
+                    setSelectedCategoryPath(categoryPath);
+                    if (categoryPath.includes('軟體通報')) {
+                      clearErrors('locationId');
+                    }
                     if (categoryPath) {
                       const categories = categoryPath.split(' > ');
                       const level3Category = categories[categories.length - 1];
-                      setValue('title', level3Category);
+                      setValue('title', level3Category, {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      });
                     }
                   }}
                   selectedCategoryId={selectedCategoryId}
@@ -273,12 +303,18 @@ export default function NewReport() {
                   htmlFor="locationId"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  問題地點 <span className="text-red-500">*</span>
+                  問題地點
+                  {!isSoftwareCategory && (
+                    <span className="text-red-500"> *</span>
+                  )}
                 </label>
                 <input
                   type="hidden"
                   id="locationId"
-                  {...register('locationId', { required: '請選擇問題地點' })}
+                  {...register('locationId', {
+                    validate: (value) =>
+                      isSoftwareCategory || value ? true : '請選擇問題地點',
+                  })}
                 />
                 <LocationSelector
                   value={selectedLocationId ? String(selectedLocationId) : null}
@@ -289,7 +325,7 @@ export default function NewReport() {
                     });
                   }}
                 />
-                {errors.locationId && (
+                {errors.locationId && !isSoftwareCategory && !selectedLocationId && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.locationId.message}
                   </p>

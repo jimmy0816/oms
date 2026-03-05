@@ -38,6 +38,8 @@ export interface Report {
   creatorId: string;
   assigneeId?: string;
   reviewerId?: string;
+  bitbucketIssueId?: string;
+  bitbucketIssueUrl?: string;
   images?: string[]; // URLs to images
   attachments?: FileInfo[]; // Add attachments
   tickets?: ReportTicket[]; // Add tickets

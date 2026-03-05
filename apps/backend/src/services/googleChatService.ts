@@ -1,0 +1,402 @@
+/**
+ * Google Chat Service
+ * 處理 Google Chat Webhook 訊息發送
+ */
+
+interface GoogleChatCard {
+  fallbackText?: string;
+  cardsV2: Array<{
+    cardId?: string;
+    card: {
+      header?: {
+        title: string;
+        subtitle?: string;
+      };
+      sections: Array<{
+        widgets: Array<any>;
+      }>;
+    };
+  }>;
+}
+
+interface GoogleChatResponse {
+  name: string; // 格式: spaces/{space}/messages/{message}
+  thread?: {
+    name: string; // Thread Key
+  };
+  space?: {
+    name: string; // Space ID
+  };
+}
+
+export const googleChatService = {
+  /**
+   * 檢查是否為軟體通報分類，只有軟體通報才發送通知
+   */
+  isSoftwareReport(report: any): boolean {
+    // 檢查分類名稱是否為「軟體通報」
+    return report?.category?.name === '軟體通報';
+  },
+
+  /**
+   * 發送訊息到 Google Chat Space (建立新 Thread)
+   */
+  async sendToSpace(message: GoogleChatCard, report?: any): Promise<GoogleChatResponse | null> {
+    // 如果提供了 report 參數，檢查是否為軟體通報
+    if (report && !this.isSoftwareReport(report)) {
+      console.log('[Google Chat] 非軟體通報，跳過發送');
+      return null;
+    }
+    const webhookUrl = process.env.GOOGLE_CHAT_WEBHOOK_URL;
+    const enabled = process.env.GOOGLE_CHAT_ENABLED === 'true';
+
+    if (!enabled) {
+      console.log('[Google Chat] 功能未啟用');
+      return null;
+    }
+
+    if (!webhookUrl) {
+      console.error('[Google Chat] GOOGLE_CHAT_WEBHOOK_URL 未設定');
+      return null;
+    }
+
+    try {
+      const summaryText =
+        message.fallbackText || this.extractCardSummaryText(message) || '您有一則新的通報通知';
+
+      const { text: _, ...messageWithoutText } = message as GoogleChatCard & { text?: string };
+
+      const payload = {
+        ...messageWithoutText,
+        fallbackText: message.fallbackText || summaryText,
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Google Chat API 錯誤: ${response.status} - ${errorText}`);
+      }
+
+      const data: GoogleChatResponse = await response.json();
+      console.log('[Google Chat] 訊息發送成功:', data.name);
+      return data;
+    } catch (error: any) {
+      console.error('[Google Chat] 發送失敗:', error.message);
+      throw error;
+    }
+  },
+
+  /**
+   * 發送訊息到現有的 Thread
+   * 使用簡單的 text 格式回覆到指定的討論串
+   */
+  async sendToThread(
+    threadName: string,
+    text: string,
+    report?: any
+  ): Promise<GoogleChatResponse | null> {
+    // 如果提供了 report 參數，檢查是否為軟體通報
+    if (report && !this.isSoftwareReport(report)) {
+      console.log('[Google Chat] 非軟體通報，跳過發送到 Thread');
+      return null;
+    }
+    const webhookUrl = process.env.GOOGLE_CHAT_WEBHOOK_URL;
+    const enabled = process.env.GOOGLE_CHAT_ENABLED === 'true';
+
+    if (!enabled) {
+      console.log('[Google Chat] 功能未啟用');
+      return null;
+    }
+
+    if (!webhookUrl) {
+      console.error('[Google Chat] GOOGLE_CHAT_WEBHOOK_URL 未設定');
+      return null;
+    }
+
+    try {
+      // 使用簡單的 text 格式，並指定 thread.name
+      const message = {
+        text: text,
+        thread: {
+          name: threadName,
+        },
+      };
+
+      console.log(`[Google Chat] 發送到 Thread: ${threadName}`);
+
+      const replyInThreadUrl = `${webhookUrl}&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD`;
+      const response = await fetch(replyInThreadUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: JSON.stringify(message),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Google Chat API 錯誤: ${response.status} - ${errorText}`);
+      }
+
+      const data: GoogleChatResponse = await response.json();
+      console.log('[Google Chat] 訊息發送到 Thread 成功:', data.name);
+      return data;
+    } catch (error: any) {
+      console.error('[Google Chat] 發送到 Thread 失敗:', error.message);
+      throw error;
+    }
+  },
+
+  /**
+   * 格式化 Report 建立訊息
+   */
+  formatReportCreateMessage(report: any): GoogleChatCard {
+    const omsUrl = process.env.PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+    const reportUrl = `${omsUrl}/reports/${report.id}`;
+    const summaryText = `📋 新通報 ${report.id}: ${report.description}`;
+
+    return {
+      fallbackText: summaryText,
+      cardsV2: [
+        {
+          cardId: `report-${report.id}`,
+          card: {
+            header: {
+              title: '📋 新通報建立',
+              subtitle: report.id,
+            },
+            sections: [
+              {
+                widgets: [
+                  {
+                    decoratedText: {
+                      topLabel: '標題',
+                      text: report.title,
+                    },
+                  },
+                  {
+                    decoratedText: {
+                      topLabel: '描述',
+                      text: report.description || '無',
+                    },
+                  },
+                  {
+                    decoratedText: {
+                      topLabel: '優先度',
+                      text: this.formatPriority(report.priority),
+                    },
+                  },
+                  {
+                    decoratedText: {
+                      topLabel: '建立人',
+                      text: report.creator?.name || '未知',
+                    },
+                  },
+                  {
+                    buttonList: {
+                      buttons: [
+                        {
+                          text: '查看詳情',
+                          onClick: {
+                            openLink: {
+                              url: reportUrl,
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    };
+  },
+
+  /**
+   * 格式化狀態顯示
+   */
+  formatStatus(status: string): string {
+    const statusMap: Record<string, string> = {
+      UNCONFIRMED: '❓ 未確認',
+      CONFIRMED: '✅ 已確認',
+      IN_PROGRESS: '🔄 處理中',
+      RESOLVED: '✔️ 已解決',
+      CLOSED: '🔒 已關閉',
+      PENDING: '⏳ 待處理',
+      REJECTED: '❌ 已拒絕',
+    };
+    return statusMap[status] || status;
+  },
+
+  /**
+   * 格式化優先度顯示
+   */
+  formatPriority(priority: string): string {
+    const priorityMap: Record<string, string> = {
+      LOW: '🟢 低',
+      MEDIUM: '🟡 中',
+      HIGH: '🔴 高',
+      URGENT: '🚨 緊急',
+    };
+    return priorityMap[priority] || priority;
+  },
+
+  /**
+   * 格式化欄位名稱
+   */
+  formatFieldName(field: string): string {
+    const fieldMap: Record<string, string> = {
+      status: '狀態',
+      priority: '優先度',
+      assigneeId: '負責人',
+      title: '標題',
+      description: '描述',
+      reportIds: '關聯通報',
+      locationId: '地點',
+      categoryId: '分類',
+      contactPhone: '聯絡電話',
+      contactEmail: '聯絡信箱',
+    };
+    return fieldMap[field] || field;
+  },
+
+  /**
+   * 格式化值顯示
+   */
+  formatValue(value: any): string {
+    if (value === null || value === undefined) {
+      return '無';
+    }
+    if (typeof value === 'object') {
+      return value.name || value.id || JSON.stringify(value);
+    }
+    return String(value);
+  },
+
+  extractCardSummaryText(message: GoogleChatCard): string | null {
+    const firstCard = message.cardsV2?.[0]?.card;
+    if (!firstCard) {
+      return null;
+    }
+
+    const headerTitle = firstCard.header?.title;
+    const headerSubtitle = firstCard.header?.subtitle;
+
+    if (headerTitle && headerSubtitle) {
+      return `${headerTitle} ${headerSubtitle}`;
+    }
+
+    if (headerTitle) {
+      return headerTitle;
+    }
+
+    return null;
+  },
+
+  /**
+   * 格式化 Report 更新的 text 訊息
+   */
+  formatReportUpdateText(report: any, changes: Record<string, any>): string {
+    const omsUrl = process.env.PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+    const reportUrl = `${omsUrl}/reports/${report.id}`;
+
+    let text = `📝 *通報已更新*\n`;
+    text += `通報編號: ${report.id}\n`;
+    text += `標題: ${report.title}\n\n`;
+    text += `*變更內容:*\n`;
+
+    for (const [field, { old, new: newValue }] of Object.entries(changes)) {
+      const fieldName = this.formatFieldName(field);
+      const oldFormatted = this.formatValue(old);
+      const newFormatted = this.formatValue(newValue);
+      text += `• ${fieldName}: ${oldFormatted} → ${newFormatted}\n`;
+    }
+
+    text += `\n查看詳情: ${reportUrl}`;
+    return text;
+  },
+
+  /**
+   * 格式化 Ticket 建立的 text 訊息
+   */
+  formatTicketCreateText(ticket: any, report: any): string {
+    const omsUrl = process.env.PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+    const ticketUrl = `${omsUrl}/tickets/${ticket.id}`;
+
+    let text = `🎫 *工單已建立*\n`;
+    text += `工單編號: ${ticket.id}\n`;
+    text += `關聯通報: ${report.id}\n`;
+    text += `標題: ${ticket.title}\n`;
+    text += `狀態: ${this.formatStatus(ticket.status)}\n`;
+    text += `優先度: ${this.formatPriority(ticket.priority)}\n`;
+    text += `負責人: ${ticket.assignee?.name || '未指派'}\n`;
+    text += `\n查看工單: ${ticketUrl}`;
+    return text;
+  },
+
+  /**
+   * 格式化 Ticket 更新的 text 訊息
+   */
+  formatTicketUpdateText(ticket: any, report: any, changes: Record<string, any>): string {
+    const omsUrl = process.env.PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+    const ticketUrl = `${omsUrl}/tickets/${ticket.id}`;
+
+    let text = `🔄 *工單已更新*\n`;
+    text += `工單編號: ${ticket.id}\n`;
+    text += `關聯通報: ${report.id}\n`;
+    text += `標題: ${ticket.title}\n\n`;
+    text += `*變更內容:*\n`;
+
+    for (const [field, { old, new: newValue }] of Object.entries(changes)) {
+      const fieldName = this.formatFieldName(field);
+      const oldFormatted = this.formatValue(old);
+      const newFormatted = this.formatValue(newValue);
+      text += `• ${fieldName}: ${oldFormatted} → ${newFormatted}\n`;
+    }
+
+    text += `\n查看工單: ${ticketUrl}`;
+    return text;
+  },
+
+  /**
+   * 格式化 Ticket 刪除的 text 訊息
+   */
+  formatTicketDeleteText(ticket: any, report: any): string {
+    const omsUrl = process.env.PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+    const reportUrl = `${omsUrl}/reports/${report.id}`;
+
+    let text = `🗑️ *工單已刪除*\n`;
+    text += `工單編號: ${ticket.id}\n`;
+    text += `關聯通報: ${report.id}\n`;
+    text += `標題: ${ticket.title}\n`;
+    text += `狀態: ${this.formatStatus(ticket.status)}\n`;
+    text += `優先度: ${this.formatPriority(ticket.priority)}\n`;
+    text += `\n查看通報: ${reportUrl}`;
+    return text;
+  },
+
+  /**
+   * 格式化通報刪除的 text 訊息
+   */
+  formatReportDeleteText(report: any): string {
+    let text = `🗑️ *通報已刪除*\n`;
+    text += `通報編號: ${report.id}\n`;
+    text += `標題: ${report.title}\n`;
+    text += `狀態: ${this.formatStatus(report.status)}\n`;
+    text += `優先度: ${this.formatPriority(report.priority)}\n`;
+    text += `分類: ${report.category?.name || '無'}\n`;
+    text += `建立人: ${report.creator?.name || '未知'}\n`;
+    text += `負責人: ${report.assignee?.name || '未指派'}`;
+    return text;
+  },
+};
