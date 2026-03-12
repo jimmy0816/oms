@@ -292,6 +292,13 @@ async function updateReport(
         select: {
           id: true,
           name: true,
+          parent: {
+            select: {
+              id: true,
+              name: true,
+              parent: { select: { id: true, name: true } },
+            },
+          },
         },
       },
     },
@@ -414,7 +421,19 @@ async function deleteReport(
     include: {
       creator: { select: { id: true, name: true, email: true } },
       assignee: { select: { id: true, name: true, email: true } },
-      category: { select: { id: true, name: true } },
+      category: {
+        select: {
+          id: true,
+          name: true,
+          parent: {
+            select: {
+              id: true,
+              name: true,
+              parent: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
     },
   });
 

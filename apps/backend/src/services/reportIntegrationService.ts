@@ -20,6 +20,14 @@ type ReportIntegrationRecord = {
   category?: {
     id?: string;
     name?: string | null;
+    parent?: {
+      id?: string;
+      name?: string | null;
+      parent?: {
+        id?: string;
+        name?: string | null;
+      } | null;
+    } | null;
   } | null;
 };
 
@@ -126,7 +134,19 @@ const createBitbucketIssueIfNeeded = async (report: ReportIntegrationRecord) => 
     include: {
       creator: { select: { id: true, name: true, email: true } },
       assignee: { select: { id: true, name: true, email: true } },
-      category: { select: { id: true, name: true } },
+      category: {
+        select: {
+          id: true,
+          name: true,
+          parent: {
+            select: {
+              id: true,
+              name: true,
+              parent: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -246,7 +266,19 @@ export const reportIntegrationService = {
       include: {
         creator: { select: { id: true, name: true, email: true } },
         assignee: { select: { id: true, name: true, email: true } },
-        category: { select: { id: true, name: true } },
+        category: {
+          select: {
+            id: true,
+            name: true,
+            parent: {
+              select: {
+                id: true,
+                name: true,
+                parent: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -359,7 +391,19 @@ export const reportIntegrationService = {
           include: {
             creator: { select: { id: true, name: true, email: true } },
             assignee: { select: { id: true, name: true, email: true } },
-            category: { select: { id: true, name: true } },
+            category: {
+              select: {
+                id: true,
+                name: true,
+                parent: {
+                  select: {
+                    id: true,
+                    name: true,
+                    parent: { select: { id: true, name: true } },
+                  },
+                },
+              },
+            },
           },
         });
 

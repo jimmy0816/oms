@@ -64,18 +64,32 @@ export interface UpdateReportStatusOptions {
   createActivityLog?: boolean;
 }
 
+const NESTED_CATEGORY_SELECT = {
+  select: {
+    id: true,
+    name: true,
+    parent: {
+      select: {
+        id: true,
+        name: true,
+        parent: { select: { id: true, name: true } },
+      },
+    },
+  },
+};
+
 const REPORT_INCLUDE = {
   location: true,
   creator: { select: { id: true, name: true, email: true } },
   assignee: { select: { id: true, name: true, email: true } },
   tickets: { include: { ticket: true } },
-  category: { select: { id: true, name: true } },
+  category: NESTED_CATEGORY_SELECT,
 };
 
 const REPORT_STATUS_INCLUDE = {
   creator: { select: { id: true, name: true, email: true } },
   assignee: { select: { id: true, name: true, email: true } },
-  category: { select: { id: true, name: true } },
+  category: NESTED_CATEGORY_SELECT,
 };
 
 const ACTIVITY_FIELDS_TO_MONITOR = [
