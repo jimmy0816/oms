@@ -31,22 +31,9 @@ interface GoogleChatResponse {
 
 export const googleChatService = {
   /**
-   * 檢查是否為軟體通報分類，只有軟體通報才發送通知
-   */
-  isSoftwareReport(report: any): boolean {
-    // 檢查分類名稱是否為「軟體通報」
-    return report?.category?.name === '軟體通報';
-  },
-
-  /**
    * 發送訊息到 Google Chat Space (建立新 Thread)
    */
-  async sendToSpace(message: GoogleChatCard, report?: any): Promise<GoogleChatResponse | null> {
-    // 如果提供了 report 參數，檢查是否為軟體通報
-    if (report && !this.isSoftwareReport(report)) {
-      console.log('[Google Chat] 非軟體通報，跳過發送');
-      return null;
-    }
+  async sendToSpace(message: GoogleChatCard): Promise<GoogleChatResponse | null> {
     const webhookUrl = process.env.GOOGLE_CHAT_WEBHOOK_URL;
     const enabled = process.env.GOOGLE_CHAT_ENABLED === 'true';
 
@@ -99,14 +86,8 @@ export const googleChatService = {
    */
   async sendToThread(
     threadName: string,
-    text: string,
-    report?: any
+    text: string
   ): Promise<GoogleChatResponse | null> {
-    // 如果提供了 report 參數，檢查是否為軟體通報
-    if (report && !this.isSoftwareReport(report)) {
-      console.log('[Google Chat] 非軟體通報，跳過發送到 Thread');
-      return null;
-    }
     const webhookUrl = process.env.GOOGLE_CHAT_WEBHOOK_URL;
     const enabled = process.env.GOOGLE_CHAT_ENABLED === 'true';
 

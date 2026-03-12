@@ -12,9 +12,7 @@ import {
   type UpdateReportPayload,
 } from '@/services/reportMutationService';
 import { sendReportUpdateChatNotification, sendReportDeleteChatNotification } from '@/services/reportUpdateNotificationService';
-import { googleChatService } from '@/services/googleChatService';
-import { chatThreadService } from '@/services/chatThreadService';
-import { bitbucketService } from '@/services/bitbucketService';
+import { reportIntegrationService } from '@/services/reportIntegrationService';
 
 // Define Report type based on Prisma schema
 interface Report {
@@ -88,144 +86,6 @@ interface Report {
 // Define UpdateReportRequest type
 interface UpdateReportRequest extends UpdateReportPayload {
   status?: ReportStatus;
-}
-
-const SOFTWARE_CATEGORY_NAME = '軟體通報';
-
-const isSoftwareCategory = (categoryName?: string | null) =>
-  categoryName === SOFTWARE_CATEGORY_NAME;
-
-async function ensureSoftwareIntegrations(report: any) {
-  if (!isSoftwareCategory(report?.category?.name)) {
-    return report;
-  }
-
-  const updatedReport = { ...report };
-
-  const existingChatThread = await chatThreadService.findByReportId(report.id);
-  if (!existingChatThread) {
-    try {
-      const message = googleChatService.formatReportCreateMessage(updatedReport);
-      const chatResponse = await googleChatService.sendToSpace(message, updatedReport);
-
-      if (chatResponse) {
-        const spaceName =
-          chatResponse.space?.name || chatResponse.name.split('/messages/')[0];
-        const threadName = chatResponse.thread?.name || chatResponse.name;
-        const spaceId = spaceName.replace('spaces/', '');
-        const threadId = threadName.split('/threads/')[1] || threadName;
-
-        await chatThreadService.create(
-          updatedReport.id,
-          spaceId,
-          threadId,
-          'OMS Bug Reports'
-        );
-      }
-    } catch (error: any) {
-      console.error(
-        `[Report Updated] 建立 Google Chat Thread 失敗 (${report.id}):`,
-        error.message
-      );
-    }
-  }
-
-  if (
-    bitbucketService.isEnabled() &&
-    !updatedReport.bitbucketIssueId
-  ) {
-    try {
-      const issue = await bitbucketService.createIssue({
-        reportId: updatedReport.id,
-        title: updatedReport.title,
-        description: updatedReport.description,
-        priority: updatedReport.priority,
-        reporterName: updatedReport.creator?.name || null,
-      });
-
-      if (issue?.id) {
-        const savedReport = await prisma.report.update({
-          where: { id: updatedReport.id },
-          data: {
-            bitbucketIssueId: issue.id,
-            bitbucketIssueUrl: issue.url,
-          },
-        });
-
-        updatedReport.bitbucketIssueId = savedReport.bitbucketIssueId;
-        updatedReport.bitbucketIssueUrl = savedReport.bitbucketIssueUrl;
-      }
-    } catch (error: any) {
-      console.error(
-        `[Report Updated] 建立 Bitbucket issue 失敗 (${report.id}):`,
-        error.message
-      );
-    }
-  }
-
-  return updatedReport;
-}
-
-async function teardownSoftwareIntegrations(report: any) {
-  if (isSoftwareCategory(report?.category?.name)) {
-    return report;
-  }
-
-  const updatedReport = { ...report };
-
-  const existingChatThread = await chatThreadService.findByReportId(report.id);
-  if (existingChatThread) {
-    try {
-      await chatThreadService.delete(existingChatThread.id);
-    } catch (error: any) {
-      console.error(
-        `[Report Updated] 移除 Google Chat Thread 映射失敗 (${report.id}):`,
-        error.message
-      );
-    }
-  }
-
-  if (updatedReport.bitbucketIssueId) {
-    if (bitbucketService.isEnabled()) {
-      try {
-        await bitbucketService.updateIssueState(
-          updatedReport.bitbucketIssueId,
-          'closed'
-        );
-      } catch (error: any) {
-        console.error(
-          `[Report Updated] 關閉 Bitbucket issue 失敗 (${report.id}):`,
-          error.message
-        );
-      }
-    } else {
-      console.warn(
-        `[Report Updated] Bitbucket 未啟用，無法關閉 issue (${report.id})`
-      );
-    }
-  }
-
-  if (updatedReport.bitbucketIssueId || updatedReport.bitbucketIssueUrl) {
-    try {
-      const savedReport = await prisma.report.update({
-        where: { id: updatedReport.id },
-        data: {
-          bitbucketIssueId: null,
-          bitbucketIssueUrl: null,
-        },
-      });
-
-      updatedReport.bitbucketIssueId = savedReport.bitbucketIssueId;
-      updatedReport.bitbucketIssueUrl = savedReport.bitbucketIssueUrl;
-    } catch (error: any) {
-      console.error(
-        `[Report Updated] 清除 Bitbucket 綁定失敗 (${report.id}):`,
-        error.message
-      );
-    }
-  }
-
-  return updatedReport;
 }
 
 async function handler(
@@ -507,13 +367,10 @@ async function updateReport(
       }
     }
 
-    if (!isSoftwareCategory(oldCategoryName) && isSoftwareCategory(newCategoryName)) {
-      finalUpdatedReport = await ensureSoftwareIntegrations(finalUpdatedReport);
-    }
-
-    if (isSoftwareCategory(oldCategoryName) && !isSoftwareCategory(newCategoryName)) {
-      finalUpdatedReport = await teardownSoftwareIntegrations(finalUpdatedReport);
-    }
+    finalUpdatedReport = await reportIntegrationService.syncCategoryChange(
+      existingReport as any,
+      finalUpdatedReport as any
+    );
 
     // 發送 Google Chat 更新通知
     const changes: Record<string, { old: any; new: any }> = {

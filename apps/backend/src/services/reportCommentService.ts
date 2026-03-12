@@ -1,9 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { bitbucketService } from '@/services/bitbucketService';
-import { chatLogService } from '@/services/chatLogService';
-import { chatThreadService } from '@/services/chatThreadService';
-import { googleChatService } from '@/services/googleChatService';
 import { notificationService } from '@/services/notificationService';
+import { reportIntegrationService } from '@/services/reportIntegrationService';
 
 const OMS_SYNC_MARKER = '<!-- OMS_SYNC_ORIGIN:OMS -->';
 
@@ -100,37 +98,14 @@ const notifyReportCommentToGoogleChat = async (
   comment: any,
   source: 'OMS' | 'BITBUCKET'
 ) => {
-  try {
-    const chatThread = await chatThreadService.findByReportId(report.id);
-    if (!chatThread) return;
-
-    const threadName = `spaces/${chatThread.chatSpaceId}/threads/${chatThread.chatThreadId}`;
-    const text = formatCommentThreadText(report, comment, source);
-    const chatResponse = await googleChatService.sendToThread(threadName, text, report);
-
-    if (chatResponse) {
-      await chatLogService.log({
-        platform: 'GOOGLE_CHAT',
-        type: 'THREAD',
-        status: 'SUCCESS',
-        request: { text, thread: { name: threadName } },
-        response: chatResponse,
-        relatedId: report.id,
-        relatedType: 'REPORT',
-      });
-    }
-  } catch (error: any) {
-    console.error('[Report Comment] Google Chat 通知失敗:', error.message);
-    await chatLogService.log({
-      platform: 'GOOGLE_CHAT',
-      type: 'THREAD',
-      status: 'FAILED',
-      request: null,
-      response: { error: error.message },
-      relatedId: report.id,
-      relatedType: 'REPORT',
-    });
-  }
+  const text = formatCommentThreadText(report, comment, source);
+  await reportIntegrationService.sendMessageToReportThread({
+    reportId: report.id,
+    text,
+    relatedId: report.id,
+    relatedType: 'REPORT',
+    failureLogMessage: '[Report Comment] Google Chat 通知失敗:',
+  });
 };
 
 export const reportCommentService = {

@@ -9,9 +9,7 @@ import {
 } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { notificationService } from '@/services/notificationService';
-import { googleChatService } from '@/services/googleChatService';
-import { chatThreadService } from '@/services/chatThreadService';
-import { chatLogService } from '@/services/chatLogService';
+import { reportIntegrationService } from '@/services/reportIntegrationService';
 
 async function handler(
   req: NextApiRequest,
@@ -659,24 +657,13 @@ async function notifyTicketUpdatedToReportThreads({
   title?: string;
   description?: string;
 }) {
-  const reportIds = Array.from(
-    new Set([...reportIdsBefore, ...reportIdsAfter])
-  );
+  const reportIds = Array.from(new Set([...reportIdsBefore, ...reportIdsAfter]));
 
   if (reportIds.length === 0) {
     return;
   }
 
   try {
-    const reports = await prisma.report.findMany({
-      where: { id: { in: reportIds } },
-      include: {
-        creator: { select: { id: true, name: true, email: true } },
-        assignee: { select: { id: true, name: true, email: true } },
-        category: { select: { id: true, name: true } },
-      },
-    });
-
     const changes: Record<string, { old: any; new: any }> = {};
 
     if (status && status !== existingTicket.status) {
@@ -723,58 +710,17 @@ async function notifyTicketUpdatedToReportThreads({
       return;
     }
 
-    for (const report of reports) {
-      const chatThread = await chatThreadService.findByReportId(report.id);
-
-      if (chatThread) {
-        const threadName = `spaces/${chatThread.chatSpaceId}/threads/${chatThread.chatThreadId}`;
-        const text = googleChatService.formatTicketUpdateText(
-          ticket,
-          report,
-          changes
-        );
-        const chatResponse = await googleChatService.sendToThread(
-          threadName,
-          text,
-          report
-        );
-
-        if (chatResponse) {
-          await chatLogService.log({
-            platform: 'GOOGLE_CHAT',
-            type: 'THREAD',
-            status: 'SUCCESS',
-            request: { text, thread: { name: threadName } },
-            response: chatResponse,
-            relatedId: ticketId,
-            relatedType: 'TICKET',
-          });
-
-          console.log(
-            `[Ticket Updated] Google Chat 通知發送成功: ${ticketId} -> Report ${report.id}`
-          );
-        }
-      }
-    }
+    await reportIntegrationService.sendMessageToMultipleReportThreads({
+      reportIds,
+      buildText: (report) =>
+        reportIntegrationService.formatTicketUpdateText(ticket, report, changes),
+      relatedId: ticketId,
+      relatedType: 'TICKET',
+      successLogPrefix: '[Ticket Updated] Google Chat 通知發送成功',
+      failureLogMessage: '[Ticket Updated] Google Chat 通知發送失敗:',
+    });
   } catch (error: any) {
     console.error('[Ticket Updated] Google Chat 通知發送失敗:', error.message);
-
-    try {
-      await chatLogService.log({
-        platform: 'GOOGLE_CHAT',
-        type: 'THREAD',
-        status: 'FAILED',
-        request: null,
-        response: { error: error.message },
-        relatedId: ticketId,
-        relatedType: 'TICKET',
-      });
-    } catch (logError: any) {
-      console.error(
-        '[Ticket Updated] Google Chat 失敗記錄寫入失敗:',
-        logError.message
-      );
-    }
   }
 }
 
@@ -792,63 +738,17 @@ async function notifyTicketDeletedToReportThreads({
   }
 
   try {
-    const reports = await prisma.report.findMany({
-      where: { id: { in: reportIds } },
-      include: {
-        creator: { select: { id: true, name: true, email: true } },
-        assignee: { select: { id: true, name: true, email: true } },
-        category: { select: { id: true, name: true } },
-      },
+    await reportIntegrationService.sendMessageToMultipleReportThreads({
+      reportIds,
+      buildText: (report) =>
+        reportIntegrationService.formatTicketDeleteText(ticket, report),
+      relatedId: ticketId,
+      relatedType: 'TICKET',
+      successLogPrefix: '[Ticket Deleted] Google Chat 通知發送成功',
+      failureLogMessage: '[Ticket Deleted] Google Chat 通知發送失敗:',
     });
-
-    for (const report of reports) {
-      const chatThread = await chatThreadService.findByReportId(report.id);
-
-      if (chatThread) {
-        const threadName = `spaces/${chatThread.chatSpaceId}/threads/${chatThread.chatThreadId}`;
-        const text = googleChatService.formatTicketDeleteText(ticket, report);
-        const chatResponse = await googleChatService.sendToThread(
-          threadName,
-          text,
-          report
-        );
-
-        if (chatResponse) {
-          await chatLogService.log({
-            platform: 'GOOGLE_CHAT',
-            type: 'THREAD',
-            status: 'SUCCESS',
-            request: { text, thread: { name: threadName } },
-            response: chatResponse,
-            relatedId: ticketId,
-            relatedType: 'TICKET',
-          });
-
-          console.log(
-            `[Ticket Deleted] Google Chat 通知發送成功: ${ticketId} -> Report ${report.id}`
-          );
-        }
-      }
-    }
   } catch (error: any) {
     console.error('[Ticket Deleted] Google Chat 通知發送失敗:', error.message);
-
-    try {
-      await chatLogService.log({
-        platform: 'GOOGLE_CHAT',
-        type: 'THREAD',
-        status: 'FAILED',
-        request: null,
-        response: { error: error.message },
-        relatedId: ticketId,
-        relatedType: 'TICKET',
-      });
-    } catch (logError: any) {
-      console.error(
-        '[Ticket Deleted] Google Chat 失敗記錄寫入失敗:',
-        logError.message
-      );
-    }
   }
 }
 

@@ -13,9 +13,7 @@ import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { ActivityLogService } from '@/services/activityLogService';
 import { notificationService } from '@/services/notificationService';
 import { Prisma } from '@prisma/client'; // Corrected import path
-import { googleChatService } from '@/services/googleChatService';
-import { chatThreadService } from '@/services/chatThreadService';
-import { chatLogService } from '@/services/chatLogService';
+import { reportIntegrationService } from '@/services/reportIntegrationService';
 
 export default async function handler(
   req: NextApiRequest,
@@ -601,16 +599,6 @@ async function notifyTicketCreatedToReportThreads(
   }
 
   try {
-    // 查詢關聯的 Reports（包含分類信息）
-    const reports = await prisma.report.findMany({
-      where: { id: { in: reportIds } },
-      include: {
-        creator: { select: { id: true, name: true, email: true } },
-        assignee: { select: { id: true, name: true, email: true } },
-        category: { select: { id: true, name: true } },
-      },
-    });
-
     // 取得完整的 Ticket 資訊
     const fullTicket = await prisma.ticket.findUnique({
       where: { id: ticketId },
@@ -620,51 +608,21 @@ async function notifyTicketCreatedToReportThreads(
       },
     });
 
-    // 對每個 Report 發送通知
-    for (const report of reports) {
-      const chatThread = await chatThreadService.findByReportId(report.id);
-
-      if (chatThread && fullTicket) {
-        const threadName = `spaces/${chatThread.chatSpaceId}/threads/${chatThread.chatThreadId}`;
-        const text = googleChatService.formatTicketCreateText(
-          fullTicket,
-          report
-        );
-        const chatResponse = await googleChatService.sendToThread(
-          threadName,
-          text,
-          report
-        );
-
-        if (chatResponse) {
-          await chatLogService.log({
-            platform: 'GOOGLE_CHAT',
-            type: 'THREAD',
-            status: 'SUCCESS',
-            request: { text, thread: { name: threadName } },
-            response: chatResponse,
-            relatedId: ticketId,
-            relatedType: 'TICKET',
-          });
-
-          console.log(
-            `[Ticket Created] Google Chat 通知發送成功: ${ticketId} -> Report ${report.id}`
-          );
-        }
-      }
+    if (!fullTicket) {
+      return;
     }
-  } catch (error: any) {
-    console.error('[Ticket Created] Google Chat 通知發送失敗:', error.message);
 
-    await chatLogService.log({
-      platform: 'GOOGLE_CHAT',
-      type: 'THREAD',
-      status: 'FAILED',
-      request: null,
-      response: { error: error.message },
+    await reportIntegrationService.sendMessageToMultipleReportThreads({
+      reportIds,
+      buildText: (report) =>
+        reportIntegrationService.formatTicketCreateText(fullTicket, report),
       relatedId: ticketId,
       relatedType: 'TICKET',
+      successLogPrefix: '[Ticket Created] Google Chat 通知發送成功',
+      failureLogMessage: '[Ticket Created] Google Chat 通知發送失敗:',
     });
+  } catch (error: any) {
+    console.error('[Ticket Created] Google Chat 通知發送失敗:', error.message);
 
     // 不阻斷主流程
   }
