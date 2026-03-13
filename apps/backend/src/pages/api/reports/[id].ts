@@ -11,7 +11,6 @@ import {
   reportMutationService,
   type UpdateReportPayload,
 } from '@/services/reportMutationService';
-import { sendReportUpdateChatNotification, sendReportDeleteChatNotification } from '@/services/reportUpdateNotificationService';
 import { reportIntegrationService } from '@/services/reportIntegrationService';
 
 // Define Report type based on Prisma schema
@@ -395,7 +394,11 @@ async function updateReport(
       };
     }
 
-    await sendReportUpdateChatNotification(id, finalUpdatedReport, changes);
+    await reportIntegrationService.sendReportUpdateChatNotification(
+      id,
+      finalUpdatedReport,
+      changes
+    );
 
     return res.status(200).json({
       success: true,
@@ -421,6 +424,12 @@ async function deleteReport(
     include: {
       creator: { select: { id: true, name: true, email: true } },
       assignee: { select: { id: true, name: true, email: true } },
+      chatThread: {
+        select: {
+          chatSpaceId: true,
+          chatThreadId: true,
+        },
+      },
       category: {
         select: {
           id: true,
@@ -445,6 +454,14 @@ async function deleteReport(
   }
 
   try {
+    // 先快照 thread，刪除成功後再做外部副作用，避免刪除失敗時需要 rollback
+    const threadSnapshot = existingReport.chatThread
+      ? {
+          chatSpaceId: existingReport.chatThread.chatSpaceId,
+          chatThreadId: existingReport.chatThread.chatThreadId,
+        }
+      : null;
+
     const deletedReportData = await prisma.$transaction(async (tx) => {
       // 1. 刪除相關的 ActivityLog (for the report itself)
       await tx.activityLog.deleteMany({
@@ -479,12 +496,26 @@ async function deleteReport(
       return deletedReport;
     });
 
-    // 發送 Google Chat 刪除通知
     try {
-      await sendReportDeleteChatNotification(id, existingReport);
+      await reportIntegrationService.teardownExternalIntegrationsAfterReportDelete(
+        existingReport as any
+      );
+    } catch (error: any) {
+      console.error('[Report Deleted] Bitbucket 解聯失敗:', error.message);
+    }
+
+    try {
+      if (threadSnapshot) {
+        await reportIntegrationService.sendReportDeleteChatNotificationToThread({
+          reportId: id,
+          report: existingReport,
+          chatSpaceId: threadSnapshot.chatSpaceId,
+          chatThreadId: threadSnapshot.chatThreadId,
+        });
+      }
     } catch (error: any) {
       console.error('[Report Deleted] Google Chat 通知發送失敗:', error.message);
-      // 不阻斷主流程，繼續返回成功結果
+      // 不阻斷主流程，維持刪除成功
     }
 
     return res.status(200).json({

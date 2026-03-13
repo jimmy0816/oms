@@ -5,7 +5,7 @@ import {
   type BitbucketIssueState,
 } from '@/services/bitbucketService';
 import { ReportStatus } from 'shared-types';
-import { sendReportUpdateChatNotification } from '@/services/reportUpdateNotificationService';
+import { reportIntegrationService } from '@/services/reportIntegrationService';
 
 export interface ReportAttachmentInput {
   id?: string;
@@ -468,7 +468,7 @@ export const reportMutationService = {
     }
 
     if (sendChatNotification) {
-      await sendReportUpdateChatNotification(reportId, updatedReport, {
+      await reportIntegrationService.sendReportUpdateChatNotification(reportId, updatedReport, {
         status: { old: existingReport.status, new: targetStatus },
       });
     }

@@ -170,6 +170,105 @@ export const reportIntegrationService = {
     return googleChatService.formatReportDeleteText(report);
   },
 
+  async sendReportUpdateChatNotification(
+    reportId: string,
+    report: any,
+    changes: Record<string, { old: any; new: any }>
+  ) {
+    if (!changes || Object.keys(changes).length === 0) {
+      return;
+    }
+
+    const text = this.formatReportUpdateText(report, changes);
+    await this.sendMessageToReportThread({
+      reportId,
+      text,
+      relatedId: reportId,
+      relatedType: 'REPORT',
+      successLogMessage: `[Report Updated] Google Chat 通知發送成功: ${reportId}`,
+      failureLogMessage: '[Report Updated] Google Chat 通知發送失敗:',
+    });
+  },
+
+  async sendReportDeleteChatNotification(reportId: string, report: any) {
+    const text = this.formatReportDeleteText(report);
+    await this.sendMessageToReportThread({
+      reportId,
+      text,
+      relatedId: reportId,
+      relatedType: 'REPORT',
+      successLogMessage: `[Report Deleted] Google Chat 通知發送成功: ${reportId}`,
+      failureLogMessage: '[Report Deleted] Google Chat 通知發送失敗:',
+    });
+  },
+
+  async sendReportDeleteChatNotificationToThread(params: {
+    reportId: string;
+    report: any;
+    chatSpaceId: string;
+    chatThreadId: string;
+  }) {
+    const { reportId, report, chatSpaceId, chatThreadId } = params;
+    const text = this.formatReportDeleteText(report);
+    const threadName = `spaces/${chatSpaceId}/threads/${chatThreadId}`;
+
+    try {
+      const chatResponse = await googleChatService.sendToThread(threadName, text);
+
+      if (chatResponse) {
+        await chatLogService.log({
+          platform: 'GOOGLE_CHAT',
+          type: 'THREAD',
+          status: 'SUCCESS',
+          request: { text, thread: { name: threadName } },
+          response: chatResponse,
+          relatedId: reportId,
+          relatedType: 'REPORT',
+        });
+
+        console.log(`[Report Deleted] Google Chat 通知發送成功: ${reportId}`);
+      }
+
+      return chatResponse;
+    } catch (error: any) {
+      console.error('[Report Deleted] Google Chat 通知發送失敗:', error.message);
+
+      await chatLogService.log({
+        platform: 'GOOGLE_CHAT',
+        type: 'THREAD',
+        status: 'FAILED',
+        request: { text, thread: { name: threadName } },
+        response: { error: error.message },
+        relatedId: reportId,
+        relatedType: 'REPORT',
+      });
+
+      return null;
+    }
+  },
+
+  async teardownExternalIntegrationsAfterReportDelete(report: ReportIntegrationRecord) {
+    if (!report.bitbucketIssueId) {
+      return;
+    }
+
+    if (!bitbucketService.isEnabled()) {
+      console.warn(
+        `[Report Integration] Bitbucket 未啟用，無法關閉 issue (${report.id})`
+      );
+      return;
+    }
+
+    try {
+      await bitbucketService.updateIssueState(report.bitbucketIssueId, 'closed');
+    } catch (error: any) {
+      console.error(
+        `[Report Integration] 關閉 Bitbucket issue 失敗 (${report.id}):`,
+        error.message
+      );
+    }
+  },
+
   formatTicketCreateText(ticket: any, report: any) {
     return googleChatService.formatTicketCreateText(ticket, report);
   },
