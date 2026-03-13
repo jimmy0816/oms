@@ -9,6 +9,7 @@ import {
 } from 'shared-types';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { notificationService } from '@/services/notificationService';
+import { reportIntegrationService } from '@/services/reportIntegrationService';
 
 async function handler(
   req: NextApiRequest,
@@ -532,6 +533,23 @@ async function updateTicket(
       });
     }
 
+    // --- 發送 Google Chat 通知到關聯的 Report Thread ---
+    void notifyTicketUpdatedToReportThreads({
+      ticketId: id,
+      reportIdsBefore: existingReportIds,
+      reportIdsAfter: reportIds ?? existingReportIds,
+      ticket: finalUpdatedTicket,
+      existingTicket,
+      status,
+      priority,
+      assigneeId,
+      title,
+      description,
+    }).catch((error) => {
+      console.error('[Ticket Updated] Google Chat 通知發送失敗:', error?.message);
+    });
+    // --- End Google Chat Notification ---
+
     return res.status(200).json({ success: true, data: finalUpdatedTicket });
   } catch (error: any) {
     console.error('Error updating ticket:', error);
@@ -551,6 +569,12 @@ async function deleteTicket(
   if (!existingTicket) {
     return res.status(404).json({ success: false, error: 'Ticket not found' });
   }
+
+  const reportIdRows = await prisma.reportTicket.findMany({
+    where: { ticketId: id },
+    select: { reportId: true },
+  });
+  const reportIds = reportIdRows.map((row) => row.reportId);
 
   try {
     const deletedTicketData = await prisma.$transaction(async (tx) => {
@@ -592,6 +616,14 @@ async function deleteTicket(
       return deletedTicket;
     });
 
+    void notifyTicketDeletedToReportThreads({
+      ticketId: id,
+      reportIds,
+      ticket: existingTicket,
+    }).catch((error) => {
+      console.error('[Ticket Deleted] Google Chat 通知發送失敗:', error?.message);
+    });
+
     return res.status(200).json({ success: true, data: deletedTicketData });
   } catch (error: any) {
     console.error(`Error deleting ticket ${id}:`, error);
@@ -599,6 +631,124 @@ async function deleteTicket(
       success: false,
       error: 'Failed to delete ticket and its related data.',
     });
+  }
+}
+
+async function notifyTicketUpdatedToReportThreads({
+  ticketId,
+  reportIdsBefore,
+  reportIdsAfter,
+  ticket,
+  existingTicket,
+  status,
+  priority,
+  assigneeId,
+  title,
+  description,
+}: {
+  ticketId: string;
+  reportIdsBefore: string[];
+  reportIdsAfter: string[];
+  ticket: any;
+  existingTicket: any;
+  status?: string;
+  priority?: string;
+  assigneeId?: string | null;
+  title?: string;
+  description?: string;
+}) {
+  const reportIds = Array.from(new Set([...reportIdsBefore, ...reportIdsAfter]));
+
+  if (reportIds.length === 0) {
+    return;
+  }
+
+  try {
+    const changes: Record<string, { old: any; new: any }> = {};
+
+    if (status && status !== existingTicket.status) {
+      changes.status = { old: existingTicket.status, new: status };
+    }
+    if (priority && priority !== existingTicket.priority) {
+      changes.priority = { old: existingTicket.priority, new: priority };
+    }
+    if (assigneeId !== undefined && assigneeId !== existingTicket.assigneeId) {
+      const oldAssignee = existingTicket.assigneeId
+        ? await prisma.user.findUnique({
+            where: { id: existingTicket.assigneeId },
+          })
+        : null;
+      const newAssignee = assigneeId
+        ? await prisma.user.findUnique({ where: { id: assigneeId } })
+        : null;
+      changes.assigneeId = {
+        old: oldAssignee?.name || '未指派',
+        new: newAssignee?.name || '未指派',
+      };
+    }
+    if (title && title !== existingTicket.title) {
+      changes.title = { old: existingTicket.title, new: title };
+    }
+    if (description && description !== existingTicket.description) {
+      changes.description = {
+        old: existingTicket.description,
+        new: description,
+      };
+    }
+
+    if (
+      reportIdsBefore.length !== reportIdsAfter.length ||
+      reportIdsBefore.some((reportId) => !reportIdsAfter.includes(reportId))
+    ) {
+      changes.reportIds = {
+        old: reportIdsBefore.join(', '),
+        new: reportIdsAfter.join(', '),
+      };
+    }
+
+    if (Object.keys(changes).length === 0) {
+      return;
+    }
+
+    await reportIntegrationService.sendMessageToMultipleReportThreads({
+      reportIds,
+      buildText: (report) =>
+        reportIntegrationService.formatTicketUpdateText(ticket, report, changes),
+      relatedId: ticketId,
+      relatedType: 'TICKET',
+      successLogPrefix: '[Ticket Updated] Google Chat 通知發送成功',
+      failureLogMessage: '[Ticket Updated] Google Chat 通知發送失敗:',
+    });
+  } catch (error: any) {
+    console.error('[Ticket Updated] Google Chat 通知發送失敗:', error.message);
+  }
+}
+
+async function notifyTicketDeletedToReportThreads({
+  ticketId,
+  reportIds,
+  ticket,
+}: {
+  ticketId: string;
+  reportIds: string[];
+  ticket: any;
+}) {
+  if (reportIds.length === 0) {
+    return;
+  }
+
+  try {
+    await reportIntegrationService.sendMessageToMultipleReportThreads({
+      reportIds,
+      buildText: (report) =>
+        reportIntegrationService.formatTicketDeleteText(ticket, report),
+      relatedId: ticketId,
+      relatedType: 'TICKET',
+      successLogPrefix: '[Ticket Deleted] Google Chat 通知發送成功',
+      failureLogMessage: '[Ticket Deleted] Google Chat 通知發送失敗:',
+    });
+  } catch (error: any) {
+    console.error('[Ticket Deleted] Google Chat 通知發送失敗:', error.message);
   }
 }
 

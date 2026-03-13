@@ -11,7 +11,7 @@ import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogService } from '@/services/activityLogService';
 import { notificationService } from '@/services/notificationService';
-import { categoryService } from '@/services/categoryService'; // Import categoryService
+import { reportIntegrationService } from '@/services/reportIntegrationService';
 
 // Define Report type based on Prisma schema (updated to include attachments)
 interface Report {
@@ -25,6 +25,8 @@ interface Report {
   updatedAt: Date;
   creatorId: string;
   assigneeId?: string | null;
+  bitbucketIssueId?: string | null;
+  bitbucketIssueUrl?: string | null;
   attachments?: FileInfo[]; // New attachments field
   category?: string | null; // This will now store categoryId
   contactPhone?: string | null;
@@ -316,6 +318,19 @@ async function createReport(
     include: {
       creator: { select: { id: true, name: true, email: true } },
       assignee: { select: { id: true, name: true, email: true } },
+      category: {
+        select: {
+          id: true,
+          name: true,
+          parent: {
+            select: {
+              id: true,
+              name: true,
+              parent: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -354,7 +369,13 @@ async function createReport(
     });
   }
 
-  // 5. 回傳結果
+  const integratedReport = await reportIntegrationService.handleReportCreated(report as any);
+  if (integratedReport) {
+    report.bitbucketIssueId = integratedReport.bitbucketIssueId ?? report.bitbucketIssueId;
+    report.bitbucketIssueUrl = integratedReport.bitbucketIssueUrl ?? report.bitbucketIssueUrl;
+  }
+
+  // 6. 回傳結果
   return res.status(201).json({
     success: true,
     data: report,

@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { ApiResponse, Comment, CreateCommentRequest } from 'shared-types';
-import { notificationService } from '@/services/notificationService';
+import { reportCommentService } from '@/services/reportCommentService';
+import { AuthenticatedRequest, withAuth } from '@/middleware/auth';
 
 
 
@@ -12,7 +13,7 @@ export default async function handler(
   try {
     switch (req.method) {
       case 'POST':
-        return await addCommentToReport(req, res);
+        return await withAuth(addCommentToReport)(req, res);
       default:
         res.setHeader('Allow', ['POST']);
         return res
@@ -29,15 +30,23 @@ export default async function handler(
 }
 
 async function addCommentToReport(
-  req: NextApiRequest,
+  req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<Comment>>
 ) {
-  const { content, reportId, userId } = req.body as CreateCommentRequest;
+  const { content, reportId } = req.body as CreateCommentRequest;
+  const userId = req.user?.id;
 
-  if (!content || !reportId || !userId) {
+  if (!content || !reportId) {
     return res.status(400).json({
       success: false,
-      error: 'Content, reportId, and userId are required',
+      error: 'Content and reportId are required',
+    });
+  }
+
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      error: '未授權訪問，請先登入',
     });
   }
 
@@ -53,76 +62,12 @@ async function addCommentToReport(
     });
   }
 
-  // Check if user exists
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
+  const comment = await reportCommentService.createReportComment({
+    reportId,
+    userId,
+    content,
+    source: 'OMS',
   });
-
-  if (!user) {
-    return res.status(404).json({
-      success: false,
-      error: 'User not found',
-    });
-  }
-
-  // Create comment
-  const comment = await prisma.comment.create({
-    data: {
-      content,
-      reportId,
-      userId,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-    },
-  });
-
-  // --- Start Notification Logic ---
-  const commenterName = user.name || '有人';
-  const notificationMessage = `${commenterName} 在通報「${report.title}」留言`;
-
-  const recipients = new Set<string>();
-
-  // Notify report creator if the commenter is not the creator
-  if (report.creatorId !== userId) {
-    recipients.add(report.creatorId);
-  }
-  // Notify report assignee if exists and commenter is not the assignee
-  if (report.assigneeId && report.assigneeId !== userId) {
-    recipients.add(report.assigneeId);
-  }
-
-  // Notify all previous commenters on this report
-  const previousCommenters = await prisma.comment.findMany({
-    where: { reportId: report.id },
-    select: { userId: true },
-    distinct: ['userId'], // Get unique user IDs
-  });
-
-  previousCommenters.forEach(c => {
-    if (c.userId !== userId) { // Don't notify the current commenter again
-      recipients.add(c.userId);
-    }
-  });
-
-  const notificationPromises = Array.from(recipients).map((recipientId) =>
-    notificationService.create({
-      title: '通報新留言',
-      message: notificationMessage,
-      userId: recipientId,
-      relatedId: reportId,
-      relatedType: 'REPORT',
-    })
-  );
-
-  await Promise.all(notificationPromises);
-  // --- End Notification Logic ---
 
   return res.status(201).json({
     success: true,

@@ -77,14 +77,10 @@ export default function TicketDetail() {
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCommentContent.trim() || !ticket?.id || !user?.id) return;
+    if (!newCommentContent.trim() || !ticket?.id) return;
 
     try {
-      await ticketService.addCommentToTicket(
-        ticket.id,
-        newCommentContent,
-        user.id,
-      );
+      await ticketService.addCommentToTicket(ticket.id, newCommentContent);
       setNewCommentContent('');
       await fetchTicket();
       showToast('留言已成功新增！', 'success');
@@ -106,10 +102,10 @@ export default function TicketDetail() {
   };
 
   const handleClaim = async () => {
-    if (!ticket?.id || !user?.id) return;
+    if (!ticket?.id) return;
 
     try {
-      await ticketService.claimTicket(ticket.id, user.id);
+      await ticketService.claimTicket(ticket.id);
       await fetchTicket();
       showToast('認領成功！', 'success');
     } catch (error) {
@@ -119,10 +115,10 @@ export default function TicketDetail() {
   };
 
   const handleAbandon = async () => {
-    if (!ticket?.id || !user?.id) return;
+    if (!ticket?.id) return;
 
     try {
-      await ticketService.abandonTicket(ticket.id, user.id);
+      await ticketService.abandonTicket(ticket.id);
       await fetchTicket();
       showToast('放棄成功！', 'success');
     } catch (error) {
@@ -155,12 +151,12 @@ export default function TicketDetail() {
   };
 
   const updateTicketStatus = async (newStatus: TicketStatus, log: string) => {
-    if (!ticket?.id || !user?.id) return;
+    if (!ticket?.id) return;
 
     try {
       await ticketService.updateTicketStatus(ticket.id, newStatus);
       if (log) {
-        await ticketService.addActivityLog(ticket.id, log, user.id);
+        await ticketService.addActivityLog(ticket.id, log);
       }
       await fetchTicket();
       showToast(`工單狀態已更新為 ${getStatusText(newStatus)}`, 'success');

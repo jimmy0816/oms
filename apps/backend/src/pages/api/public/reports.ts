@@ -33,7 +33,7 @@ export interface PaginatedPublicReportsResponse {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<PaginatedPublicReportsResponse | { error: string }>
+  res: NextApiResponse<PaginatedPublicReportsResponse | { error: string }>,
 ) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
@@ -61,7 +61,7 @@ export default async function handler(
     // 1. Find parent categories
     const parentCategories = await prisma.category.findMany({
       where: {
-        name: { in: ['我拾獲別人的東西'] },
+        name: { in: ['拾獲財物'] },
       },
     });
     if (parentCategories.length === 0) {
