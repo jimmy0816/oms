@@ -13,6 +13,7 @@ import { withAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { ActivityLogService } from '@/services/activityLogService';
 import { notificationService } from '@/services/notificationService';
 import { Prisma } from '@prisma/client'; // Corrected import path
+import { reportIntegrationService } from '@/services/reportIntegrationService';
 
 export default async function handler(
   req: NextApiRequest,
@@ -566,6 +567,17 @@ async function createTicket(
   }
   // --- End Notification Logic ---
 
+  // --- 發送 Google Chat 通知到關聯的 Report Thread ---
+  void notifyTicketCreatedToReportThreads(ticket.id, reportIds).catch(
+    (error) => {
+      console.error(
+        '[Ticket Created] Google Chat 通知發送失敗:',
+        error?.message
+      );
+    }
+  );
+  // --- End Google Chat Notification ---
+
   const ticketWithCorrectTypes: Ticket = {
     ...ticket,
     status: ticket.status as unknown as TicketStatus,
@@ -576,4 +588,42 @@ async function createTicket(
     success: true,
     data: ticketWithCorrectTypes,
   });
+}
+
+async function notifyTicketCreatedToReportThreads(
+  ticketId: string,
+  reportIds: string[]
+) {
+  if (reportIds.length === 0) {
+    return;
+  }
+
+  try {
+    // 取得完整的 Ticket 資訊
+    const fullTicket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: {
+        creator: { select: { id: true, name: true, email: true } },
+        assignee: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    if (!fullTicket) {
+      return;
+    }
+
+    await reportIntegrationService.sendMessageToMultipleReportThreads({
+      reportIds,
+      buildText: (report) =>
+        reportIntegrationService.formatTicketCreateText(fullTicket, report),
+      relatedId: ticketId,
+      relatedType: 'TICKET',
+      successLogPrefix: '[Ticket Created] Google Chat 通知發送成功',
+      failureLogMessage: '[Ticket Created] Google Chat 通知發送失敗:',
+    });
+  } catch (error: any) {
+    console.error('[Ticket Created] Google Chat 通知發送失敗:', error.message);
+
+    // 不阻斷主流程
+  }
 }

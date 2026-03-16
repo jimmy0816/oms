@@ -15,11 +15,13 @@ export interface CategoryLevel1 extends Category {
 interface CategorySelectorProps {
   onCategorySelect: (categoryId: string, categoryPath: string) => void;
   selectedCategoryId?: string;
+  onCategoryPathResolved?: (categoryPath: string) => void;
 }
 
 const CategorySelector: React.FC<CategorySelectorProps> = ({
   onCategorySelect,
   selectedCategoryId,
+  onCategoryPathResolved,
 }) => {
   const [categories, setCategories] = useState<CategoryLevel1[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,10 +44,10 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
             for (const cat2 of cat1.children) {
               for (const cat3 of cat2.children) {
                 if (cat3.id === selectedCategoryId) {
+                  const resolvedPath = `${cat1.name} > ${cat2.name} > ${cat3.name}`;
                   setExpandedLevel1([cat1.id]);
-                  setDisplayCategoryPath(
-                    `${cat1.name} > ${cat2.name} > ${cat3.name}`
-                  );
+                  setDisplayCategoryPath(resolvedPath);
+                  onCategoryPathResolved?.(resolvedPath);
                   break;
                 }
               }

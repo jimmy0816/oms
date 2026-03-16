@@ -239,14 +239,12 @@ export const ticketService = {
    */
   async addCommentToTicket(
     ticketId: string,
-    content: string,
-    userId: string
+    content: string
   ): Promise<any> {
     try {
       const comment = await apiClient.post<any>('/api/tickets/comments', {
         ticketId,
         content,
-        userId,
       });
       return {
         ...comment,
@@ -271,13 +269,11 @@ export const ticketService = {
    */
   async addActivityLog(
     ticketId: string,
-    content: string,
-    userId: string
+    content: string
   ): Promise<any> {
     try {
       const activityLog = await apiClient.post<any>('/api/activitylogs', {
         content,
-        userId,
         parentId: ticketId,
         parentType: 'TICKET',
       });
@@ -295,12 +291,12 @@ export const ticketService = {
   /**
    * 認領工單
    */
-  async claimTicket(ticketId: string, userId: string): Promise<Ticket> {
+  async claimTicket(ticketId: string): Promise<Ticket> {
     try {
       const ticket = await apiClient.patch<Ticket>(`/api/tickets/${ticketId}`, {
         action: 'claim',
       });
-      await this.addActivityLog(ticketId, '認領工單', userId);
+      await this.addActivityLog(ticketId, '認領工單');
       return {
         ...ticket,
         createdAt: new Date(ticket.createdAt),
@@ -315,12 +311,12 @@ export const ticketService = {
   /**
    * 放棄工單
    */
-  async abandonTicket(ticketId: string, userId: string): Promise<Ticket> {
+  async abandonTicket(ticketId: string): Promise<Ticket> {
     try {
       const ticket = await apiClient.patch<Ticket>(`/api/tickets/${ticketId}`, {
         action: 'abandon',
       });
-      await this.addActivityLog(ticketId, '放棄工單', userId);
+      await this.addActivityLog(ticketId, '放棄工單');
       return {
         ...ticket,
         createdAt: new Date(ticket.createdAt),
