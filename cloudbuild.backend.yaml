@@ -126,7 +126,6 @@ substitutions:
   _BITBUCKET_REPO_SLUG: "your_repo_slug"
   _BITBUCKET_BOT_EMAIL: "bitbucket-bot@oms.local"
   _BITBUCKET_BOT_NAME: "Bitbucket Bot"
-  _BITBUCKET_TOKEN: "your_bitbucket_access_token"
   _BITBUCKET_USERNAME: "your_atlassian_email"
   _BITBUCKET_APP_PASSWORD: "your_bitbucket_app_password_or_api_token"
 

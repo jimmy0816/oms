@@ -52,14 +52,14 @@ const BITBUCKET_TOKEN = process.env.BITBUCKET_TOKEN || '';
 const BITBUCKET_ENABLED = process.env.BITBUCKET_ENABLED === 'true';
 
 const getAuthHeader = () => {
-  if (BITBUCKET_TOKEN) {
-    return `Bearer ${BITBUCKET_TOKEN}`;
-  }
   if (BITBUCKET_USERNAME && BITBUCKET_APP_PASSWORD) {
     const encoded = Buffer.from(
       `${BITBUCKET_USERNAME}:${BITBUCKET_APP_PASSWORD}`
     ).toString('base64');
     return `Basic ${encoded}`;
+  }
+  if (BITBUCKET_TOKEN) {
+    return `Bearer ${BITBUCKET_TOKEN}`;
   }
   return '';
 };
