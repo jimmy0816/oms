@@ -26,7 +26,8 @@ interface Report {
   creatorId: string;
   assigneeId?: string | null;
   bitbucketIssueId?: string | null;
-  bitbucketIssueUrl?: string | null;
+  jiraIssueId?: string | null;
+  jiraIssueKey?: string | null;
   category?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
@@ -360,6 +361,7 @@ async function updateReport(
         actorUserId: userId,
         source: 'REPORT_API',
         syncBitbucketState: true,
+        syncJiraState: true,
         sendChatNotification: false,
         createActivityLog: true,
       });

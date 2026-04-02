@@ -4,6 +4,7 @@ import {
   bitbucketService,
   type BitbucketIssueState,
 } from '@/services/bitbucketService';
+import { jiraService } from '@/services/jiraService';
 import { ReportStatus } from 'shared-types';
 import { reportIntegrationService } from '@/services/reportIntegrationService';
 
@@ -41,6 +42,8 @@ interface ExistingReportSnapshot {
   priority: string;
   assigneeId?: string | null;
   bitbucketIssueId?: string | null;
+  jiraIssueId?: string | null;
+  jiraIssueKey?: string | null;
   categoryId?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
@@ -58,8 +61,9 @@ export interface UpdateReportStatusOptions {
   reportId: string;
   targetStatus: ReportStatus;
   actorUserId?: string;
-  source?: 'REPORT_API' | 'WEBHOOK_BITBUCKET' | 'SYSTEM';
+  source?: 'REPORT_API' | 'WEBHOOK_BITBUCKET' | 'WEBHOOK_JIRA' | 'SYSTEM';
   syncBitbucketState?: boolean;
+  syncJiraState?: boolean;
   sendChatNotification?: boolean;
   createActivityLog?: boolean;
 }
@@ -125,6 +129,10 @@ const buildStatusLogMessage = (
 ) => {
   if (source === 'WEBHOOK_BITBUCKET') {
     return `通報狀態由 Bitbucket 同步：${oldStatus} → ${newStatus}`;
+  }
+
+  if (source === 'WEBHOOK_JIRA') {
+    return `通報狀態由 Jira 同步：${oldStatus} → ${newStatus}`;
   }
 
   return `通報狀態從「${oldStatus}」變更為「${newStatus}」`;
@@ -408,6 +416,7 @@ export const reportMutationService = {
       actorUserId,
       source = 'SYSTEM',
       syncBitbucketState = false,
+      syncJiraState = false,
       sendChatNotification = true,
       createActivityLog = true,
     } = options;
@@ -446,6 +455,10 @@ export const reportMutationService = {
 
     if (createActivityLog && source === 'WEBHOOK_BITBUCKET' && !resolvedActorUserId) {
       console.warn('[Report Status Update] WEBHOOK_BITBUCKET 缺少 actorUserId，略過活動日誌寫入');
+    }
+
+    if (createActivityLog && source === 'WEBHOOK_JIRA' && !resolvedActorUserId) {
+      console.warn('[Report Status Update] WEBHOOK_JIRA 缺少 actorUserId，略過活動日誌寫入');
     }
 
     if (createActivityLog && resolvedActorUserId) {
@@ -488,10 +501,21 @@ export const reportMutationService = {
           );
         } catch (error: any) {
           console.error(
-            '[Report Status Update] Bitbucket issue 更新失敗:',
+            '[Report Status Update] Bitbucket 狀態同步失敗:',
             error.message
           );
         }
+      }
+    }
+
+    if (syncJiraState && existingReport.jiraIssueKey && jiraService.isEnabled()) {
+      try {
+        await jiraService.syncStatusByReportStatus(
+          existingReport.jiraIssueKey,
+          targetStatus
+        );
+      } catch (error: any) {
+        console.error('[Report Status Update] Jira transition 失敗:', error.message);
       }
     }
 
@@ -509,6 +533,31 @@ export const reportMutationService = {
   ) {
     const report = await prisma.report.findFirst({
       where: { bitbucketIssueId },
+      select: { id: true },
+    });
+
+    if (!report) {
+      return {
+        changed: false,
+        report: null,
+        previousStatus: null,
+      };
+    }
+
+    return this.updateReportStatus({
+      reportId: report.id,
+      targetStatus,
+      ...options,
+    });
+  },
+
+  async updateReportStatusByJiraIssueId(
+    jiraIssueId: string,
+    targetStatus: ReportStatus,
+    options?: Omit<UpdateReportStatusOptions, 'reportId' | 'targetStatus'>
+  ) {
+    const report = await prisma.report.findFirst({
+      where: { jiraIssueId },
       select: { id: true },
     });
 

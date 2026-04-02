@@ -39,7 +39,8 @@ export interface Report {
   assigneeId?: string;
   reviewerId?: string;
   bitbucketIssueId?: string;
-  bitbucketIssueUrl?: string;
+  jiraIssueId?: string;
+  jiraIssueKey?: string;
   images?: string[]; // URLs to images
   attachments?: FileInfo[]; // Add attachments
   tickets?: ReportTicket[]; // Add tickets

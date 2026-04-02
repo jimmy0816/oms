@@ -32,7 +32,8 @@ export interface Report {
   trackingDate: Date;
   assigneeId?: string | null;
   bitbucketIssueId?: string | null;
-  bitbucketIssueUrl?: string | null;
+  jiraIssueId?: string | null;
+  jiraIssueKey?: string | null;
   images: string[];
   categoryId?: string | null;
   contactPhone?: string | null;

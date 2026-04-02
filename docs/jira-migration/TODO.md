@@ -5,47 +5,47 @@
 ## Jira 遷移（hotfix/bitbucket_to_jira）
 
 > 規格來源：`OMS_JIRA_BITBUCKET_DUAL_INTEGRATION_PRD.md` Section 22
-> 程式碼現況：PR-1 ~ PR-6 全部尚未實作
+> 程式碼現況：PR-1 ~ PR-5 已實作，PR-6 待驗證
 
 ### PR-1：Schema 與 Shared Types 基礎調整
 
-- [ ] `packages/prisma-client/prisma/schema.prisma`：新增 `jiraIssueId String?`、`jiraIssueKey String?`、`@@index([jiraIssueId])`
-- [ ] `packages/prisma-client/prisma/schema.prisma`：移除（或標記 deprecated）`bitbucketIssueUrl String?`
-- [ ] 執行 `pnpm prisma migrate dev`
-- [ ] `packages/shared-types/src/reports.ts`：移除 `bitbucketIssueUrl?`，新增 `jiraIssueId?`、`jiraIssueKey?`
-- [ ] `apps/frontend/src/services/reportService.ts`：同步移除 `bitbucketIssueId`/`bitbucketIssueUrl`，新增 jira 欄位
-- [ ] 確認 backend / frontend TypeScript compile 無誤
+- [x] `packages/prisma-client/prisma/schema.prisma`：新增 `jiraIssueId String?`、`jiraIssueKey String?`、`@@index([jiraIssueId])`
+- [x] `packages/prisma-client/prisma/schema.prisma`：移除（或標記 deprecated）`bitbucketIssueUrl String?`
+- [x] 執行 `pnpm prisma migrate dev`
+- [x] `packages/shared-types/src/reports.ts`：移除 `bitbucketIssueUrl?`，新增 `jiraIssueId?`、`jiraIssueKey?`
+- [x] `apps/frontend/src/services/reportService.ts`：同步移除 `bitbucketIssueId`/`bitbucketIssueUrl`，新增 jira 欄位
+- [ ] 確認 backend / frontend TypeScript compile 無誤（目前專案存在既有錯誤，非本次引入）
 
 ### PR-2：Jira Service（獨立可測）
 
-- [ ] 建立 `apps/backend/src/services/jiraService.ts`（目前不存在）
-- [ ] 實作 `isEnabled()`、`ensureConfig()`
-- [ ] 實作 `GET /myself` health check
-- [ ] 實作 ADF builder（`buildAdfDocument`）
-- [ ] 實作 `createIssue()`
-- [ ] 實作 `getTransitions()`、`transitionIssue()`
-- [ ] 實作 `syncStatusByReportStatus()`
-- [ ] 實作 `extractIssueFromWebhook()`
+- [x] 建立 `apps/backend/src/services/jiraService.ts`（目前不存在）
+- [x] 實作 `isEnabled()`、`ensureConfig()`
+- [x] 實作 `GET /myself` health check
+- [x] 實作 ADF builder（`buildAdfDocument`）
+- [x] 實作 `createIssue()`
+- [x] 實作 `getTransitions()`、`transitionIssue()`
+- [x] 實作 `syncStatusByReportStatus()`
+- [x] 實作 `extractIssueFromWebhook()`
 - [ ] 補 `createmeta` 驗證邏輯
 
 ### PR-3：Report 建立流程接入 Jira（過渡期雙軌）
 
-- [ ] `apps/backend/src/services/reportIntegrationPolicyService.ts`：新增 `shouldEnableJira()`
-- [ ] `apps/backend/src/services/reportIntegrationService.ts`：新增 `createJiraIssueIfNeeded()`
-- [ ] `reportIntegrationService.ts`：在 `handleReportCreated` 增加 Jira create branch（獨立 try/catch）
-- [ ] 回寫 `jiraIssueId` / `jiraIssueKey` 至 Report
+- [x] `apps/backend/src/services/reportIntegrationPolicyService.ts`：新增 `shouldEnableJira()`
+- [x] `apps/backend/src/services/reportIntegrationService.ts`：新增 `createJiraIssueIfNeeded()`
+- [x] `reportIntegrationService.ts`：在 `handleReportCreated` 增加 Jira create branch（獨立 try/catch）
+- [x] 回寫 `jiraIssueId` / `jiraIssueKey` 至 Report
 
 ### PR-4：OMS → Jira 狀態同步
 
-- [ ] `apps/backend/src/services/reportMutationService.ts`：`UpdateReportStatusOptions` 新增 `syncJiraState?: boolean`
-- [ ] `reportMutationService.ts`：新增 `updateReportStatusByJiraIssueId()`
-- [ ] `reportMutationService.ts`：`updateReportStatus` 末段接 Jira transition 呼叫
+- [x] `apps/backend/src/services/reportMutationService.ts`：`UpdateReportStatusOptions` 新增 `syncJiraState?: boolean`
+- [x] `reportMutationService.ts`：新增 `updateReportStatusByJiraIssueId()`
+- [x] `reportMutationService.ts`：`updateReportStatus` 末段接 Jira transition 呼叫
 
 ### PR-5：Jira Webhook 回寫 OMS
 
-- [ ] `apps/backend/src/pages/api/webhook.ts`：新增 `origin_platform=jira` branch
-- [ ] 實作 Jira status → OMS ReportStatus 映射
-- [ ] inbound 回寫時強制 `syncJiraState: false`（避免 loop）
+- [x] `apps/backend/src/pages/api/webhook.ts`：新增 `origin_platform=jira` branch
+- [x] 實作 Jira status → OMS ReportStatus 映射
+- [x] inbound 回寫時強制 `syncJiraState: false`（避免 loop）
 
 ### PR-6：驗證、監控與上線開關
 

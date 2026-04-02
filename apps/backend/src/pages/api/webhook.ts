@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ReportStatus } from 'shared-types';
 import { bitbucketService } from '@/services/bitbucketService';
+import { jiraService } from '@/services/jiraService';
 import { reportMutationService } from '@/services/reportMutationService';
 import { getBitbucketBotUserOrThrow } from '@/lib/bot-user';
 import { reportCommentService } from '@/services/reportCommentService';
@@ -132,6 +133,40 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           }
         }
       }
+    }
+
+    if (originPlatform === 'jira') {
+      const issue = jiraService.extractIssueFromWebhook(req.body);
+      if (!issue) {
+        return res.status(200).json({
+          success: true,
+          message: 'Jira webhook 無可處理 issue 資訊',
+          originPlatform: originPlatform ?? null,
+          receivedAt: new Date().toISOString(),
+        });
+      }
+
+      const targetStatus = jiraService.mapJiraStatusToReportStatus(issue.statusName);
+      if (!targetStatus) {
+        return res.status(200).json({
+          success: true,
+          message: `Jira status (${issue.statusName}) 無對應 OMS 狀態，已略過`,
+          originPlatform: originPlatform ?? null,
+          receivedAt: new Date().toISOString(),
+        });
+      }
+
+      await reportMutationService.updateReportStatusByJiraIssueId(
+        issue.issueId,
+        targetStatus,
+        {
+          source: 'WEBHOOK_JIRA',
+          syncBitbucketState: false,
+          syncJiraState: false,
+          sendChatNotification: true,
+          createActivityLog: true,
+        }
+      );
     }
 
     // 回傳成功訊息

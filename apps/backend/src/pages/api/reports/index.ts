@@ -26,7 +26,8 @@ interface Report {
   creatorId: string;
   assigneeId?: string | null;
   bitbucketIssueId?: string | null;
-  bitbucketIssueUrl?: string | null;
+  jiraIssueId?: string | null;
+  jiraIssueKey?: string | null;
   attachments?: FileInfo[]; // New attachments field
   category?: string | null; // This will now store categoryId
   contactPhone?: string | null;
@@ -372,7 +373,8 @@ async function createReport(
   const integratedReport = await reportIntegrationService.handleReportCreated(report as any);
   if (integratedReport) {
     report.bitbucketIssueId = integratedReport.bitbucketIssueId ?? report.bitbucketIssueId;
-    report.bitbucketIssueUrl = integratedReport.bitbucketIssueUrl ?? report.bitbucketIssueUrl;
+    report.jiraIssueId = (integratedReport as any).jiraIssueId ?? report.jiraIssueId;
+    report.jiraIssueKey = (integratedReport as any).jiraIssueKey ?? report.jiraIssueKey;
   }
 
   // 6. 回傳結果

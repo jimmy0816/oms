@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { bitbucketService } from '@/services/bitbucketService';
+import { jiraService } from '@/services/jiraService';
 import { chatLogService } from '@/services/chatLogService';
 import { chatThreadService } from '@/services/chatThreadService';
 import { googleChatService } from '@/services/googleChatService';
@@ -13,7 +14,8 @@ type ReportIntegrationRecord = {
   description?: string | null;
   priority?: string | null;
   bitbucketIssueId?: string | null;
-  bitbucketIssueUrl?: string | null;
+  jiraIssueId?: string | null;
+  jiraIssueKey?: string | null;
   creator?: {
     name?: string | null;
   } | null;
@@ -129,7 +131,6 @@ const createBitbucketIssueIfNeeded = async (report: ReportIntegrationRecord) => 
     where: { id: report.id },
     data: {
       bitbucketIssueId: issue.id,
-      bitbucketIssueUrl: issue.url,
     },
     include: {
       creator: { select: { id: true, name: true, email: true } },
@@ -153,6 +154,66 @@ const createBitbucketIssueIfNeeded = async (report: ReportIntegrationRecord) => 
   return savedReport;
 };
 
+const createJiraIssueIfNeeded = async (report: ReportIntegrationRecord) => {
+  if (
+    !reportIntegrationPolicyService.shouldEnableJira(report) ||
+    !jiraService.isEnabled() ||
+    report.jiraIssueId
+  ) {
+    return report;
+  }
+
+  const categoryName = report.category?.name ?? null;
+  const issue = await jiraService.createIssue({
+    reportId: report.id,
+    description: report.description,
+    priority: report.priority,
+    categoryName,
+  });
+
+  if (!issue?.id) {
+    return report;
+  }
+
+  const savedReport = await prisma.report.update({
+    where: { id: report.id },
+    data: {
+      jiraIssueId: issue.id,
+      jiraIssueKey: issue.key,
+    },
+    include: {
+      creator: { select: { id: true, name: true, email: true } },
+      assignee: { select: { id: true, name: true, email: true } },
+      category: {
+        select: {
+          id: true,
+          name: true,
+          parent: {
+            select: {
+              id: true,
+              name: true,
+              parent: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return savedReport;
+};
+
+// 預留 Jira 解聯通道：後續若要做 transition / close / comment 清理，可集中在此擴充。
+const requestJiraUnlinkIfNeeded = async (report: ReportIntegrationRecord) => {
+  if (!report.jiraIssueId && !report.jiraIssueKey) {
+    return;
+  }
+
+  console.info(
+    `[Report Integration] Jira 解聯預留通道 (${report.id}) issueId=${report.jiraIssueId ?? 'null'} issueKey=${report.jiraIssueKey ?? 'null'}`
+  );
+};
+
 export const reportIntegrationService = {
   shouldEnableGoogleChat(report: ReportIntegrationRecord) {
     return reportIntegrationPolicyService.shouldEnableGoogleChat(report);
@@ -160,6 +221,10 @@ export const reportIntegrationService = {
 
   shouldEnableBitbucket(report: ReportIntegrationRecord) {
     return reportIntegrationPolicyService.shouldEnableBitbucket(report);
+  },
+
+  shouldEnableJira(report: ReportIntegrationRecord) {
+    return reportIntegrationPolicyService.shouldEnableJira(report);
   },
 
   formatReportUpdateText(report: any, changes: Record<string, { old: any; new: any }>) {
@@ -398,24 +463,34 @@ export const reportIntegrationService = {
   },
 
   async handleReportCreated(report: ReportIntegrationRecord) {
-    if (this.shouldEnableGoogleChat(report)) {
+    let updatedReport: any = report;
+
+    if (this.shouldEnableGoogleChat(updatedReport)) {
       try {
-        await createGoogleChatThreadIfNeeded(report);
+        await createGoogleChatThreadIfNeeded(updatedReport);
       } catch (error: any) {
         console.error('[Report Created] Google Chat 通知發送失敗:', error);
         await logGoogleChatFailure(report.id, 'SPACE', error);
       }
     }
 
-    if (this.shouldEnableBitbucket(report)) {
+    if (this.shouldEnableBitbucket(updatedReport)) {
       try {
-        return await createBitbucketIssueIfNeeded(report);
+        updatedReport = await createBitbucketIssueIfNeeded(updatedReport);
       } catch (error: any) {
         console.error('[Report Created] Bitbucket issue 建立失敗:', error.message);
       }
     }
 
-    return report;
+    if (this.shouldEnableJira(updatedReport)) {
+      try {
+        updatedReport = await createJiraIssueIfNeeded(updatedReport);
+      } catch (error: any) {
+        console.error('[Report Created] Jira issue 建立失敗:', error.message);
+      }
+    }
+
+    return updatedReport;
   },
 
   async ensureIntegrations(report: ReportIntegrationRecord) {
@@ -439,6 +514,17 @@ export const reportIntegrationService = {
       } catch (error: any) {
         console.error(
           `[Report Integration] 建立 Bitbucket issue 失敗 (${report.id}):`,
+          error.message
+        );
+      }
+    }
+
+    if (this.shouldEnableJira(updatedReport)) {
+      try {
+        updatedReport = await createJiraIssueIfNeeded(updatedReport);
+      } catch (error: any) {
+        console.error(
+          `[Report Integration] 建立 Jira issue 失敗 (${report.id}):`,
           error.message
         );
       }
@@ -479,13 +565,20 @@ export const reportIntegrationService = {
       }
     }
 
-    if (updatedReport.bitbucketIssueId || updatedReport.bitbucketIssueUrl) {
+    await requestJiraUnlinkIfNeeded(updatedReport);
+
+    if (
+      updatedReport.bitbucketIssueId ||
+      updatedReport.jiraIssueId ||
+      updatedReport.jiraIssueKey
+    ) {
       try {
         const savedReport = await prisma.report.update({
           where: { id: report.id },
           data: {
             bitbucketIssueId: null,
-            bitbucketIssueUrl: null,
+            jiraIssueId: null,
+            jiraIssueKey: null,
           },
           include: {
             creator: { select: { id: true, name: true, email: true } },
@@ -509,7 +602,7 @@ export const reportIntegrationService = {
         return savedReport;
       } catch (error: any) {
         console.error(
-          `[Report Integration] 清除 Bitbucket 綁定失敗 (${report.id}):`,
+          `[Report Integration] 清除外部整合綁定失敗 (${report.id}):`,
           error.message
         );
       }
