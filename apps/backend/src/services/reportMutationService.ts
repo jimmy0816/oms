@@ -384,7 +384,7 @@ export const reportMutationService = {
 
     const changes: Record<string, { old: any; new: any }> = {};
 
-    if (priority && priority !== existingReport.priority) {
+    if (priority !== undefined && priority !== existingReport.priority) {
       changes.priority = { old: existingReport.priority, new: priority };
     }
 
@@ -395,11 +395,11 @@ export const reportMutationService = {
       };
     }
 
-    if (title && title !== existingReport.title) {
+    if (title !== undefined && title !== existingReport.title) {
       changes.title = { old: existingReport.title, new: title };
     }
 
-    if (description && description !== existingReport.description) {
+    if (description !== undefined && description !== existingReport.description) {
       changes.description = { old: existingReport.description, new: description };
     }
 
@@ -412,11 +412,11 @@ export const reportMutationService = {
       jiraService.isEnabled() &&
       (finalUpdatedReport.jiraIssueKey || finalUpdatedReport.jiraIssueId)
     ) {
-      const titleChanged = title && title !== existingReport.title;
+      const titleChanged = title !== undefined && title !== existingReport.title;
       const categoryChanged = categoryId !== undefined && categoryId !== existingReport.categoryId;
       const descriptionChanged =
-        description && description !== existingReport.description;
-      const priorityChanged = priority && priority !== existingReport.priority;
+        description !== undefined && description !== existingReport.description;
+      const priorityChanged = priority !== undefined && priority !== existingReport.priority;
 
       if (titleChanged || categoryChanged || descriptionChanged || priorityChanged) {
         // 組建新的 summary（遵照 PRD 格式：{reportId} - {categoryName}）
@@ -620,5 +620,63 @@ export const reportMutationService = {
       targetStatus,
       ...options,
     });
+  },
+
+  async updateReportByJiraIssueId(
+    jiraIssueId: string,
+    updates: {
+      description?: string;
+      priority?: string;
+    },
+    jiraIssueKey?: string
+  ) {
+    const report = await prisma.report.findFirst({
+      where: jiraIssueKey
+        ? {
+            OR: [{ jiraIssueId }, { jiraIssueKey }],
+          }
+        : { jiraIssueId },
+    });
+
+    if (!report) {
+      console.warn(
+        `[Jira Webhook] 找不到對應 Report (jiraIssueId=${jiraIssueId}, jiraIssueKey=${jiraIssueKey ?? 'N/A'})`
+      );
+      return {
+        changed: false,
+        report: null,
+      };
+    }
+
+    const updateData: Record<string, unknown> = {};
+
+    if (updates.description !== undefined && updates.description !== report.description) {
+      updateData.description = updates.description;
+    }
+
+    if (updates.priority !== undefined && updates.priority !== report.priority) {
+      updateData.priority = updates.priority;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      console.log(
+        `[Jira Webhook] 非狀態欄位無實際變更 (reportId=${report.id}, jiraIssueId=${jiraIssueId}, jiraIssueKey=${jiraIssueKey ?? 'N/A'})`
+      );
+      return {
+        changed: false,
+        report,
+      };
+    }
+
+    const updatedReport = await prisma.report.update({
+      where: { id: report.id },
+      data: updateData,
+      include: REPORT_STATUS_INCLUDE,
+    });
+
+    return {
+      changed: true,
+      report: updatedReport,
+    };
   },
 };

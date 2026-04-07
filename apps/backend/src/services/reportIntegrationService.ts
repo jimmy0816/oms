@@ -638,15 +638,28 @@ export const reportIntegrationService = {
     const wasIntegrated = reportIntegrationPolicyService.shouldEnableAnyIntegration(previousReport);
     const isIntegrated = reportIntegrationPolicyService.shouldEnableAnyIntegration(currentReport);
 
+    // 保存 currentReport 的關鍵 scalar field，確保在返回時不會遺漏
+    const preservedDescription = currentReport.description;
+    const preservedPriority = currentReport.priority;
+    let result = currentReport;
+
     if (!wasIntegrated && isIntegrated) {
-      return this.ensureIntegrations(currentReport);
+      result = await this.ensureIntegrations(currentReport);
+    } else if (wasIntegrated && !isIntegrated) {
+      result = await this.teardownIntegrations(currentReport);
     }
 
-    if (wasIntegrated && !isIntegrated) {
-      return this.teardownIntegrations(currentReport);
+    // 確保返回的物件包含原始的 description 和 priority
+    // 這防止在 Prisma 查詢或物件轉換過程中字段遺漏
+    if (!result) {
+      result = currentReport;
     }
-
-    return currentReport;
+    
+    return {
+      ...result,
+      description: result.description ?? preservedDescription,
+      priority: result.priority ?? preservedPriority,
+    } as any;
   },
 };
 

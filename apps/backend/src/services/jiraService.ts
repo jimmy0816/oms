@@ -53,7 +53,18 @@ interface JiraWebhookPayload {
       status?: {
         name?: string;
       };
+      description?: unknown;
+      priority?: {
+        name?: string;
+      };
     };
+  };
+  changelog?: {
+    items?: Array<{
+      field?: string;
+      fromString?: string;
+      toString?: string;
+    }>;
   };
 }
 
@@ -83,6 +94,14 @@ const PRIORITY_MAP: Record<string, string> = {
   URGENT: 'Highest',
 };
 
+const JIRA_PRIORITY_TO_OMS: Record<string, string> = Object.entries(PRIORITY_MAP).reduce(
+  (acc, [oms, jira]) => {
+    acc[jira.toUpperCase()] = oms;
+    return acc;
+  },
+  {} as Record<string, string>
+);
+
 // ---------------------------------------------------------------------------
 // ADF builder（plain text → Atlassian Document Format）
 // ---------------------------------------------------------------------------
@@ -103,6 +122,99 @@ function buildAdfDocument(text: string | null | undefined) {
       },
     ],
   };
+}
+
+function extractTextFromAdf(node: unknown): string {
+  if (!node || typeof node !== 'object') {
+    return '';
+  }
+
+  const typedNode = node as {
+    type?: string;
+    text?: string;
+    attrs?: {
+      text?: string;
+      shortName?: string;
+      url?: string;
+    };
+    content?: unknown[];
+  };
+
+  if (typedNode.type === 'text') {
+    return typedNode.text || '';
+  }
+
+  if (typedNode.type === 'hardBreak') {
+    return '\n';
+  }
+
+   if (typedNode.type === 'mention' || typedNode.type === 'status') {
+    return typedNode.attrs?.text || '';
+  }
+
+  if (typedNode.type === 'emoji') {
+    return typedNode.attrs?.shortName || '';
+  }
+
+  if (typedNode.type === 'inlineCard') {
+    return typedNode.attrs?.url || '';
+  }
+
+  if (!Array.isArray(typedNode.content)) {
+    return '';
+  }
+
+  if (typedNode.type === 'paragraph') {
+    return typedNode.content.map(extractTextFromAdf).join('');
+  }
+
+  return typedNode.content
+    .map(extractTextFromAdf)
+    .filter((part) => part.length > 0)
+    .join('\n');
+}
+
+function isAdfEffectivelyEmpty(node: unknown): boolean {
+  if (!node || typeof node !== 'object') {
+    return true;
+  }
+
+  const typedNode = node as {
+    type?: string;
+    text?: string;
+    attrs?: {
+      text?: string;
+      shortName?: string;
+      url?: string;
+    };
+    content?: unknown[];
+  };
+
+  if (typedNode.type === 'text') {
+    return (typedNode.text || '').trim().length === 0;
+  }
+
+  if (typedNode.type === 'hardBreak') {
+    return false;
+  }
+
+  if (typedNode.type === 'mention' || typedNode.type === 'status') {
+    return (typedNode.attrs?.text || '').trim().length === 0;
+  }
+
+  if (typedNode.type === 'emoji') {
+    return (typedNode.attrs?.shortName || '').trim().length === 0;
+  }
+
+  if (typedNode.type === 'inlineCard') {
+    return (typedNode.attrs?.url || '').trim().length === 0;
+  }
+
+  if (!Array.isArray(typedNode.content)) {
+    return true;
+  }
+
+  return typedNode.content.every(isAdfEffectivelyEmpty);
 }
 
 // ---------------------------------------------------------------------------
@@ -276,11 +388,16 @@ export const jiraService = {
     return this.transitionIssueToStatus(issueKey, targetJiraStatus);
   },
 
-  /** 解析 Jira webhook payload，回傳 issue 資訊與最新 status */
+  /** 解析 Jira webhook payload，回傳 issue 資訊與欄位變更 */
   extractIssueFromWebhook(payload: JiraWebhookPayload): {
     issueId: string;
     issueKey: string;
     statusName: string;
+    statusChanged: boolean;
+    descriptionChanged: boolean;
+    priorityChanged: boolean;
+    descriptionText?: string;
+    priority?: string;
   } | null {
     const issue = payload?.issue;
     if (!issue?.id || !issue?.key) {
@@ -289,10 +406,79 @@ export const jiraService = {
     }
 
     const statusName = issue.fields?.status?.name || '';
+
+    // 依 changelog 判斷此次 webhook 是否真的有 status 欄位變更
+    // 若 changelog 不存在（如舊版 Jira 或手動觸發），則退回至「有 statusName 即視為變更」
+    const changelogItems = payload?.changelog?.items ?? null;
+    const statusChangeItem = changelogItems?.find((item) => item.field === 'status');
+    const statusChanged = changelogItems
+      ? Boolean(statusChangeItem)
+      : statusName !== '';
+
+    const descriptionChangeItem = changelogItems?.find(
+      (item) => item.field === 'description'
+    );
+    const descriptionChanged = changelogItems
+      ? Boolean(descriptionChangeItem)
+      : false;
+
+    const priorityChanged = changelogItems
+      ? changelogItems.some((item) => item.field === 'priority')
+      : false;
+
+    let descriptionText: string | undefined;
+    let shouldSyncDescription = false;
+    if (descriptionChanged) {
+      const changeToString =
+        descriptionChangeItem && descriptionChangeItem.toString !== undefined
+          ? descriptionChangeItem.toString
+          : undefined;
+
+      // changelog 的 toString 最能反映此次變更後值，優先採用
+      if (changeToString !== undefined) {
+        descriptionText = changeToString;
+        shouldSyncDescription = true;
+      }
+
+      // null 代表 Jira 端明確清空描述
+      if (!shouldSyncDescription && issue.fields?.description === null) {
+        descriptionText = '';
+        shouldSyncDescription = true;
+      } else if (!shouldSyncDescription && issue.fields?.description !== undefined) {
+        const extractedDescription = extractTextFromAdf(issue.fields.description);
+
+        if (
+          extractedDescription.length > 0 ||
+          isAdfEffectivelyEmpty(issue.fields.description)
+        ) {
+          descriptionText = extractedDescription;
+          shouldSyncDescription = true;
+        } else {
+          console.warn(
+            `[Jira Webhook] description 解析為空字串，疑似 payload 不完整，略過 OMS description 同步 (issueKey=${issue.key})`
+          );
+        }
+      } else {
+        console.warn(
+          `[Jira Webhook] description 有變更但 payload 未提供可同步內容，略過 OMS description 同步 (issueKey=${issue.key})`
+        );
+      }
+    }
+
+    const jiraPriorityName = issue.fields?.priority?.name;
+    const priority = priorityChanged && jiraPriorityName
+      ? JIRA_PRIORITY_TO_OMS[jiraPriorityName.toUpperCase()]
+      : undefined;
+
     return {
       issueId: issue.id,
       issueKey: issue.key,
       statusName,
+      statusChanged,
+      descriptionChanged: shouldSyncDescription,
+      priorityChanged,
+      descriptionText,
+      priority,
     };
   },
 
@@ -311,21 +497,26 @@ export const jiraService = {
       priority?: string | null;
     }
   ): Promise<boolean> {
-    if (!updates.summary && !updates.description && !updates.priority) {
+    const hasSummaryUpdate = updates.summary !== undefined && updates.summary !== null;
+    const hasDescriptionUpdate =
+      updates.description !== undefined && updates.description !== null;
+    const hasPriorityUpdate = updates.priority !== undefined && updates.priority !== null;
+
+    if (!hasSummaryUpdate && !hasDescriptionUpdate && !hasPriorityUpdate) {
       return true; // 沒有更新就回傳 true
     }
 
     const fields: Record<string, unknown> = {};
 
-    if (updates.summary) {
+    if (hasSummaryUpdate) {
       fields.summary = updates.summary;
     }
 
-    if (updates.description) {
+    if (hasDescriptionUpdate) {
       fields.description = buildAdfDocument(updates.description);
     }
 
-    if (updates.priority) {
+    if (hasPriorityUpdate) {
       const priorityName = PRIORITY_MAP[updates.priority];
       if (priorityName) {
         fields.priority = { name: priorityName };

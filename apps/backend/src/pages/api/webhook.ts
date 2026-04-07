@@ -146,6 +146,42 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         });
       }
 
+      if (issue.descriptionChanged || issue.priorityChanged) {
+        const nonStatusUpdateResult = await reportMutationService.updateReportByJiraIssueId(
+          issue.issueId,
+          {
+            description: issue.descriptionChanged ? issue.descriptionText : undefined,
+            priority: issue.priority,
+          },
+          issue.issueKey
+        );
+
+        if (nonStatusUpdateResult.changed) {
+          console.log(
+            `[Jira Webhook] 已同步非狀態欄位到 OMS (issueKey=${issue.issueKey}, description=${issue.descriptionChanged}, priority=${issue.priorityChanged})`
+          );
+        } else {
+          console.warn(
+            `[Jira Webhook] 非狀態欄位同步未更新資料 (issueId=${issue.issueId}, issueKey=${issue.issueKey}, descriptionChanged=${issue.descriptionChanged}, descriptionText=${issue.descriptionText ?? 'undefined'})`
+          );
+        }
+      }
+
+      // 若 changelog 顯示此次 webhook 沒有 status 變更（例如只改了 summary/description/priority）
+      // 則不需要觸發 OMS 狀態同步，直接略過
+      if (!issue.statusChanged) {
+        const webhookEvent = req.body?.webhookEvent ?? 'unknown';
+        console.log(
+          `[Jira Webhook] ${webhookEvent} 非狀態變更，略過 OMS 狀態同步 (issueKey=${issue.issueKey})`
+        );
+        return res.status(200).json({
+          success: true,
+          message: 'Jira webhook 非狀態變更，已略過 OMS 同步',
+          originPlatform: originPlatform ?? null,
+          receivedAt: new Date().toISOString(),
+        });
+      }
+
       const targetStatus = jiraService.mapJiraStatusToReportStatus(issue.statusName);
       if (!targetStatus) {
         return res.status(200).json({
