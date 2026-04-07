@@ -209,8 +209,28 @@ const requestJiraUnlinkIfNeeded = async (report: ReportIntegrationRecord) => {
     return;
   }
 
+  if (!jiraService.isEnabled()) {
+    console.warn(
+      `[Report Integration] Jira 未啟用，略過解聯 transition (${report.id})`
+    );
+    return;
+  }
+
+  const issueRef = report.jiraIssueKey || report.jiraIssueId;
+  if (!issueRef) {
+    return;
+  }
+
+  const transitioned = await jiraService.transitionIssueForUnlink(issueRef);
+  if (!transitioned) {
+    console.warn(
+      `[Report Integration] Jira 解聯 transition 失敗 (${report.id}) issue=${issueRef}`
+    );
+    return;
+  }
+
   console.info(
-    `[Report Integration] Jira 解聯預留通道 (${report.id}) issueId=${report.jiraIssueId ?? 'null'} issueKey=${report.jiraIssueKey ?? 'null'}`
+    `[Report Integration] Jira 解聯完成 (${report.id}) issue=${issueRef}`
   );
 };
 

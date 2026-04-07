@@ -70,6 +70,8 @@ const OMS_STATUS_TO_JIRA_STATUS: Partial<Record<ReportStatus, string>> = {
   [ReportStatus.RETURNED]: 'RETURNED',
 };
 
+const JIRA_UNLINK_TARGET_STATUS = 'BACKLOG';
+
 // ---------------------------------------------------------------------------
 // Priority mapping
 // ---------------------------------------------------------------------------
@@ -231,6 +233,33 @@ export const jiraService = {
   },
 
   /**
+   * 依目標 Jira status name 自動尋找 transition 並執行
+   */
+  async transitionIssueToStatus(issueKey: string, targetStatusName: string): Promise<boolean> {
+    const transitions = await this.getTransitions(issueKey);
+    const match = transitions.find(
+      (t) => t.to.name.toUpperCase() === targetStatusName.toUpperCase()
+    );
+
+    if (!match) {
+      console.warn(
+        `[Jira] 找不到對應 transition (${issueKey} → ${targetStatusName})，可用清單: ${transitions.map((t) => t.to.name).join(', ')}`
+      );
+      return false;
+    }
+
+    return this.transitionIssue(issueKey, match.id);
+  },
+
+  /**
+   * 解聯時使用的 Jira 狀態回落 transition
+   * 目標狀態由 jiraService 內部常數控制，外部不需要傳入狀態名稱。
+   */
+  async transitionIssueForUnlink(issueKey: string): Promise<boolean> {
+    return this.transitionIssueToStatus(issueKey, JIRA_UNLINK_TARGET_STATUS);
+  },
+
+  /**
    * 依 OMS ReportStatus 查詢並執行對應 Jira transition
    * UNCONFIRMED 不執行任何 transition
    */
@@ -244,19 +273,7 @@ export const jiraService = {
       return true;
     }
 
-    const transitions = await this.getTransitions(issueKey);
-    const match = transitions.find(
-      (t) => t.to.name.toUpperCase() === targetJiraStatus.toUpperCase()
-    );
-
-    if (!match) {
-      console.warn(
-        `[Jira] 找不到對應 transition (${issueKey} → ${targetJiraStatus})，可用清單: ${transitions.map((t) => t.to.name).join(', ')}`
-      );
-      return false;
-    }
-
-    return this.transitionIssue(issueKey, match.id);
+    return this.transitionIssueToStatus(issueKey, targetJiraStatus);
   },
 
   /** 解析 Jira webhook payload，回傳 issue 資訊與最新 status */
@@ -277,6 +294,63 @@ export const jiraService = {
       issueKey: issue.key,
       statusName,
     };
+  },
+
+  /**
+   * 更新 Jira Issue 的 summary、description 和 priority
+   * 遵照 PRD 10.1 欄位映射規則
+   * - summary: {reportId} - {categoryName}（若 category 為空則退化為 {reportId}）
+   * - description: 必須 ADF 格式
+   * - priority: 通過 PRIORITY_MAP 映射；無對應值時略過
+   */
+  async updateIssue(
+    issueKey: string,
+    updates: {
+      summary?: string | null;
+      description?: string | null;
+      priority?: string | null;
+    }
+  ): Promise<boolean> {
+    if (!updates.summary && !updates.description && !updates.priority) {
+      return true; // 沒有更新就回傳 true
+    }
+
+    const fields: Record<string, unknown> = {};
+
+    if (updates.summary) {
+      fields.summary = updates.summary;
+    }
+
+    if (updates.description) {
+      fields.description = buildAdfDocument(updates.description);
+    }
+
+    if (updates.priority) {
+      const priorityName = PRIORITY_MAP[updates.priority];
+      if (priorityName) {
+        fields.priority = { name: priorityName };
+      } else {
+        console.warn(
+          `[Jira] priority '${updates.priority}' 無對應映射，已略過`
+        );
+      }
+    }
+
+    // 若沒有任何有效欄位需要更新，則直接回傳
+    if (Object.keys(fields).length === 0) {
+      return true;
+    }
+
+    try {
+      await jiraFetch(`/issue/${encodeURIComponent(issueKey)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ fields }),
+      });
+      return true;
+    } catch (error: any) {
+      console.error(`[Jira] updateIssue 失敗 (${issueKey}):`, error.message);
+      return false;
+    }
   },
 
   /**

@@ -403,6 +403,52 @@ export const reportMutationService = {
       changes.description = { old: existingReport.description, new: description };
     }
 
+    // 同步 title/description/priority 到 Jira（如果啟用且有關聯 Issue）
+    // 遵照 PRD 10.1 欄位映射：
+    // - summary = {reportId} - {categoryName}（若 category 為空則退化為 {reportId}）
+    // - description 轉為 ADF 格式
+    // - priority 通過 PRIORITY_MAP 映射
+    if (
+      jiraService.isEnabled() &&
+      (finalUpdatedReport.jiraIssueKey || finalUpdatedReport.jiraIssueId)
+    ) {
+      const titleChanged = title && title !== existingReport.title;
+      const categoryChanged = categoryId !== undefined && categoryId !== existingReport.categoryId;
+      const descriptionChanged =
+        description && description !== existingReport.description;
+      const priorityChanged = priority && priority !== existingReport.priority;
+
+      if (titleChanged || categoryChanged || descriptionChanged || priorityChanged) {
+        // 組建新的 summary（遵照 PRD 格式：{reportId} - {categoryName}）
+        let newSummary: string | undefined;
+        if (titleChanged || categoryChanged) {
+          const categoryName = finalUpdatedReport.category?.name ?? null;
+          newSummary = categoryName
+            ? `${finalUpdatedReport.id} - ${categoryName}`
+            : finalUpdatedReport.id;
+        }
+
+        const success = await jiraService.updateIssue(
+          finalUpdatedReport.jiraIssueKey || finalUpdatedReport.jiraIssueId || '',
+          {
+            summary: newSummary,
+            description: descriptionChanged ? description : undefined,
+            priority: priorityChanged ? priority : undefined,
+          }
+        );
+
+        if (success) {
+          console.log(
+            `[Jira] 已同步 Report 內容更新 (${finalUpdatedReport.jiraIssueKey}): summary=${titleChanged || categoryChanged}, description=${descriptionChanged}, priority=${priorityChanged}`
+          );
+        } else {
+          console.warn(
+            `[Jira] Report 內容同步失敗 (${finalUpdatedReport.jiraIssueKey})`
+          );
+        }
+      }
+    }
+
     return {
       report: finalUpdatedReport,
       changes,
