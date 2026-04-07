@@ -68,6 +68,31 @@ interface JiraWebhookPayload {
   };
 }
 
+interface JiraCreateFieldMetadata {
+  required?: boolean;
+  allowedValues?: Array<{
+    id?: string;
+    name?: string;
+    value?: string;
+  }>;
+}
+
+interface JiraCreateIssueTypeMetadata {
+  id?: string;
+  name?: string;
+  fields?: Record<string, JiraCreateFieldMetadata>;
+}
+
+interface JiraCreateProjectMetadata {
+  id?: string;
+  key?: string;
+  issuetypes?: JiraCreateIssueTypeMetadata[];
+}
+
+interface JiraCreateMetadataResponse {
+  projects?: JiraCreateProjectMetadata[];
+}
+
 // ---------------------------------------------------------------------------
 // OMS status → Jira target status name 對應
 // UNCONFIRMED 不主動 transition，使用 Jira 預設初始狀態
@@ -282,15 +307,82 @@ export const jiraService = {
   },
 
   /**
+   * 取得 Jira issue 建立 metadata（PRD Phase 0/2 要求）
+   * 使用 createmeta 驗證 project / issue type / fields / allowedValues
+   */
+  async getCreateMetadata(): Promise<JiraCreateIssueTypeMetadata | null> {
+    this.ensureConfig();
+
+    const query = new URLSearchParams({
+      projectIds: JIRA_PROJECT_ID,
+      issuetypeIds: JIRA_ISSUE_TYPE_ID,
+      expand: 'projects.issuetypes.fields',
+    });
+
+    try {
+      const metadata = await jiraFetch<JiraCreateMetadataResponse>(
+        `/issue/createmeta?${query.toString()}`
+      );
+
+      const project = (metadata.projects || []).find(
+        (p) => p.id === JIRA_PROJECT_ID || p.key === JIRA_PROJECT_KEY
+      );
+
+      if (!project) {
+        console.error(
+          `[Jira] issue type 或欄位驗證失敗：找不到 project (projectId=${JIRA_PROJECT_ID}, projectKey=${JIRA_PROJECT_KEY})`
+        );
+        return null;
+      }
+
+      const issueType = (project.issuetypes || []).find(
+        (it) => it.id === JIRA_ISSUE_TYPE_ID
+      );
+
+      if (!issueType) {
+        console.error(
+          `[Jira] issue type 或欄位驗證失敗：找不到 issueType (issueTypeId=${JIRA_ISSUE_TYPE_ID})`
+        );
+        return null;
+      }
+
+      return issueType;
+    } catch (error: any) {
+      console.error('[Jira] create metadata 驗證失敗:', error.message);
+      return null;
+    }
+  },
+
+  /**
    * 建立 Jira issue
    * summary = "{reportId} - {categoryName}" 或 "{reportId}"
    */
   async createIssue(input: CreateJiraIssueInput): Promise<JiraIssue | null> {
     this.ensureConfig();
 
+    const createMetadata = await this.getCreateMetadata();
+    if (!createMetadata) {
+      return null;
+    }
+
     const summary = input.categoryName
       ? `${input.reportId} - ${input.categoryName}`
       : input.reportId;
+
+    const metadataFields = createMetadata.fields || {};
+    const summaryField = metadataFields.summary;
+    const descriptionField = metadataFields.description;
+    const priorityField = metadataFields.priority;
+
+    if (summaryField?.required && !summary.trim()) {
+      console.error('[Jira] issue type 或欄位驗證失敗：summary 為必填但值為空');
+      return null;
+    }
+
+    if (descriptionField?.required && !(input.description || '').trim()) {
+      console.error('[Jira] issue type 或欄位驗證失敗：description 為必填但值為空');
+      return null;
+    }
 
     const priorityName = input.priority ? PRIORITY_MAP[input.priority] : undefined;
 
@@ -302,7 +394,21 @@ export const jiraService = {
     };
 
     if (priorityName) {
-      fields.priority = { name: priorityName };
+      const allowedPriorityValues = priorityField?.allowedValues || [];
+      const isPriorityAllowed =
+        allowedPriorityValues.length === 0 ||
+        allowedPriorityValues.some((value) => {
+          const allowedName = value.name || value.value || '';
+          return allowedName.toUpperCase() === priorityName.toUpperCase();
+        });
+
+      if (isPriorityAllowed) {
+        fields.priority = { name: priorityName };
+      } else {
+        console.warn(
+          `[Jira] priority ${priorityName} 不在 allowedValues，已略過`
+        );
+      }
     }
 
     try {

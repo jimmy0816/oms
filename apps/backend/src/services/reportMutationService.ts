@@ -600,14 +600,22 @@ export const reportMutationService = {
   async updateReportStatusByJiraIssueId(
     jiraIssueId: string,
     targetStatus: ReportStatus,
-    options?: Omit<UpdateReportStatusOptions, 'reportId' | 'targetStatus'>
+    options?: Omit<UpdateReportStatusOptions, 'reportId' | 'targetStatus'>,
+    jiraIssueKey?: string
   ) {
     const report = await prisma.report.findFirst({
-      where: { jiraIssueId },
+      where: jiraIssueKey
+        ? {
+            OR: [{ jiraIssueId }, { jiraIssueKey }],
+          }
+        : { jiraIssueId },
       select: { id: true },
     });
 
     if (!report) {
+      console.warn(
+        `[Jira Webhook] 狀態同步找不到對應 Report (jiraIssueId=${jiraIssueId}, jiraIssueKey=${jiraIssueKey ?? 'N/A'})`
+      );
       return {
         changed: false,
         report: null,

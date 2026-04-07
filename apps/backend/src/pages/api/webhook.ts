@@ -201,7 +201,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           syncJiraState: false,
           sendChatNotification: true,
           createActivityLog: true,
-        }
+        },
+        issue.issueKey
       );
     }
 
