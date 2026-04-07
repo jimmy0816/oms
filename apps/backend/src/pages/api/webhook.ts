@@ -3,7 +3,7 @@ import { ReportStatus } from 'shared-types';
 import { bitbucketService } from '@/services/bitbucketService';
 import { jiraService } from '@/services/jiraService';
 import { reportMutationService } from '@/services/reportMutationService';
-import { getBitbucketBotUserOrThrow } from '@/lib/bot-user';
+import { getBitbucketBotUserOrThrow, getJiraBotUserOrThrow } from '@/lib/bot-user';
 import { reportCommentService } from '@/services/reportCommentService';
 
 /**
@@ -136,6 +136,40 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (originPlatform === 'jira') {
+      const jiraBotUser = await getJiraBotUserOrThrow();
+      const commentPayload = jiraService.extractCommentFromWebhook(req.body);
+
+      if (commentPayload?.eventType === 'created' && commentPayload.content) {
+        await reportCommentService.syncJiraIssueCommentToOms({
+          issueId: commentPayload.issueId,
+          issueKey: commentPayload.issueKey,
+          commentId: commentPayload.commentId,
+          content: commentPayload.content,
+          actorName: commentPayload.actorName,
+          botUserId: jiraBotUser.id,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: 'Jira comment webhook 已處理',
+          originPlatform: originPlatform ?? null,
+          receivedAt: new Date().toISOString(),
+        });
+      }
+
+      if (commentPayload?.eventType === 'deleted') {
+        await reportCommentService.syncJiraIssueCommentDeletionToOms({
+          commentId: commentPayload.commentId,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: 'Jira comment delete webhook 已處理',
+          originPlatform: originPlatform ?? null,
+          receivedAt: new Date().toISOString(),
+        });
+      }
+
       const issue = jiraService.extractIssueFromWebhook(req.body);
       if (!issue) {
         return res.status(200).json({

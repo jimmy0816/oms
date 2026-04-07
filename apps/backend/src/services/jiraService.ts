@@ -36,6 +36,13 @@ export interface JiraIssue {
   key: string;
 }
 
+export interface JiraIssueComment {
+  id: string;
+  bodyText: string;
+  authorName: string;
+  authorAccountId: string | null;
+}
+
 interface JiraTransition {
   id: string;
   name: string;
@@ -46,6 +53,10 @@ interface JiraTransition {
 
 interface JiraWebhookPayload {
   webhookEvent?: string;
+  user?: {
+    accountId?: string;
+    displayName?: string;
+  };
   issue?: {
     id?: string;
     key?: string;
@@ -57,6 +68,18 @@ interface JiraWebhookPayload {
       priority?: {
         name?: string;
       };
+    };
+  };
+  comment?: {
+    id?: string;
+    body?: unknown;
+    author?: {
+      accountId?: string;
+      displayName?: string;
+    };
+    updateAuthor?: {
+      accountId?: string;
+      displayName?: string;
     };
   };
   changelog?: {
@@ -648,6 +671,91 @@ export const jiraService = {
       console.error(`[Jira] updateIssue 失敗 (${issueKey}):`, error.message);
       return false;
     }
+  },
+
+  async createIssueComment(
+    issueKey: string,
+    content: string
+  ): Promise<JiraIssueComment | null> {
+    try {
+      const result = await jiraFetch<{
+        id: string;
+        body?: unknown;
+        author?: { displayName?: string; accountId?: string };
+      }>(`/issue/${encodeURIComponent(issueKey)}/comment`, {
+        method: 'POST',
+        body: JSON.stringify({
+          body: buildAdfDocument(content),
+        }),
+      });
+
+      return {
+        id: result.id,
+        bodyText: extractTextFromAdf(result.body),
+        authorName: result.author?.displayName || 'Jira User',
+        authorAccountId: result.author?.accountId || null,
+      };
+    } catch (error: any) {
+      console.error(`[Jira] create comment 失敗 (${issueKey}):`, error.message);
+      return null;
+    }
+  },
+
+  async deleteIssueComment(issueKey: string, commentId: string): Promise<boolean> {
+    try {
+      await jiraFetch(
+        `/issue/${encodeURIComponent(issueKey)}/comment/${encodeURIComponent(commentId)}`,
+        {
+          method: 'DELETE',
+        }
+      );
+      return true;
+    } catch (error: any) {
+      console.error(
+        `[Jira] delete comment 失敗 (${issueKey}/${commentId}):`,
+        error.message
+      );
+      return false;
+    }
+  },
+
+  extractCommentFromWebhook(payload: JiraWebhookPayload): {
+    eventType: 'created' | 'updated' | 'deleted';
+    issueId: string;
+    issueKey: string;
+    commentId: string;
+    content: string;
+    actorName: string;
+    actorAccountId: string | null;
+  } | null {
+    const webhookEvent = payload?.webhookEvent;
+    const issue = payload?.issue;
+    const comment = payload?.comment;
+
+    if (!webhookEvent || !issue?.id || !issue?.key || !comment?.id) {
+      return null;
+    }
+
+    let eventType: 'created' | 'updated' | 'deleted' | null = null;
+    if (webhookEvent === 'comment_created') eventType = 'created';
+    if (webhookEvent === 'comment_updated') eventType = 'updated';
+    if (webhookEvent === 'comment_deleted') eventType = 'deleted';
+
+    if (!eventType) {
+      return null;
+    }
+
+    const actor = comment.author || comment.updateAuthor || payload.user;
+
+    return {
+      eventType,
+      issueId: issue.id,
+      issueKey: issue.key,
+      commentId: comment.id,
+      content: extractTextFromAdf(comment.body).trim(),
+      actorName: actor?.displayName || 'Jira User',
+      actorAccountId: actor?.accountId || null,
+    };
   },
 
   /**
