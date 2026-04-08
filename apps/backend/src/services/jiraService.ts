@@ -122,11 +122,11 @@ interface JiraCreateMetadataResponse {
 // ---------------------------------------------------------------------------
 
 const OMS_STATUS_TO_JIRA_STATUS: Partial<Record<ReportStatus, string>> = {
-  [ReportStatus.PROCESSING]: 'PROCESSING',
-  [ReportStatus.REJECTED]: 'REJECTED',
-  [ReportStatus.PENDING_REVIEW]: 'PENDING_REVIEW',
-  [ReportStatus.REVIEWED]: 'REVIEWED',
-  [ReportStatus.RETURNED]: 'RETURNED',
+  [ReportStatus.PROCESSING]: 'OMS_PROCESSING',
+  [ReportStatus.REJECTED]: 'OMS_REJECTED',
+  [ReportStatus.PENDING_REVIEW]: 'OMS_PENDING_REVIEW',
+  [ReportStatus.REVIEWED]: 'OMS_REVIEWED',
+  [ReportStatus.RETURNED]: 'OMS_RETURNED',
 };
 
 const JIRA_UNLINK_TARGET_STATUS = 'BACKLOG';
