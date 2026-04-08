@@ -1,8 +1,0 @@
-{
-    "chat.tools.terminal.autoApprove": {
-        "/^cd /Users/chenzhenting/Documents/Happ/oms/apps/backend && npx tsc --noEmit 2>&1 \\| head -40$/": {
-            "approve": true,
-            "matchCommandLine": true
-        }
-    }
-}
