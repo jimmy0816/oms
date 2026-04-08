@@ -173,6 +173,10 @@ function buildAdfDocument(text: string | null | undefined) {
 }
 
 function extractTextFromAdf(node: unknown): string {
+  if (typeof node === 'string') {
+    return node;
+  }
+
   if (!node || typeof node !== 'object') {
     return '';
   }
@@ -223,6 +227,10 @@ function extractTextFromAdf(node: unknown): string {
 }
 
 function isAdfEffectivelyEmpty(node: unknown): boolean {
+  if (typeof node === 'string') {
+    return node.trim().length === 0;
+  }
+
   if (!node || typeof node !== 'object') {
     return true;
   }
