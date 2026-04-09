@@ -129,7 +129,7 @@ const OMS_STATUS_TO_JIRA_STATUS: Partial<Record<ReportStatus, string>> = {
   [ReportStatus.RETURNED]: 'OMS_RETURNED',
 };
 
-const JIRA_UNLINK_TARGET_STATUS = 'BACKLOG';
+const JIRA_UNLINK_TARGET_STATUS = 'OMS_BACKLOG';
 
 // ---------------------------------------------------------------------------
 // Priority mapping
