@@ -4,6 +4,7 @@ import {
   bitbucketService,
   type BitbucketIssueState,
 } from '@/services/bitbucketService';
+import { jiraService } from '@/services/jiraService';
 import { ReportStatus } from 'shared-types';
 import { reportIntegrationService } from '@/services/reportIntegrationService';
 
@@ -41,6 +42,8 @@ interface ExistingReportSnapshot {
   priority: string;
   assigneeId?: string | null;
   bitbucketIssueId?: string | null;
+  jiraIssueId?: string | null;
+  jiraIssueKey?: string | null;
   categoryId?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
@@ -58,8 +61,9 @@ export interface UpdateReportStatusOptions {
   reportId: string;
   targetStatus: ReportStatus;
   actorUserId?: string;
-  source?: 'REPORT_API' | 'WEBHOOK_BITBUCKET' | 'SYSTEM';
+  source?: 'REPORT_API' | 'WEBHOOK_BITBUCKET' | 'WEBHOOK_JIRA' | 'SYSTEM';
   syncBitbucketState?: boolean;
+  syncJiraState?: boolean;
   sendChatNotification?: boolean;
   createActivityLog?: boolean;
 }
@@ -125,6 +129,10 @@ const buildStatusLogMessage = (
 ) => {
   if (source === 'WEBHOOK_BITBUCKET') {
     return `通報狀態由 Bitbucket 同步：${oldStatus} → ${newStatus}`;
+  }
+
+  if (source === 'WEBHOOK_JIRA') {
+    return `通報狀態由 Jira 同步：${oldStatus} → ${newStatus}`;
   }
 
   return `通報狀態從「${oldStatus}」變更為「${newStatus}」`;
@@ -376,7 +384,7 @@ export const reportMutationService = {
 
     const changes: Record<string, { old: any; new: any }> = {};
 
-    if (priority && priority !== existingReport.priority) {
+    if (priority !== undefined && priority !== existingReport.priority) {
       changes.priority = { old: existingReport.priority, new: priority };
     }
 
@@ -387,12 +395,58 @@ export const reportMutationService = {
       };
     }
 
-    if (title && title !== existingReport.title) {
+    if (title !== undefined && title !== existingReport.title) {
       changes.title = { old: existingReport.title, new: title };
     }
 
-    if (description && description !== existingReport.description) {
+    if (description !== undefined && description !== existingReport.description) {
       changes.description = { old: existingReport.description, new: description };
+    }
+
+    // 同步 title/description/priority 到 Jira（如果啟用且有關聯 Issue）
+    // 遵照 PRD 10.1 欄位映射：
+    // - summary = {reportId} - {categoryName}（若 category 為空則退化為 {reportId}）
+    // - description 轉為 ADF 格式
+    // - priority 通過 PRIORITY_MAP 映射
+    if (
+      jiraService.isEnabled() &&
+      (finalUpdatedReport.jiraIssueKey || finalUpdatedReport.jiraIssueId)
+    ) {
+      const titleChanged = title !== undefined && title !== existingReport.title;
+      const categoryChanged = categoryId !== undefined && categoryId !== existingReport.categoryId;
+      const descriptionChanged =
+        description !== undefined && description !== existingReport.description;
+      const priorityChanged = priority !== undefined && priority !== existingReport.priority;
+
+      if (titleChanged || categoryChanged || descriptionChanged || priorityChanged) {
+        // 組建新的 summary（遵照 PRD 格式：{reportId} - {categoryName}）
+        let newSummary: string | undefined;
+        if (titleChanged || categoryChanged) {
+          const categoryName = finalUpdatedReport.category?.name ?? null;
+          newSummary = categoryName
+            ? `${finalUpdatedReport.id} - ${categoryName}`
+            : finalUpdatedReport.id;
+        }
+
+        const success = await jiraService.updateIssue(
+          finalUpdatedReport.jiraIssueKey || finalUpdatedReport.jiraIssueId || '',
+          {
+            summary: newSummary,
+            description: descriptionChanged ? description : undefined,
+            priority: priorityChanged ? priority : undefined,
+          }
+        );
+
+        if (success) {
+          console.log(
+            `[Jira] 已同步 Report 內容更新 (${finalUpdatedReport.jiraIssueKey}): summary=${titleChanged || categoryChanged}, description=${descriptionChanged}, priority=${priorityChanged}`
+          );
+        } else {
+          console.warn(
+            `[Jira] Report 內容同步失敗 (${finalUpdatedReport.jiraIssueKey})`
+          );
+        }
+      }
     }
 
     return {
@@ -408,6 +462,7 @@ export const reportMutationService = {
       actorUserId,
       source = 'SYSTEM',
       syncBitbucketState = false,
+      syncJiraState = false,
       sendChatNotification = true,
       createActivityLog = true,
     } = options;
@@ -446,6 +501,10 @@ export const reportMutationService = {
 
     if (createActivityLog && source === 'WEBHOOK_BITBUCKET' && !resolvedActorUserId) {
       console.warn('[Report Status Update] WEBHOOK_BITBUCKET 缺少 actorUserId，略過活動日誌寫入');
+    }
+
+    if (createActivityLog && source === 'WEBHOOK_JIRA' && !resolvedActorUserId) {
+      console.warn('[Report Status Update] WEBHOOK_JIRA 缺少 actorUserId，略過活動日誌寫入');
     }
 
     if (createActivityLog && resolvedActorUserId) {
@@ -488,10 +547,21 @@ export const reportMutationService = {
           );
         } catch (error: any) {
           console.error(
-            '[Report Status Update] Bitbucket issue 更新失敗:',
+            '[Report Status Update] Bitbucket 狀態同步失敗:',
             error.message
           );
         }
+      }
+    }
+
+    if (syncJiraState && existingReport.jiraIssueKey && jiraService.isEnabled()) {
+      try {
+        await jiraService.syncStatusByReportStatus(
+          existingReport.jiraIssueKey,
+          targetStatus
+        );
+      } catch (error: any) {
+        console.error('[Report Status Update] Jira transition 失敗:', error.message);
       }
     }
 
@@ -525,5 +595,96 @@ export const reportMutationService = {
       targetStatus,
       ...options,
     });
+  },
+
+  async updateReportStatusByJiraIssueId(
+    jiraIssueId: string,
+    targetStatus: ReportStatus,
+    options?: Omit<UpdateReportStatusOptions, 'reportId' | 'targetStatus'>,
+    jiraIssueKey?: string
+  ) {
+    const report = await prisma.report.findFirst({
+      where: jiraIssueKey
+        ? {
+            OR: [{ jiraIssueId }, { jiraIssueKey }],
+          }
+        : { jiraIssueId },
+      select: { id: true },
+    });
+
+    if (!report) {
+      console.warn(
+        `[Jira Webhook] 狀態同步找不到對應 Report (jiraIssueId=${jiraIssueId}, jiraIssueKey=${jiraIssueKey ?? 'N/A'})`
+      );
+      return {
+        changed: false,
+        report: null,
+        previousStatus: null,
+      };
+    }
+
+    return this.updateReportStatus({
+      reportId: report.id,
+      targetStatus,
+      ...options,
+    });
+  },
+
+  async updateReportByJiraIssueId(
+    jiraIssueId: string,
+    updates: {
+      description?: string;
+      priority?: string;
+    },
+    jiraIssueKey?: string
+  ) {
+    const report = await prisma.report.findFirst({
+      where: jiraIssueKey
+        ? {
+            OR: [{ jiraIssueId }, { jiraIssueKey }],
+          }
+        : { jiraIssueId },
+    });
+
+    if (!report) {
+      console.warn(
+        `[Jira Webhook] 找不到對應 Report (jiraIssueId=${jiraIssueId}, jiraIssueKey=${jiraIssueKey ?? 'N/A'})`
+      );
+      return {
+        changed: false,
+        report: null,
+      };
+    }
+
+    const updateData: Record<string, unknown> = {};
+
+    if (updates.description !== undefined && updates.description !== report.description) {
+      updateData.description = updates.description;
+    }
+
+    if (updates.priority !== undefined && updates.priority !== report.priority) {
+      updateData.priority = updates.priority;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      console.log(
+        `[Jira Webhook] 非狀態欄位無實際變更 (reportId=${report.id}, jiraIssueId=${jiraIssueId}, jiraIssueKey=${jiraIssueKey ?? 'N/A'})`
+      );
+      return {
+        changed: false,
+        report,
+      };
+    }
+
+    const updatedReport = await prisma.report.update({
+      where: { id: report.id },
+      data: updateData,
+      include: REPORT_STATUS_INCLUDE,
+    });
+
+    return {
+      changed: true,
+      report: updatedReport,
+    };
   },
 };

@@ -169,15 +169,35 @@ export const googleChatService = {
                     },
                   },
                   {
-                    decoratedText: {
-                      topLabel: '優先度',
-                      text: this.formatPriority(report.priority),
-                    },
-                  },
-                  {
-                    decoratedText: {
-                      topLabel: '建立人',
-                      text: report.creator?.name || '未知',
+                    columns: {
+                      columnItems: [
+                        {
+                          horizontalSizeStyle: 'FILL_AVAILABLE_SPACE',
+                          horizontalAlignment: 'START',
+                          verticalAlignment: 'CENTER',
+                          widgets: [
+                            {
+                              decoratedText: {
+                                topLabel: '優先度',
+                                text: this.formatPriority(report.priority),
+                              },
+                            },
+                          ],
+                        },
+                        {
+                          horizontalSizeStyle: 'FILL_AVAILABLE_SPACE',
+                          horizontalAlignment: 'START',
+                          verticalAlignment: 'CENTER',
+                          widgets: [
+                            {
+                              decoratedText: {
+                                topLabel: '建立人',
+                                text: report.creator?.name || '未知',
+                              },
+                            },
+                          ],
+                        },
+                      ],
                     },
                   },
                   {

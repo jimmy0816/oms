@@ -26,7 +26,8 @@ interface Report {
   creatorId: string;
   assigneeId?: string | null;
   bitbucketIssueId?: string | null;
-  bitbucketIssueUrl?: string | null;
+  jiraIssueId?: string | null;
+  jiraIssueKey?: string | null;
   category?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
@@ -353,6 +354,11 @@ async function updateReport(
     const oldCategoryName = existingReport.category?.name || null;
     const newCategoryName = finalUpdatedReport.category?.name || null;
 
+    // 保存關鍵字段，防止在後續操作中遺漏
+    const originalDescription = finalUpdatedReport.description;
+    const originalPriority = finalUpdatedReport.priority;
+    const originalTitle = finalUpdatedReport.title;
+
     if (shouldUpdateStatus && status) {
       const statusUpdateResult = await reportMutationService.updateReportStatus({
         reportId: id,
@@ -360,6 +366,7 @@ async function updateReport(
         actorUserId: userId,
         source: 'REPORT_API',
         syncBitbucketState: true,
+        syncJiraState: true,
         sendChatNotification: false,
         createActivityLog: true,
       });
@@ -377,6 +384,15 @@ async function updateReport(
       existingReport as any,
       finalUpdatedReport as any
     );
+
+    // 安全確保關鍵字段不會遺漏
+    // 這防止了在 syncCategoryChange 中因為 Prisma 查詢或物件轉換而遺漏字段
+    finalUpdatedReport = {
+      ...finalUpdatedReport,
+      description: finalUpdatedReport.description ?? originalDescription,
+      priority: finalUpdatedReport.priority ?? originalPriority,
+      title: finalUpdatedReport.title ?? originalTitle,
+    };
 
     // 發送 Google Chat 更新通知
     const changes: Record<string, { old: any; new: any }> = {
