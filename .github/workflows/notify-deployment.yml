@@ -1,0 +1,90 @@
+name: Unified Deployment Announcement
+
+on:
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  notify:
+    name: Wait for Cloud Builds and Notify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 0. 根據分支決定: Check Name 與 環境變數
+      - name: Set Environment & Check Names
+        id: config
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            echo "ENV_NAME=Production" >> $GITHUB_OUTPUT
+            # 請替換為你 GCP 上 【正式機】 後端與前端 Trigger 的確切名稱
+            echo "BACKEND_CHECK=oms-backend-deploy-trigger (treerful-200611)" >> $GITHUB_OUTPUT
+            echo "FRONTEND_CHECK=oms-frontend-deploy-trigger (treerful-200611)" >> $GITHUB_OUTPUT
+          else
+            echo "ENV_NAME=Staging" >> $GITHUB_OUTPUT
+            # 請替換為你 GCP 上 【測試機】 後端與前端 Trigger 的確切名稱
+            echo "BACKEND_CHECK=oms-backend-stage-deploy-trigger (treerful-200611)" >> $GITHUB_OUTPUT
+            echo "FRONTEND_CHECK=oms-frontend-stage-deploy-trigger (treerful-200611)" >> $GITHUB_OUTPUT
+          fi
+
+      # 1. 偵測哪些專案有變動 (過濾路徑)
+      - name: Detect Changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'apps/backend/**'
+              - 'packages/prisma-client/**'
+              - 'cloudbuild.backend.yaml'
+            frontend:
+              - 'apps/frontend/**'
+              - 'cloudbuild.frontend.yaml'
+
+      # 2. 等待 Backend Cloud Build (只有當 backend 有變動時)
+      - name: Wait for Backend Build
+        if: steps.changes.outputs.backend == 'true'
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.sha }}
+          check-name: ${{ steps.config.outputs.BACKEND_CHECK }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 20
+
+      # 3. 等待 Frontend Cloud Build (只有當 frontend 有變動時)
+      - name: Wait for Frontend Build
+        if: steps.changes.outputs.frontend == 'true'
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.sha }}
+          check-name: ${{ steps.config.outputs.FRONTEND_CHECK }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 20
+
+      # 4. 發送統一公告
+      - name: Send Announcement
+        shell: bash
+        run: |
+          # 判斷受影響的服務
+          SERVICES=""
+          [ "${{ steps.changes.outputs.backend }}" == "true" ] && SERVICES="Backend"
+          [ "${{ steps.changes.outputs.frontend }}" == "true" ] && { [ -n "$SERVICES" ] && SERVICES="$SERVICES & Frontend" || SERVICES="Frontend"; }
+
+          # 防呆：若前後端均無異動，則略過通知
+          if [ -z "$SERVICES" ]; then
+            echo "No relevant changes detected. Skipping announcement."
+            exit 0
+          fi
+
+          echo "Announcing deployment for: $SERVICES (${{ steps.config.outputs.ENV_NAME }})"
+
+          bash scripts/notify-deploy.sh \
+            "$SERVICES" \
+            "Success" \
+            "https://deployment-notifier.j-3f8.workers.dev" \
+            "true" \
+            "${{ github.sha }}" \
+            "thehapp-oms" \
+            "${{ github.repository }}" \
+            "${{ steps.config.outputs.ENV_NAME }}"
