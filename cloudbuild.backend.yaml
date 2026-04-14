@@ -138,5 +138,6 @@ substitutions:
   _JIRA_BOT_NAME: ""
   _JIRA_BOT_EMAIL: ""
 
+
 options:
   logging: CLOUD_LOGGING_ONLY
