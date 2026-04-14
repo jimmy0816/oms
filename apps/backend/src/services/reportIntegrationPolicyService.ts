@@ -23,6 +23,8 @@ const getTopLevelCategoryName = (
 const isSoftwareCategory = (category?: CategoryWithAncestors | null) =>
   getTopLevelCategoryName(category) === SOFTWARE_CATEGORY_NAME;
 
+const JIRA_ENABLED = process.env.JIRA_ENABLED === 'true';
+
 export const reportIntegrationPolicyService = {
   shouldEnableGoogleChat(report: { category?: CategoryWithAncestors | null }) {
     return isSoftwareCategory(report?.category);
@@ -32,10 +34,18 @@ export const reportIntegrationPolicyService = {
     return isSoftwareCategory(report?.category);
   },
 
+  shouldEnableJira(report: { category?: CategoryWithAncestors | null }) {
+    return isSoftwareCategory(report?.category) && JIRA_ENABLED;
+  },
+
   shouldEnableAnyIntegration(report: {
     category?: CategoryWithAncestors | null;
   }) {
-    return this.shouldEnableGoogleChat(report) || this.shouldEnableBitbucket(report);
+    return (
+      this.shouldEnableGoogleChat(report) ||
+      this.shouldEnableBitbucket(report) ||
+      this.shouldEnableJira(report)
+    );
   },
 };
 

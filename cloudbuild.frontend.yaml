@@ -52,8 +52,6 @@ substitutions:
   _NEXTAUTH_URL: "https://oms-nextauth-url.run.app" # 將在 Cloud Build 觸發器中設置為 NextAuth 服務的 URL
   _NEXTAUTH_SECRET: "nextauth-secret" # 將在 Cloud Build 觸發器中設置為 NextAuth 密鑰
   _SERVICE_NAME: "oms-frontend-service"
-  _DEPLOY_NOTIFIER_URL: "https://deployment-notifier.j-3f8.workers.dev"
-  _DEPLOY_NOTIFIER_ENABLED: "true"
 
 # 構建的鏡像
 images:

@@ -1,8 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ReportStatus } from 'shared-types';
 import { bitbucketService } from '@/services/bitbucketService';
+import { jiraService } from '@/services/jiraService';
 import { reportMutationService } from '@/services/reportMutationService';
-import { getBitbucketBotUserOrThrow } from '@/lib/bot-user';
+import { getBitbucketBotUserOrThrow, getJiraBotUserOrThrow } from '@/lib/bot-user';
 import { reportCommentService } from '@/services/reportCommentService';
 
 /**
@@ -132,6 +133,111 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           }
         }
       }
+    }
+
+    if (originPlatform === 'jira') {
+      const jiraBotUser = await getJiraBotUserOrThrow();
+      const commentPayload = jiraService.extractCommentFromWebhook(req.body);
+
+      if (commentPayload?.eventType === 'created' && commentPayload.content) {
+        await reportCommentService.syncJiraIssueCommentToOms({
+          issueId: commentPayload.issueId,
+          issueKey: commentPayload.issueKey,
+          commentId: commentPayload.commentId,
+          content: commentPayload.content,
+          actorName: commentPayload.actorName,
+          botUserId: jiraBotUser.id,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: 'Jira comment webhook 已處理',
+          originPlatform: originPlatform ?? null,
+          receivedAt: new Date().toISOString(),
+        });
+      }
+
+      if (commentPayload?.eventType === 'deleted') {
+        await reportCommentService.syncJiraIssueCommentDeletionToOms({
+          commentId: commentPayload.commentId,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: 'Jira comment delete webhook 已處理',
+          originPlatform: originPlatform ?? null,
+          receivedAt: new Date().toISOString(),
+        });
+      }
+
+      const issue = jiraService.extractIssueFromWebhook(req.body);
+      if (!issue) {
+        return res.status(200).json({
+          success: true,
+          message: 'Jira webhook 無可處理 issue 資訊',
+          originPlatform: originPlatform ?? null,
+          receivedAt: new Date().toISOString(),
+        });
+      }
+
+      if (issue.descriptionChanged || issue.priorityChanged) {
+        const nonStatusUpdateResult = await reportMutationService.updateReportByJiraIssueId(
+          issue.issueId,
+          {
+            description: issue.descriptionChanged ? issue.descriptionText : undefined,
+            priority: issue.priority,
+          },
+          issue.issueKey
+        );
+
+        if (nonStatusUpdateResult.changed) {
+          console.log(
+            `[Jira Webhook] 已同步非狀態欄位到 OMS (issueKey=${issue.issueKey}, description=${issue.descriptionChanged}, priority=${issue.priorityChanged})`
+          );
+        } else {
+          console.warn(
+            `[Jira Webhook] 非狀態欄位同步未更新資料 (issueId=${issue.issueId}, issueKey=${issue.issueKey}, descriptionChanged=${issue.descriptionChanged}, descriptionText=${issue.descriptionText ?? 'undefined'})`
+          );
+        }
+      }
+
+      // 若 changelog 顯示此次 webhook 沒有 status 變更（例如只改了 summary/description/priority）
+      // 則不需要觸發 OMS 狀態同步，直接略過
+      if (!issue.statusChanged) {
+        const webhookEvent = req.body?.webhookEvent ?? 'unknown';
+        console.log(
+          `[Jira Webhook] ${webhookEvent} 非狀態變更，略過 OMS 狀態同步 (issueKey=${issue.issueKey})`
+        );
+        return res.status(200).json({
+          success: true,
+          message: 'Jira webhook 非狀態變更，已略過 OMS 同步',
+          originPlatform: originPlatform ?? null,
+          receivedAt: new Date().toISOString(),
+        });
+      }
+
+      const targetStatus = jiraService.mapJiraStatusToReportStatus(issue.statusName);
+      if (!targetStatus) {
+        return res.status(200).json({
+          success: true,
+          message: `Jira status (${issue.statusName}) 無對應 OMS 狀態，已略過`,
+          originPlatform: originPlatform ?? null,
+          receivedAt: new Date().toISOString(),
+        });
+      }
+
+      await reportMutationService.updateReportStatusByJiraIssueId(
+        issue.issueId,
+        targetStatus,
+        {
+          source: 'WEBHOOK_JIRA',
+          syncBitbucketState: false,
+          syncJiraState: false,
+          sendChatNotification: true,
+          createActivityLog: true,
+        },
+        issue.issueKey
+      );
     }
 
     // 回傳成功訊息
