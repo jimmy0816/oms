@@ -571,8 +571,20 @@ export default function TicketsPage() {
 
   // --- RENDER LOGIC ---
   useEffect(() => {
-    const checkSize = () => setIsFilterVisible(window.innerWidth >= 768);
-    checkSize();
+    let lastWidth = window.innerWidth;
+    const checkSize = () => {
+      const currentWidth = window.innerWidth;
+      if (currentWidth !== lastWidth) {
+        if (
+          (lastWidth < 768 && currentWidth >= 768) ||
+          (lastWidth >= 768 && currentWidth < 768)
+        ) {
+          setIsFilterVisible(currentWidth >= 768);
+        }
+        lastWidth = currentWidth;
+      }
+    };
+    setIsFilterVisible(window.innerWidth >= 768);
     window.addEventListener('resize', checkSize);
     return () => window.removeEventListener('resize', checkSize);
   }, []);
